@@ -1,0 +1,33 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =============================================================================
+// Phase 0 Infrastructure Table
+//
+// _SystemInfo is a single-row metadata table used to track the schema version
+// and deployment timestamp. It is an infrastructure concern (not a business
+// entity) and is required so that Prisma can generate the client.
+//
+// Prisma requires at least one model to generate @prisma/client. Business
+// entities (Intern, Company, Application, etc.) will be added in Phase 1
+// via additive migrations.
+//
+// The leading underscore (_) is a Prisma convention indicating an internal /
+// system-managed table, not a user-facing entity.
+// =============================================================================
+
+model SystemInfo {
+  id            Int      @id @default(1)     // Single-row table — ID is always 1
+  schemaVersion String   @default("0.0.1")  // Tracks the current schema phase
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("_system_info")
+}
+

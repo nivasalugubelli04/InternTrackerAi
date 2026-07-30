@@ -1,0 +1,49 @@
+# =============================================================================
+# InternTracker AI – .dockerignore
+# =============================================================================
+
+# Git
+.git
+.gitignore
+.github
+
+# Node modules (installed fresh inside Docker)
+node_modules
+**/node_modules
+
+# Development & test artifacts
+dist
+build
+coverage
+**/*.spec.ts
+**/*.test.ts
+
+# Environment files (injected via Docker Compose)
+.env
+.env.*
+!.env.example
+
+# Editor & OS
+.DS_Store
+.vscode
+.idea
+**/*.swp
+
+# Expo mobile app (not containerised)
+apps/mobile
+
+# Documentation
+*.md
+LICENSE
+
+# Docker files (avoid recursive context)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Logs
+logs
+*.log
+
+# TypeScript build info
+*.tsbuildinfo

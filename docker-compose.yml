@@ -1,0 +1,114 @@
+# =============================================================================
+# InternTracker AI – Docker Compose (Local Development)
+#
+# Services:
+#   - postgres  PostgreSQL 16 database
+#   - redis     Redis 7 cache / queue backend
+#   - api       NestJS backend with hot-reload
+#
+# Usage:
+#   docker compose up            # Start all services (dev mode)
+#   docker compose up -d         # Detached
+#   docker compose logs -f api   # Tail API logs
+#   docker compose down -v       # Stop and remove volumes
+#
+# Architectural Decision:
+#   - Named volumes (not bind mounts) are used for Postgres and Redis data
+#     so that data persists across container restarts but can be cleanly
+#     wiped with `docker compose down -v`.
+#   - The api service uses the Dockerfile.dev image with a bind-mounted
+#     source tree for hot-reload without re-building the image on each
+#     code change.
+#   - Health checks on postgres and redis ensure the api container waits
+#     until its dependencies are actually ready (depends_on condition).
+# =============================================================================
+
+version: '3.9'
+
+services:
+  # ── PostgreSQL ──────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: intern_tracker_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-intern_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dev_password_change_me}
+      POSTGRES_DB: ${POSTGRES_DB:-intern_tracker_db}
+      # Locale for deterministic collation
+      POSTGRES_INITDB_ARGS: "--locale=en_US.UTF-8"
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-intern_user} -d ${POSTGRES_DB:-intern_tracker_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # ── Redis ───────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: intern_tracker_redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --appendonly yes
+      --appendfsync everysec
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ── API (NestJS) ─────────────────────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile.dev
+    container_name: intern_tracker_api
+    restart: unless-stopped
+    command: ["npm", "run", "start:dev", "--workspace=apps/api"]
+    env_file:
+      - apps/api/.env
+    environment:
+      # Override localhost references to point to Docker service names
+      POSTGRES_HOST: postgres
+      REDIS_HOST: redis
+      DATABASE_URL: postgresql://${POSTGRES_USER:-intern_user}:${POSTGRES_PASSWORD:-dev_password_change_me}@postgres:5432/${POSTGRES_DB:-intern_tracker_db}?schema=public
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    volumes:
+      # Bind-mount source for hot-reload
+      - ./apps/api/src:/app/apps/api/src
+      - ./apps/api/prisma:/app/apps/api/prisma
+      # Exclude node_modules from the bind mount
+      - /app/node_modules
+      - /app/apps/api/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/v1/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+# ── Named volumes ─────────────────────────────────────────────────────────────
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local

@@ -1,0 +1,42 @@
+# =============================================================================
+# InternTracker AI – API Development Dockerfile
+#
+# Purpose: Hot-reload development environment inside Docker.
+#
+# Architectural Decision:
+#   - Uses ts-node / @nestjs/cli with --watch for hot reload without
+#     a separate build step, keeping the dev loop fast.
+#   - Source code is mounted from the host via Docker Compose volumes
+#     so file changes are reflected immediately.
+#   - Does NOT use multi-stage because we want all dev tools available.
+# =============================================================================
+
+FROM node:20-alpine
+WORKDIR /app
+
+# Install system utilities needed for Prisma binary compatibility
+RUN apk add --no-cache openssl libc6-compat
+
+# Copy workspace manifests
+COPY package.json yarn.lock ./
+COPY tsconfig.base.json ./
+COPY apps/api/package.json ./apps/api/
+COPY apps/api/tsconfig.json ./apps/api/
+COPY apps/api/nest-cli.json ./apps/api/
+
+# Install all dependencies (including dev)
+RUN npm install
+
+# Copy prisma schema (source is mounted at runtime, but schema must exist for generate)
+COPY apps/api/prisma ./apps/api/prisma
+
+# Generate Prisma client
+WORKDIR /app/apps/api
+RUN npx prisma generate
+
+# The source directory is mounted as a volume in docker-compose.dev.yml
+WORKDIR /app
+
+EXPOSE 3000
+
+CMD ["npm", "run", "start:dev", "--workspace=apps/api"]
