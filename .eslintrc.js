@@ -4,7 +4,7 @@ module.exports = {
   parserOptions: {
     ecmaVersion: 2022,
     sourceType: 'module',
-    project: ['./apps/api/tsconfig.json'],
+    project: ['./apps/api/tsconfig.json', './apps/api/tsconfig.test.json'],
     tsconfigRootDir: __dirname,
   },
   plugins: ['@typescript-eslint', 'import', 'prettier'],
@@ -45,4 +45,18 @@ module.exports = {
     'prettier/prettier': 'error',
   },
   ignorePatterns: ['dist/', 'node_modules/', '*.js', '*.d.ts', 'apps/mobile/'],
+  overrides: [
+    {
+      // Spec files — relax some strict rules that conflict with Jest mocking patterns
+      files: ['**/*.spec.ts', '**/*.test.ts'],
+      rules: {
+        '@typescript-eslint/no-explicit-any': 'off',
+        '@typescript-eslint/unbound-method': 'off',
+        '@typescript-eslint/no-unsafe-assignment': 'off',
+        '@typescript-eslint/no-unsafe-member-access': 'off',
+        '@typescript-eslint/no-unsafe-call': 'off',
+        '@typescript-eslint/no-unsafe-return': 'off',
+      },
+    },
+  ],
 };

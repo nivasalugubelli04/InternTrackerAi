@@ -8,26 +8,107 @@ datasource db {
 }
 
 // =============================================================================
-// Phase 0 Infrastructure Table
-//
-// _SystemInfo is a single-row metadata table used to track the schema version
-// and deployment timestamp. It is an infrastructure concern (not a business
-// entity) and is required so that Prisma can generate the client.
-//
-// Prisma requires at least one model to generate @prisma/client. Business
-// entities (Intern, Company, Application, etc.) will be added in Phase 1
-// via additive migrations.
-//
-// The leading underscore (_) is a Prisma convention indicating an internal /
-// system-managed table, not a user-facing entity.
+// Phase 0 — Infrastructure
 // =============================================================================
 
 model SystemInfo {
-  id            Int      @id @default(1)     // Single-row table — ID is always 1
-  schemaVersion String   @default("0.0.1")  // Tracks the current schema phase
+  id            Int      @id @default(1)
+  schemaVersion String   @default("1.0.0")
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   @@map("_system_info")
 }
 
+// =============================================================================
+// Phase 1 — Authentication
+//
+// Architectural Decisions:
+//  - UUIDs as PKs prevent sequential ID enumeration attacks and enable
+//    distributed ID generation without a central sequence.
+//  - Passwords are stored as bcrypt hashes ONLY — never plaintext.
+//  - Refresh tokens are stored as SHA-256 hashes — the raw token is only
+//    sent to the client once and never persisted in plaintext.
+//  - Email/password-reset tokens follow the same hash-only pattern.
+//  - Account lockout: loginAttempts + lockedUntil implement brute-force
+//    protection at the application layer (complements rate limiting).
+//  - isEmailVerified guards privileged actions (future phases).
+//  - Role enum is defined now for future RBAC — Phase 1 only uses USER.
+// =============================================================================
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+model User {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email            String    @unique @db.VarChar(255)
+  passwordHash     String    @db.VarChar(255)
+  firstName        String?   @db.VarChar(100)
+  lastName         String?   @db.VarChar(100)
+  role             UserRole  @default(USER)
+  isEmailVerified  Boolean   @default(false)
+  isActive         Boolean   @default(true)
+  loginAttempts    Int       @default(0)
+  lockedUntil      DateTime?
+  lastLoginAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  // Relations
+  refreshTokens          RefreshToken[]
+  emailVerificationTokens EmailVerificationToken[]
+  passwordResetTokens    PasswordResetToken[]
+
+  @@index([email])
+  @@map("users")
+}
+
+model RefreshToken {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// SHA-256 hash of the raw token — never store raw tokens
+  tokenHash   String   @unique @db.VarChar(64)
+  userId      String   @db.Uuid
+  expiresAt   DateTime
+  isRevoked   Boolean  @default(false)
+  ipAddress   String?  @db.VarChar(45)
+  userAgent   String?  @db.VarChar(512)
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenHash])
+  @@map("refresh_tokens")
+}
+
+model EmailVerificationToken {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// SHA-256 hash of the raw token
+  tokenHash String    @unique @db.VarChar(64)
+  userId    String    @db.Uuid
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("email_verification_tokens")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// SHA-256 hash of the raw token
+  tokenHash String    @unique @db.VarChar(64)
+  userId    String    @db.Uuid
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("password_reset_tokens")
+}

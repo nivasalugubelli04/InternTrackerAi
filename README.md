@@ -4,7 +4,7 @@
 
 ### Mobile-First Internship Monitoring Platform
 
-[![Phase](https://img.shields.io/badge/Phase-0%20%E2%80%93%20Foundation-7c3aed?style=for-the-badge)]()
+[![Phase](https://img.shields.io/badge/Phase-1%20%E2%80%93%20Authentication-7c3aed?style=for-the-badge)]()
 [![NestJS](https://img.shields.io/badge/NestJS-10-e0234e?style=for-the-badge&logo=nestjs)]()
 [![Expo](https://img.shields.io/badge/Expo-51-000020?style=for-the-badge&logo=expo)]()
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?style=for-the-badge&logo=postgresql)]()
@@ -35,15 +35,64 @@
 
 InternTracker AI is a **mobile-first platform** that helps organisations monitor, manage, and optimise their internship programmes using AI-driven insights.
 
-This repository contains **Phase 0** — the production-ready foundation:
+This repository contains **Phase 0 + Phase 1** — the production-ready foundation with a complete authentication system:
 
 | Layer | Technology | Purpose |
 |---|---|---|
 | Mobile | React Native (Expo 51) | iOS & Android app |
 | API | NestJS 10 + Fastify | REST backend |
+| Auth | JWT (access + refresh) | Stateless authentication |
 | Database | PostgreSQL 16 + Prisma | Relational data store |
 | Cache / Queue | Redis 7 + BullMQ | Caching & background jobs |
 | Containerisation | Docker + Compose | Local & production environments |
+| Docs | Swagger / OpenAPI | Interactive API documentation |
+
+---
+
+## 🔐 Phase 1 — Authentication API
+
+All auth endpoints are prefixed with `/api/v1/auth`.
+
+| Method | Endpoint | Auth Required | Description |
+|---|---|---|---|
+| `POST` | `/auth/register` | ❌ | Register new account |
+| `POST` | `/auth/login` | ❌ | Login → access + refresh tokens |
+| `POST` | `/auth/refresh` | Refresh Token | Rotate refresh token |
+| `POST` | `/auth/logout` | ✅ Access Token | Revoke refresh token |
+| `GET` | `/auth/me` | ✅ Access Token | Get current user |
+| `POST` | `/auth/verify-email` | ❌ | Verify email from link |
+| `POST` | `/auth/resend-verification` | ✅ Access Token | Resend verification email |
+| `POST` | `/auth/forgot-password` | ❌ | Request reset email |
+| `POST` | `/auth/reset-password` | ❌ | Reset password with token |
+| `POST` | `/auth/change-password` | ✅ Access Token | Change password |
+
+### Swagger UI
+
+```
+http://localhost:3000/api/v1/docs
+```
+
+### Security Features
+
+- 🔒 **bcrypt** password hashing (configurable rounds)
+- 🔄 **Refresh token rotation** — old token revoked on every refresh
+- 🔑 **SHA-256 token hashing** — raw tokens never stored in DB
+- 🚫 **Account lockout** after N failed login attempts
+- ⏱ **Rate limiting** via `@nestjs/throttler` (global)
+- 📧 **Email verification** with 24h expiry
+- 🔐 **Separate JWT secrets** for access vs refresh tokens
+- 🛡 **Secure by default** — all routes require auth; use `@Public()` to opt out
+
+### Running the Migration
+
+```bash
+# Start Docker services first
+docker compose up -d postgres redis
+
+# Run migration (creates auth tables)
+npm run prisma:migrate --workspace=apps/api
+# When prompted, name it: phase1_auth
+```
 
 ---
 

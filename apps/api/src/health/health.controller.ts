@@ -1,7 +1,9 @@
 import { Controller, Get, HttpCode, HttpStatus } from '@nestjs/common';
 
-import { HealthService } from './health.service';
+import { Public } from '../auth/decorators/public.decorator';
+
 import type { HealthReport } from './health.service';
+import { HealthService } from './health.service';
 
 /**
  * HealthController — GET /api/v1/health
@@ -32,6 +34,7 @@ export class HealthController {
   constructor(private readonly healthService: HealthService) {}
 
   @Get()
+  @Public()
   @HttpCode(HttpStatus.OK)
   async check(): Promise<HealthReport> {
     return this.healthService.getHealth();

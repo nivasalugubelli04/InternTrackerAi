@@ -1,8 +1,13 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
 
+import { AuthModule } from './auth/auth.module';
+import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import configuration from './config/configuration';
+import type { AppConfig } from './config/configuration';
 import { HealthModule } from './health/health.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { RedisModule } from './redis/redis.module';
@@ -10,15 +15,12 @@ import { RedisModule } from './redis/redis.module';
 /**
  * AppModule — root module of the InternTracker API.
  *
- * Architectural Decision:
- *  - ConfigModule is loaded globally (isGlobal: true) and marked as
- *    expandVariables: true so that .env references like ${VAR} work.
- *  - LoggerModule (nestjs-pino) is configured at the root level so that
- *    every NestJS logger instance produces structured JSON automatically.
- *    In development, pino-pretty provides human-readable output.
- *  - Infrastructure modules (PrismaModule, RedisModule) are imported here
- *    and marked @Global inside their own files so they don't need to be
- *    imported in feature modules.
+ * Phase 1 additions:
+ *  - ThrottlerModule provides global rate limiting.
+ *  - APP_GUARD binds JwtAuthGuard globally — all routes require auth by
+ *    default; use @Public() decorator to opt out.
+ *  - APP_GUARD also binds ThrottlerGuard globally for rate limiting.
+ *  - AuthModule contains the full authentication feature set.
  */
 @Module({
   imports: [
@@ -53,12 +55,32 @@ import { RedisModule } from './redis/redis.module';
       },
     }),
 
+    // ── Rate Limiting ────────────────────────────────────────────────────────
+    ThrottlerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService<AppConfig, true>) => ({
+        throttlers: [
+          {
+            ttl: configService.get('throttle', { infer: true }).ttl,
+            limit: configService.get('throttle', { infer: true }).limit,
+          },
+        ],
+      }),
+    }),
+
     // ── Infrastructure ───────────────────────────────────────────────────────
     PrismaModule,
     RedisModule,
 
     // ── Features ────────────────────────────────────────────────────────────
     HealthModule,
+    AuthModule,
+  ],
+  providers: [
+    // Global JWT guard — secure by default, use @Public() to opt out
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
+    // Global rate limiting guard
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
   ],
 })
 export class AppModule {}

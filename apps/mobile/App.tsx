@@ -1,19 +1,26 @@
+import React from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import WelcomeScreen from './src/screens/WelcomeScreen';
+import { AuthProvider } from './src/context/AuthContext';
+import AppNavigator from './src/navigation/AppNavigator';
 
 /**
- * App root — Phase 0 placeholder.
- *
- * Renders only the WelcomeScreen. Navigation (React Navigation) and
- * authentication flows will wrap this in Phase 1.
+ * App root — Phase 1 with full auth navigation.
  */
 export default function App(): React.ReactElement {
   return (
-    <SafeAreaProvider>
-      <StatusBar style="light" />
-      <WelcomeScreen />
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <StatusBar style="light" />
+        <AuthProvider>
+          <NavigationContainer>
+            <AppNavigator />
+          </NavigationContainer>
+        </AuthProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
