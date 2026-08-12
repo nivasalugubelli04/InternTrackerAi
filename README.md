@@ -49,22 +49,41 @@ This repository contains **Phase 0 + Phase 1** — the production-ready foundati
 
 ---
 
-## 🔐 Phase 1 — Authentication API
+## 🔐 Phase 1 & 2 — Authentication & Profile API
 
-All auth endpoints are prefixed with `/api/v1/auth`.
+All endpoints are prefixed with `/api/v1`.
 
 | Method | Endpoint | Auth Required | Description |
 |---|---|---|---|
+| **Auth** | | | |
 | `POST` | `/auth/register` | ❌ | Register new account |
 | `POST` | `/auth/login` | ❌ | Login → access + refresh tokens |
 | `POST` | `/auth/refresh` | Refresh Token | Rotate refresh token |
 | `POST` | `/auth/logout` | ✅ Access Token | Revoke refresh token |
 | `GET` | `/auth/me` | ✅ Access Token | Get current user |
-| `POST` | `/auth/verify-email` | ❌ | Verify email from link |
-| `POST` | `/auth/resend-verification` | ✅ Access Token | Resend verification email |
-| `POST` | `/auth/forgot-password` | ❌ | Request reset email |
-| `POST` | `/auth/reset-password` | ❌ | Reset password with token |
-| `POST` | `/auth/change-password` | ✅ Access Token | Change password |
+| **Profile** | | | |
+| `GET` | `/profile` | ✅ Access Token | Get profile + skills + completion |
+| `POST` | `/profile` | ✅ Access Token | Create profile (Onboarding) |
+| `PATCH` | `/profile` | ✅ Access Token | Update profile |
+| `POST` | `/profile/complete-onboarding`| ✅ Access Token | Mark onboarding as complete |
+| **Skills** | | | |
+| `GET` | `/skills` | ✅ Access Token | Search global skills catalog |
+| `POST` | `/profile/skills` | ✅ Access Token | Add skill to profile |
+| `DELETE` | `/profile/skills/:id` | ✅ Access Token | Remove skill from profile |
+| **Resume** | | | |
+| `POST` | `/resume/upload` | ✅ Access Token | Upload/upsert resume metadata |
+| `GET` | `/resume` | ✅ Access Token | Get current user's resume |
+| `DELETE` | `/resume` | ✅ Access Token | Delete resume |
+| **Preferences** | | | |
+| `GET` | `/preferences` | ✅ Access Token | Get all preferences (career + notification) |
+| `PUT` | `/preferences/career` | ✅ Access Token | Update career preferences |
+| **Phase 4 — Scrapers & Jobs Engine** | | | |
+| `GET` | `/scrapers/status` | Internal/Admin | System health, success rates, active telemetry |
+| `GET` | `/scrapers/history` | Internal/Admin | Historical scrape execution logs |
+| `POST` | `/scrapers/run/:companyId` | Internal/Admin | Trigger scrape job for single company |
+| `POST` | `/scrapers/run-all` | Internal/Admin | Trigger batch scrape jobs for all active companies |
+| `GET` | `/jobs/raw` | Internal/Admin | Query raw JSON/HTML snapshots |
+| `GET` | `/jobs/normalized` | Internal/Admin | Query normalized, deduplicated internship listings |
 
 ### Swagger UI
 
@@ -89,9 +108,8 @@ http://localhost:3000/api/v1/docs
 # Start Docker services first
 docker compose up -d postgres redis
 
-# Run migration (creates auth tables)
+# Run migration (creates auth, company, and scraper tables)
 npm run prisma:migrate --workspace=apps/api
-# When prompted, name it: phase1_auth
 ```
 
 ---
@@ -474,16 +492,95 @@ Allowed types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `buil
 
 ---
 
+## 🔔 Phase 6 — Notification Intelligence Engine
+
+Implements a scalable, intelligent notification delivery platform that integrates with the Phase 5 Recommendation Engine.
+
+### Notification API Endpoints
+
+All endpoints are prefixed with `/api/v1`. JWT Bearer token required.
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/notifications` | Paginated list of user's notifications |
+| `GET` | `/notifications/:id` | Single notification with delivery events |
+| `PATCH` | `/notifications/read` | Bulk mark as read |
+| `GET` | `/notifications/history` | Delivery history with attempt details |
+| `POST` | `/notifications/test` | Send a test notification |
+| `GET` | `/preferences/notifications` | Get notification preferences |
+| `PATCH` | `/preferences/notifications` | Update notification preferences |
+
+### Decision Engine Guards
+
+Every recommendation passes through 7 guards before delivery:
+
+1. **Channel Enabled?** — User has at least one notification channel active
+2. **Score Threshold?** — Match score ≥ 50 (digest min) to proceed
+3. **Duplicate Check?** — Not notified for same job in last 7 days (Redis TTL)
+4. **Not Dismissed?** — Recommendation not marked as dismissed
+5. **Quiet Hours?** — Push/SMS suppressed during configured quiet window; rescheduled for after
+6. **Frequency Limit?** — Within daily total and instant alert limits (downgrades to digest)
+7. **Channel Filter?** — Final channel list filtered by user preferences
+
+### Score → Channel Routing
+
+| Match Score | Delivery Mode |
+|---|---|
+| ≥ 90 | Instant Push **+** Email |
+| 80–89 | Instant Push only |
+| 70–79 | Instant Email only |
+| 50–69 | Daily Digest |
+| < 50 | Skip |
+
+### Digest Schedule
+
+| Digest | Schedule |
+|---|---|
+| Daily | Mon–Fri, 17:00 (server time) |
+| Weekly | Sunday, 18:00 (server time) |
+
+### Queue Architecture
+
+```
+notification-queue   → main fan-out router
+email-queue          → EmailProcessor (SendGrid SMTP)
+push-queue           → PushProcessor (FCM v1 REST)
+sms-queue            → SmsProcessor (Twilio — feature-flagged OFF)
+digest-queue         → DigestProcessor (aggregated HTML email)
+dead-letter-queue    → Failed jobs after max retries
+```
+
+### New Environment Variables (Phase 6)
+
+| Variable | Default | Description |
+|---|---|---|
+| `SENDGRID_API_KEY` | — | SendGrid API key (or any SMTP) |
+| `FCM_PROJECT_ID` | — | Firebase project ID |
+| `FCM_PRIVATE_KEY` | — | Firebase service account private key |
+| `FCM_CLIENT_EMAIL` | — | Firebase service account email |
+| `TWILIO_ENABLED` | `false` | Enable SMS via Twilio |
+| `NOTIF_THRESHOLD_INSTANT_PUSH_EMAIL` | `90` | Score for Push + Email |
+| `NOTIF_THRESHOLD_PUSH_ONLY` | `80` | Score for Push only |
+| `NOTIF_THRESHOLD_EMAIL_ONLY` | `70` | Score for Email only |
+| `NOTIF_THRESHOLD_DIGEST_ONLY` | `50` | Score for Digest |
+| `NOTIF_MAX_PER_DAY` | `10` | Global daily notification limit |
+| `NOTIF_MAX_INSTANT_PER_DAY` | `5` | Global instant alert limit |
+| `NOTIF_MAX_RETRIES` | `3` | Max delivery retry attempts |
+
+---
+
 ## Roadmap
 
 | Phase | Description |
 |---|---|
 | ✅ **Phase 0** | Foundation — monorepo, infra, health endpoint, logging |
-| 🔜 Phase 1 | Authentication — JWT + refresh tokens, user model |
-| Phase 2 | Core entities — Intern, Company, Application models |
-| Phase 3 | AI Matching — embedding-based recommendation engine |
-| Phase 4 | Notifications — push notifications, email (BullMQ) |
-| Phase 5 | Analytics — dashboard, reporting, data export |
+| ✅ **Phase 1** | Authentication — JWT + refresh tokens, user model |
+| ✅ **Phase 2** | Core Profiles & Onboarding — Profile, Skills, Resume, Preferences |
+| ✅ **Phase 3** | Company Intelligence & Tracking |
+| ✅ **Phase 4** | Internship Collection Engine (BullMQ scrapers) |
+| ✅ **Phase 5** | AI Matching & Recommendation Engine |
+| ✅ **Phase 6** | Notification Intelligence Engine (Email/Push/SMS/Digest) |
+| Phase 7 | Analytics Dashboard & Reporting |
 
 ---
 

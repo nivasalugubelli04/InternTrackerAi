@@ -4,34 +4,34 @@ import {
   Text,
   StyleSheet,
   ActivityIndicator,
-  type ViewStyle,
+  type TouchableOpacityProps,
 } from 'react-native';
 
 import { Colors, Typography, Spacing, BorderRadius } from '../../theme';
 
-interface PrimaryButtonProps {
-  onPress: () => void;
+interface PrimaryButtonProps extends TouchableOpacityProps {
   title: string;
   isLoading?: boolean;
-  disabled?: boolean;
-  style?: ViewStyle;
+  loading?: boolean;
 }
 
 export function PrimaryButton({
-  onPress,
   title,
-  isLoading = false,
-  disabled = false,
+  isLoading,
+  loading,
   style,
+  disabled,
+  ...props
 }: PrimaryButtonProps): React.ReactElement {
+  const isButtonLoading = isLoading || loading;
   return (
     <TouchableOpacity
-      style={[styles.button, (disabled || isLoading) && styles.buttonDisabled, style]}
-      onPress={onPress}
-      disabled={disabled || isLoading}
+      style={[styles.button, (disabled || isButtonLoading) && styles.buttonDisabled, style]}
+      disabled={disabled || isButtonLoading}
       activeOpacity={0.8}
+      {...props}
     >
-      {isLoading ? (
+      {isButtonLoading ? (
         <ActivityIndicator color={Colors.white} />
       ) : (
         <Text style={styles.text}>{title}</Text>

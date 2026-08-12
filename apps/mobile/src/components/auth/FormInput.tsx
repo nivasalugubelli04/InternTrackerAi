@@ -12,44 +12,43 @@ import { useController } from 'react-hook-form';
 import { Colors, Typography, Spacing, BorderRadius } from '../../theme';
 
 interface FormInputProps<T extends FieldValues> extends TextInputProps {
-  name: FieldPath<T>;
-  control: Control<T>;
+  name?: FieldPath<T>;
+  control?: Control<T>;
   label: string;
-  placeholder?: string;
+  error?: string;
 }
 
 export function FormInput<T extends FieldValues>({
   name,
   control,
   label,
-  placeholder,
-  secureTextEntry,
-  keyboardType,
-  autoCapitalize = 'none',
-  autoComplete,
+  error: manualError,
+  ...textInputProps
 }: FormInputProps<T>): React.ReactElement {
-  const {
-    field: { value, onChange, onBlur },
-    fieldState: { error },
-  } = useController({ name, control });
+  let rhfProps = {};
+  let fieldError = manualError;
+
+  if (name && control) {
+    const { field, fieldState } = useController({ name, control });
+    rhfProps = {
+      value: field.value as string,
+      onChangeText: field.onChange,
+      onBlur: field.onBlur,
+    };
+    fieldError = fieldState.error?.message ?? manualError;
+  }
 
   return (
     <View style={styles.container}>
       <Text style={styles.label}>{label}</Text>
       <TextInput
-        style={[styles.input, error ? styles.inputError : null]}
-        value={value as string}
-        onChangeText={onChange}
-        onBlur={onBlur}
-        placeholder={placeholder}
+        style={[styles.input, fieldError ? styles.inputError : null, textInputProps.style]}
         placeholderTextColor={Colors.text.muted}
-        secureTextEntry={secureTextEntry}
-        keyboardType={keyboardType}
-        autoCapitalize={autoCapitalize}
-        autoComplete={autoComplete}
         selectionColor={Colors.brand.purple}
+        {...rhfProps}
+        {...textInputProps}
       />
-      {error ? <Text style={styles.errorText}>{error.message}</Text> : null}
+      {fieldError ? <Text style={styles.errorText}>{fieldError}</Text> : null}
     </View>
   );
 }

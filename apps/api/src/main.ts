@@ -6,6 +6,7 @@ import { NestFactory } from '@nestjs/core';
 import type { NestFastifyApplication } from '@nestjs/platform-fastify';
 import { FastifyAdapter } from '@nestjs/platform-fastify';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import helmet from '@fastify/helmet';
 import { Logger } from 'nestjs-pino';
 
 import { AppModule } from './app.module';
@@ -39,6 +40,11 @@ async function bootstrap(): Promise<void> {
 
   // ── API versioning ────────────────────────────────────────────────────────
   app.setGlobalPrefix(appConfig.prefix);
+
+  // ── Security Headers ──────────────────────────────────────────────────────
+  await app.register(helmet, {
+    contentSecurityPolicy: appConfig.nodeEnv === 'production',
+  });
 
   // ── CORS ──────────────────────────────────────────────────────────────────
   app.enableCors({

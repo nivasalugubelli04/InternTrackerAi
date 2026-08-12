@@ -1,0 +1,44 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Images
+        run: |
+          docker build -t interntracker-api:staging -f apps/api/Dockerfile .
+          docker build -t interntracker-admin:staging -f apps/admin/Dockerfile .
+
+      # Note: Placeholder for actual deployment logic (e.g., AWS ECS, Vercel, etc.)
+      - name: Push to Registry (Placeholder)
+        run: |
+          echo "Simulating push to container registry (e.g. Amazon ECR)..."
+          # aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $ECR_REGISTRY
+          # docker push $ECR_REGISTRY/interntracker-api:staging
+          # docker push $ECR_REGISTRY/interntracker-admin:staging
+          echo "Push complete."
+
+      - name: Trigger Staging Deployment (Placeholder)
+        run: |
+          echo "Simulating ECS service update..."
+          # aws ecs update-service --cluster InternTracker-Staging --service api-service --force-new-deployment
+          echo "Deployment triggered."

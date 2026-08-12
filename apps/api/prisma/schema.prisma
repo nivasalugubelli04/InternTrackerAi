@@ -39,44 +39,266 @@ model SystemInfo {
 enum UserRole {
   USER
   ADMIN
+  SUPER_ADMIN
 }
 
 model User {
-  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email            String    @unique @db.VarChar(255)
-  passwordHash     String    @db.VarChar(255)
-  firstName        String?   @db.VarChar(100)
-  lastName         String?   @db.VarChar(100)
-  role             UserRole  @default(USER)
-  isEmailVerified  Boolean   @default(false)
-  isActive         Boolean   @default(true)
-  loginAttempts    Int       @default(0)
-  lockedUntil      DateTime?
-  lastLoginAt      DateTime?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email           String    @unique @db.VarChar(255)
+  passwordHash    String    @db.VarChar(255)
+  firstName       String?   @db.VarChar(100)
+  lastName        String?   @db.VarChar(100)
+  role            UserRole  @default(USER)
+  isEmailVerified Boolean   @default(false)
+  isActive        Boolean   @default(true)
+  loginAttempts   Int       @default(0)
+  lockedUntil     DateTime?
+  lastLoginAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   // Relations
-  refreshTokens          RefreshToken[]
+  refreshTokens           RefreshToken[]
   emailVerificationTokens EmailVerificationToken[]
-  passwordResetTokens    PasswordResetToken[]
+  passwordResetTokens     PasswordResetToken[]
+  profile                 Profile?
+  userSkills              UserSkill[]
+  careerPreference        CareerPreference?
+  resume                  Resume?
+  notificationPreference  NotificationPreference?
+  trackedCompanies        TrackedCompany[]
+  matchScores             MatchScore[]
+  recommendations         Recommendation[]
+  // Phase 6
+  notifications           Notification[]
+  // Phase 7
+  aiConversations         AiConversation[]
+  aiAnalyses              AiAnalysis[]
+  generatedDocuments      GeneratedDocument[]
+  learningRoadmaps        LearningRoadmap[]
+  interviewPreparations   InterviewPreparation[]
+  // Phase 8
+  savedJobs               SavedJob[]
+  dismissedJobs           DismissedJob[]
+  jobInteractions         JobInteraction[]
+
+  // Phase 9
+  applications Application[]
+
+  // Phase 10
+  adminAuditLogs      AdminAuditLog[]
+  updatedFeatureFlags FeatureFlag[]
 
   @@index([email])
   @@map("users")
 }
 
-model RefreshToken {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  /// SHA-256 hash of the raw token — never store raw tokens
-  tokenHash   String   @unique @db.VarChar(64)
-  userId      String   @db.Uuid
-  expiresAt   DateTime
-  isRevoked   Boolean  @default(false)
-  ipAddress   String?  @db.VarChar(45)
-  userAgent   String?  @db.VarChar(512)
-  createdAt   DateTime @default(now())
+// =============================================================================
+// Phase 2 — Onboarding & Profile Management
+//
+// Architectural Decisions:
+//  - Profile is 1:1 with User (separate table keeps auth lean).
+//  - Skill is a global catalog; UserSkill is the join with proficiency.
+//  - CareerPreference uses String[] (PostgreSQL array) for multi-selects.
+//  - Resume stores metadata only — file bytes live in cloud storage (Phase 3).
+//  - onboardingCompletedAt drives the mobile wizard gate.
+//  - All monetary values (stipend) stored as Int cents-equivalent for safety.
+// =============================================================================
 
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+enum Gender {
+  MALE
+  FEMALE
+  NON_BINARY
+  PREFER_NOT_TO_SAY
+}
+
+enum SkillCategory {
+  PROGRAMMING
+  FRONTEND
+  BACKEND
+  DATABASE
+  AI_ML
+  CLOUD
+  DEVOPS
+  MOBILE
+  TESTING
+  VERSION_CONTROL
+  SOFT_SKILLS
+  OTHER
+}
+
+enum ProficiencyLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  EXPERT
+}
+
+enum WorkMode {
+  REMOTE
+  HYBRID
+  ONSITE
+}
+
+model Profile {
+  id     String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId String @unique @db.Uuid
+
+  // Personal
+  phone       String?   @db.VarChar(20)
+  gender      Gender?
+  dateOfBirth DateTime? @db.Date
+  bio         String?   @db.VarChar(500)
+  headline    String?   @db.VarChar(150)
+  avatarUrl   String?   @db.VarChar(500)
+
+  // Location
+  city    String? @db.VarChar(100)
+  state   String? @db.VarChar(100)
+  country String? @db.VarChar(100)
+
+  // Education
+  college        String?  @db.VarChar(200)
+  university     String?  @db.VarChar(200)
+  degree         String?  @db.VarChar(100)
+  branch         String?  @db.VarChar(100)
+  yearOfStudy    Int?
+  cgpa           Decimal? @db.Decimal(4, 2)
+  graduationYear Int?
+
+  // Social
+  linkedinUrl  String? @db.VarChar(500)
+  githubUrl    String? @db.VarChar(500)
+  portfolioUrl String? @db.VarChar(500)
+
+  // Onboarding state
+  onboardingCompletedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("profiles")
+}
+
+model Skill {
+  id       String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name     String        @unique @db.VarChar(100)
+  category SkillCategory
+  isActive Boolean       @default(true)
+
+  userSkills UserSkill[]
+
+  @@index([category])
+  @@index([name])
+  @@map("skills")
+}
+
+model UserSkill {
+  userId      String           @db.Uuid
+  skillId     String           @db.Uuid
+  proficiency ProficiencyLevel @default(BEGINNER)
+  addedAt     DateTime         @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skill Skill @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@id([userId, skillId])
+  @@index([userId])
+  @@map("user_skills")
+}
+
+model CareerPreference {
+  userId              String     @id @db.Uuid
+  preferredRoles      String[]   @default([])
+  preferredLocations  String[]   @default([])
+  preferredIndustries String[]   @default([])
+  preferredWorkMode   WorkMode[]
+  minimumStipend      Int?
+  internshipDuration  String?    @db.VarChar(50)
+  preferredCompanies  String[]   @default([])
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("career_preferences")
+}
+
+model Resume {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String   @unique @db.Uuid
+  fileName   String   @db.VarChar(255)
+  /// Cloud storage URL or local path
+  fileUrl    String   @db.VarChar(1000)
+  fileSize   Int
+  mimeType   String   @db.VarChar(100)
+  uploadedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("resumes")
+}
+
+model NotificationPreference {
+  userId String @id @db.Uuid
+
+  // ── Channel toggles ──────────────────────────────────────────────────────
+  emailEnabled Boolean @default(true)
+  pushEnabled  Boolean @default(true)
+  /// SMS is behind a feature flag — disabled by default
+  smsEnabled   Boolean @default(false)
+
+  // ── Digest settings ───────────────────────────────────────────────────────
+  dailyDigest  Boolean @default(false)
+  weeklyDigest Boolean @default(true)
+  /// HH:MM in 24h format, e.g. "17:00"
+  digestTime   String? @default("17:00") @db.VarChar(5)
+  /// 0 = Sunday … 6 = Saturday; null = daily
+  digestDay    Int?
+
+  // ── Quiet hours ───────────────────────────────────────────────────────────
+  /// HH:MM in 24h format, e.g. "22:00"
+  quietHoursStart String? @db.VarChar(5)
+  /// HH:MM in 24h format, e.g. "08:00"
+  quietHoursEnd   String? @db.VarChar(5)
+
+  // ── Frequency limits ──────────────────────────────────────────────────────
+  /// Maximum total notifications per day (0 = unlimited)
+  maxNotificationsPerDay Int @default(10)
+  /// Maximum instant (non-digest) alerts per day
+  maxInstantAlertsPerDay Int @default(5)
+
+  // ── Channel priority order (comma-separated: "push,email,sms") ───────────
+  channelPriority String @default("push,email") @db.VarChar(50)
+
+  // ── Device tokens ─────────────────────────────────────────────────────────
+  /// Firebase Cloud Messaging device token
+  fcmToken String? @db.VarChar(1000)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification_preferences")
+}
+
+model RefreshToken {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// SHA-256 hash of the raw token — never store raw tokens
+  tokenHash String   @unique @db.VarChar(64)
+  userId    String   @db.Uuid
+  expiresAt DateTime
+  isRevoked Boolean  @default(false)
+  ipAddress String?  @db.VarChar(45)
+  userAgent String?  @db.VarChar(512)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([tokenHash])
@@ -92,7 +314,7 @@ model EmailVerificationToken {
   usedAt    DateTime?
   createdAt DateTime  @default(now())
 
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@map("email_verification_tokens")
@@ -107,8 +329,692 @@ model PasswordResetToken {
   usedAt    DateTime?
   createdAt DateTime  @default(now())
 
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@map("password_reset_tokens")
+}
+
+// =============================================================================
+// Phase 3 — Company Intelligence
+// =============================================================================
+
+enum ParserType {
+  GREENHOUSE
+  LEVER
+  WORKDAY
+  ASHBY
+  SMARTRECRUITERS
+  GENERIC_HTML
+  CUSTOM
+  UNASSIGNED
+}
+
+enum JobPostingStatus {
+  ACTIVE
+  CLOSED
+  EXPIRED
+}
+
+enum ScrapeJobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum TrackingPriority {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+model Company {
+  id            String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name          String     @db.VarChar(255)
+  slug          String     @unique @db.VarChar(255)
+  logoUrl       String?    @db.VarChar(1000)
+  website       String?    @db.VarChar(1000)
+  careerPageUrl String?    @db.VarChar(1000)
+  industry      String?    @db.VarChar(255)
+  description   String?
+  headquarters  String?    @db.VarChar(255)
+  companySize   String?    @db.VarChar(50)
+  foundedYear   Int?
+  linkedinUrl   String?    @db.VarChar(1000)
+  isActive      Boolean    @default(true)
+  parserType    ParserType @default(UNASSIGNED)
+  lastCheckedAt DateTime?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  tags           CompanyTag[]
+  categories     CompanyCategory[]
+  trackedBy      TrackedCompany[]
+  jobPostings    JobPosting[]
+  rawJobPostings RawJobPosting[]
+  scrapeJobs     ScrapeJob[]
+  parserHealth   ParserHealth?
+
+  @@index([name])
+  @@index([industry])
+  @@map("companies")
+}
+
+model CompanyTag {
+  id   String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name String @unique @db.VarChar(100)
+
+  companies Company[]
+
+  @@map("company_tags")
+}
+
+model CompanyCategory {
+  id   String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name String  @unique @db.VarChar(100)
+  icon String? @db.VarChar(50)
+
+  companies Company[]
+
+  @@map("company_categories")
+}
+
+model TrackedCompany {
+  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String           @db.Uuid
+  companyId       String           @db.Uuid
+  trackingEnabled Boolean          @default(true)
+  priority        TrackingPriority @default(MEDIUM)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, companyId])
+  @@index([userId])
+  @@index([companyId])
+  @@map("tracked_companies")
+}
+
+// =============================================================================
+// Phase 4 — Internship Collection Engine
+// =============================================================================
+
+model JobPosting {
+  id               String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId        String           @db.Uuid
+  externalJobId    String?          @db.VarChar(255)
+  title            String           @db.VarChar(500)
+  department       String?          @db.VarChar(255)
+  employmentType   String?          @db.VarChar(100)
+  experienceLevel  String?          @db.VarChar(100)
+  location         String?          @db.VarChar(500)
+  workMode         WorkMode?
+  stipend          Int?
+  salary           Int?
+  duration         String?          @db.VarChar(100)
+  description      String?
+  requirements     String[]         @default([])
+  responsibilities String[]         @default([])
+  benefits         String[]         @default([])
+  applicationUrl   String           @db.VarChar(1000)
+  postedDate       DateTime?
+  deadline         DateTime?
+  status           JobPostingStatus @default(ACTIVE)
+  source           ParserType       @default(GENERIC_HTML)
+  hash             String           @unique @db.VarChar(64)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  company               Company                @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  matchScores           MatchScore[]
+  recommendations       Recommendation[]
+  // Phase 6
+  notifications         Notification[]
+  // Phase 7
+  aiAnalyses            AiAnalysis[]
+  generatedDocuments    GeneratedDocument[]
+  interviewPreparations InterviewPreparation[]
+  // Phase 8
+  savedByUsers          SavedJob[]
+  dismissedByUsers      DismissedJob[]
+  interactions          JobInteraction[]
+
+  // Phase 9
+  applications Application[]
+
+  @@index([companyId])
+  @@index([title])
+  @@index([location])
+  @@index([status])
+  @@index([hash])
+  @@map("job_postings")
+}
+
+model RawJobPosting {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId       String   @db.Uuid
+  rawJson         Json
+  htmlSnapshotUrl String?  @db.VarChar(1000)
+  scrapedAt       DateTime @default(now())
+  parserVersion   String   @default("1.0.0") @db.VarChar(20)
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@map("raw_job_postings")
+}
+
+model ScrapeJob {
+  id           String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId    String          @db.Uuid
+  startedAt    DateTime        @default(now())
+  completedAt  DateTime?
+  status       ScrapeJobStatus @default(PENDING)
+  jobsFound    Int             @default(0)
+  jobsAdded    Int             @default(0)
+  jobsUpdated  Int             @default(0)
+  jobsRemoved  Int             @default(0)
+  durationMs   Int?
+  errorMessage String?
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([status])
+  @@map("scrape_jobs")
+}
+
+model ParserHealth {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId      String    @unique @db.Uuid
+  parserName     String    @db.VarChar(100)
+  successRate    Float     @default(100.0)
+  lastSuccess    DateTime?
+  lastFailure    DateTime?
+  averageRuntime Float     @default(0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@map("parser_healths")
+}
+
+// =============================================================================
+// Phase 5 — AI Matching Engine
+// =============================================================================
+
+enum RecommendationPriority {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum RecommendationType {
+  PERFECT_MATCH
+  STRONG_MATCH
+  GOOD_MATCH
+  EXPLORE
+  LOW_RELEVANCE
+}
+
+model MatchScore {
+  id                     String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId                 String   @db.Uuid
+  jobId                  String   @db.Uuid
+  overallScore           Float
+  skillScore             Float
+  educationScore         Float
+  locationScore          Float
+  cgpaScore              Float
+  companyPreferenceScore Float
+  stipendScore           Float
+  experienceScore        Float
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  user User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job  JobPosting @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, jobId])
+  @@index([userId])
+  @@index([jobId])
+  @@map("match_scores")
+}
+
+model Recommendation {
+  id                 String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId             String                 @db.Uuid
+  jobId              String                 @db.Uuid
+  rank               Int
+  priority           RecommendationPriority @default(MEDIUM)
+  recommendationType RecommendationType     @default(EXPLORE)
+  isViewed           Boolean                @default(false)
+  isSaved            Boolean                @default(false)
+  isDismissed        Boolean                @default(false)
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+
+  user    User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job     JobPosting             @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  reasons RecommendationReason[]
+
+  @@unique([userId, jobId])
+  @@index([userId])
+  @@index([jobId])
+  @@index([recommendationType])
+  @@index([priority])
+  @@map("recommendations")
+}
+
+model RecommendationReason {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  recommendationId String   @db.Uuid
+  reasonType       String   @db.VarChar(100)
+  description      String   @db.VarChar(500)
+  weight           Float    @default(0.0)
+  createdAt        DateTime @default(now())
+
+  recommendation Recommendation @relation(fields: [recommendationId], references: [id], onDelete: Cascade)
+
+  @@index([recommendationId])
+  @@map("recommendation_reasons")
+}
+
+// =============================================================================
+// Phase 6 — Notification Intelligence Engine
+// =============================================================================
+
+enum NotificationChannel {
+  EMAIL
+  PUSH
+  SMS
+}
+
+enum NotificationStatus {
+  PENDING
+  QUEUED
+  SENT
+  DELIVERED
+  FAILED
+  CANCELLED
+}
+
+enum NotificationPriority {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum NotificationEventType {
+  CREATED
+  QUEUED
+  SENT
+  DELIVERED
+  OPENED
+  CLICKED
+  FAILED
+  BOUNCED
+  UNSUBSCRIBED
+  RETRY
+}
+
+enum DeliveryAttemptStatus {
+  SUCCESS
+  FAILURE
+  RETRY
+}
+
+model Notification {
+  id           String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId       String               @db.Uuid
+  /// Linked job posting — null for digest / system notifications
+  jobId        String?              @db.Uuid
+  /// Human-readable category, e.g. "INSTANT_ALERT", "DAILY_DIGEST", "WEEKLY_DIGEST"
+  type         String               @db.VarChar(50)
+  title        String               @db.VarChar(255)
+  message      String
+  channel      NotificationChannel
+  priority     NotificationPriority @default(MEDIUM)
+  status       NotificationStatus   @default(PENDING)
+  /// When the notification is scheduled to be sent (null = immediate)
+  scheduledFor DateTime?
+  sentAt       DateTime?
+  readAt       DateTime?
+  clickedAt    DateTime?
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+
+  user             User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job              JobPosting?         @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  events           NotificationEvent[]
+  deliveryAttempts DeliveryAttempt[]
+
+  @@index([userId])
+  @@index([jobId])
+  @@index([status])
+  @@index([channel])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+model NotificationEvent {
+  id             String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  notificationId String                @db.Uuid
+  eventType      NotificationEventType
+  /// ISO timestamp of the event
+  timestamp      DateTime              @default(now())
+  /// Provider response payload, tracking data, etc.
+  metadata       Json?
+
+  notification Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+
+  @@index([notificationId])
+  @@index([eventType])
+  @@map("notification_events")
+}
+
+model DeliveryAttempt {
+  id             String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  notificationId String                @db.Uuid
+  attempt        Int                   @default(1)
+  status         DeliveryAttemptStatus
+  /// Provider name: "sendgrid", "fcm", "twilio"
+  provider       String                @db.VarChar(50)
+  /// Raw provider response or error message
+  response       String?
+  createdAt      DateTime              @default(now())
+
+  notification Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+
+  @@index([notificationId])
+  @@index([status])
+  @@map("delivery_attempts")
+}
+
+// =============================================================================
+// Phase 7 — AI Career Copilot & LLM Intelligence
+// =============================================================================
+
+model AiConversation {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String   @db.Uuid
+  title       String   @db.VarChar(255)
+  contextType String   @default("NONE") @db.VarChar(50) // "JOB", "RESUME", "NONE"
+  contextId   String?  @db.Uuid
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages AiMessage[]
+
+  @@index([userId])
+  @@map("ai_conversations")
+}
+
+model AiMessage {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  conversationId String   @db.Uuid
+  role           String   @db.VarChar(50) // "user", "assistant", "system"
+  content        String
+  provider       String?  @db.VarChar(100)
+  model          String?  @db.VarChar(100)
+  tokenUsage     Json? // { inputTokens: Int, outputTokens: Int, totalTokens: Int }
+  createdAt      DateTime @default(now())
+
+  conversation AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@map("ai_messages")
+}
+
+model AiAnalysis {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId       String   @db.Uuid
+  jobId        String?  @db.Uuid
+  analysisType String   @db.VarChar(100) // "RESUME_ANALYSIS", "JOB_SUMMARY", "MATCH_EXPLANATION", "SKILL_GAP", "COMPARISON"
+  inputHash    String   @db.VarChar(64)
+  resultJson   Json
+  provider     String   @db.VarChar(100)
+  model        String   @db.VarChar(100)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job  JobPosting? @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, jobId, analysisType])
+  @@index([userId])
+  @@index([jobId])
+  @@index([inputHash])
+  @@map("ai_analyses")
+}
+
+model GeneratedDocument {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId       String   @db.Uuid
+  jobId        String?  @db.Uuid
+  documentType String   @db.VarChar(100) // "COVER_LETTER", "REFERRAL_MESSAGE"
+  content      String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job  JobPosting? @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([jobId])
+  @@map("generated_documents")
+}
+
+model LearningRoadmap {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId        String   @db.Uuid
+  targetRole    String   @db.VarChar(255)
+  targetCompany String?  @db.VarChar(255)
+  roadmapJson   Json
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("learning_roadmaps")
+}
+
+model InterviewPreparation {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String   @db.Uuid
+  jobId       String   @db.Uuid
+  contentJson Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job  JobPosting @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([jobId])
+  @@map("interview_preparations")
+}
+
+// =============================================================================
+// Phase 8 — Opportunity Feed, Search & Discovery
+// =============================================================================
+
+enum DismissReason {
+  NOT_RELEVANT
+  WRONG_LOCATION
+  MISSING_SKILLS
+  ALREADY_APPLIED
+  NOT_INTERESTED
+  OTHER
+}
+
+enum InteractionType {
+  VIEW
+  SAVE
+  UNSAVE
+  DISMISS
+  APPLY_CLICK
+  AI_COPILOT_OPEN
+  SEARCH
+  FILTER
+}
+
+model SavedJob {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @db.Uuid
+  jobId     String   @db.Uuid
+  createdAt DateTime @default(now())
+
+  user User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job  JobPosting @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, jobId])
+  @@index([userId])
+  @@index([jobId])
+  @@map("saved_jobs")
+}
+
+model DismissedJob {
+  id        String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String        @db.Uuid
+  jobId     String        @db.Uuid
+  reason    DismissReason @default(NOT_INTERESTED)
+  createdAt DateTime      @default(now())
+
+  user User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job  JobPosting @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, jobId])
+  @@index([userId])
+  @@index([jobId])
+  @@map("dismissed_jobs")
+}
+
+model JobInteraction {
+  id              String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String          @db.Uuid
+  jobId           String?         @db.Uuid
+  interactionType InteractionType
+  /// Search query text — only set for SEARCH interactions
+  query           String?         @db.VarChar(500)
+  /// JSON object of applied filters — only set for FILTER interactions
+  filtersJson     Json?
+  createdAt       DateTime        @default(now())
+
+  user User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job  JobPosting? @relation(fields: [jobId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([jobId])
+  @@index([interactionType])
+  @@map("job_interactions")
+}
+
+// =============================================================================
+// Phase 9 — Application Tracking & Career Progress Dashboard
+// =============================================================================
+
+enum ApplicationStatus {
+  DISCOVERED
+  SAVED
+  APPLIED
+  ASSESSMENT
+  INTERVIEW
+  OFFER
+  REJECTED
+  WITHDRAWN
+}
+
+model Application {
+  id                  String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId              String            @db.Uuid
+  jobId               String            @db.Uuid
+  status              ApplicationStatus @default(SAVED)
+  appliedAt           DateTime?
+  applicationUrl      String?           @db.VarChar(1000)
+  companyNameSnapshot String?           @db.VarChar(255)
+  jobTitleSnapshot    String?           @db.VarChar(500)
+  locationSnapshot    String?           @db.VarChar(500)
+  notes               String?
+  salaryExpectation   Int?
+  source              String?           @db.VarChar(100)
+  nextAction          String?           @db.VarChar(255)
+  nextActionDate      DateTime?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  closedAt            DateTime?
+
+  user   User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job    JobPosting         @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  events ApplicationEvent[]
+
+  @@unique([userId, jobId])
+  @@index([userId])
+  @@index([jobId])
+  @@index([status])
+  @@index([appliedAt])
+  @@index([nextActionDate])
+  @@map("applications")
+}
+
+model ApplicationEvent {
+  id            String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  applicationId String             @db.Uuid
+  fromStatus    ApplicationStatus?
+  toStatus      ApplicationStatus
+  note          String?
+  createdAt     DateTime           @default(now())
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId])
+  @@index([createdAt])
+  @@map("application_events")
+}
+
+// =============================================================================
+// Phase 10 — Admin Dashboard & System Monitoring
+// =============================================================================
+
+model AdminAuditLog {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  adminUserId  String   @db.Uuid
+  action       String   @db.VarChar(100)
+  resourceType String   @db.VarChar(100)
+  resourceId   String?  @db.VarChar(255)
+  metadata     Json?
+  ipAddress    String?  @db.VarChar(45)
+  userAgent    String?
+  createdAt    DateTime @default(now())
+
+  adminUser User @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+
+  @@index([adminUserId])
+  @@index([action])
+  @@index([resourceType, resourceId])
+  @@index([createdAt])
+  @@map("admin_audit_logs")
+}
+
+model FeatureFlag {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  key              String   @unique @db.VarChar(100)
+  isEnabled        Boolean  @default(false)
+  description      String?
+  updatedByAdminId String?  @db.Uuid
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  updatedByAdmin User? @relation(fields: [updatedByAdminId], references: [id], onDelete: SetNull)
+
+  @@index([key])
+  @@map("feature_flags")
 }

@@ -39,4 +39,18 @@ export class HealthController {
   async check(): Promise<HealthReport> {
     return this.healthService.getHealth();
   }
+
+  @Get('live')
+  @Public()
+  @HttpCode(HttpStatus.OK)
+  live(): { status: string } {
+    return { status: 'ok' };
+  }
+
+  @Get('ready')
+  @Public()
+  @HttpCode(HttpStatus.OK)
+  async ready(): Promise<HealthReport> {
+    return this.healthService.getHealth();
+  }
 }
