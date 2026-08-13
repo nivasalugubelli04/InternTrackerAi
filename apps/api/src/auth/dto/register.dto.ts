@@ -26,6 +26,11 @@ export class RegisterDto {
   @ApiProperty({ example: 'Doe', description: 'Last name', required: false })
   @IsOptional()
   @IsString()
-  @MaxLength(100)
+  @IsOptional()
   lastName?: string;
+
+  @ApiProperty({ example: 'BETA123', description: 'Beta invitation code', required: false })
+  @IsString()
+  @IsOptional()
+  invitationCode?: string;
 }

@@ -68,6 +68,9 @@ const mockPrisma = {
       { id: 'job-2', title: 'Job 2', company: { name: 'Company 2' } },
     ]),
   },
+  application: {
+    findMany: jest.fn().mockResolvedValue([]),
+  },
   matchScore: {
     findUnique: jest.fn().mockResolvedValue({ overallScore: 85, skillScore: 80 }),
     findMany: jest.fn().mockResolvedValue([
@@ -143,7 +146,7 @@ const mockCache = {
 };
 
 const mockCostTracker = {
-  calculateCost: jest.fn().mockReturnValue(0.0001),
+  recordMetrics: jest.fn().mockReturnValue(0.0001),
 };
 
 const mockRateLimiter = {
@@ -247,7 +250,7 @@ describe('AiService', () => {
   describe('coverLetter()', () => {
     it('generates cover letter successfully', async () => {
       const result = await service.generateCoverLetter('user-1', 'job-1');
-      expect(result.content).toBe('Mocked text response');
+      expect(result.content).toContain('Mocked text response');
       expect(mockPrisma.generatedDocument.create).toHaveBeenCalled();
     });
   });

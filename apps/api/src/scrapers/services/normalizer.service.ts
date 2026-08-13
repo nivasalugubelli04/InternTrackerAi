@@ -4,6 +4,7 @@ import { Injectable } from '@nestjs/common';
 import type { ParserType } from '@prisma/client';
 import { WorkMode } from '@prisma/client';
 
+import { sanitizeHtml } from '../../common/utils/sanitize.util';
 import type { CollectedJob } from '../interfaces/ats-adapter.interface';
 
 export interface NormalizedJobData {
@@ -62,7 +63,7 @@ export class NormalizerService {
       ...(job.stipend !== undefined ? { stipend: job.stipend } : {}),
       ...(job.salary !== undefined ? { salary: job.salary } : {}),
       ...(job.duration ? { duration: job.duration } : {}),
-      ...(job.description ? { description: job.description } : {}),
+      ...(job.description ? { description: sanitizeHtml(job.description) } : {}),
       requirements: job.requirements || [],
       responsibilities: job.responsibilities || [],
       benefits: job.benefits || [],

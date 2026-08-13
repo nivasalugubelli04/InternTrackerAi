@@ -1,26 +1,38 @@
-import { Module } from '@nestjs/common';
-import { PrismaModule } from '../prisma/prisma.module';
-import { AdminAuditService } from './services/admin-audit.service';
-import { AdminDashboardService } from './services/admin-dashboard.service';
-import { AdminDashboardController } from './controllers/admin-dashboard.controller';
-import { AdminUsersController } from './controllers/admin-users.controller';
-import { AdminCompaniesController } from './controllers/admin-companies.controller';
-import { AdminLogsController } from './controllers/admin-logs.controller';
-import { AdminFeatureFlagsController } from './controllers/admin-feature-flags.controller';
-import { AdminUsersService } from './services/admin-users.service';
-import { AdminCompaniesService } from './services/admin-companies.service';
-import { AdminFeatureFlagsService } from './services/admin-feature-flags.service';
 import { BullModule } from '@nestjs/bullmq';
-import { SCRAPE_QUEUE } from '../queues/queue.constants';
+import { Module } from '@nestjs/common';
+
+import { PrismaModule } from '../prisma/prisma.module';
+import { SCRAPE_QUEUE, EMBEDDING_QUEUE } from '../queues/queue.constants';
+
+import { AdminCompaniesController } from './controllers/admin-companies.controller';
+import { AdminDashboardController } from './controllers/admin-dashboard.controller';
+import { AdminFeatureFlagsController } from './controllers/admin-feature-flags.controller';
+import { AdminLogsController } from './controllers/admin-logs.controller';
+import { AdminUsersController } from './controllers/admin-users.controller';
+import { AdminAuditService } from './services/admin-audit.service';
+import { AdminCompaniesService } from './services/admin-companies.service';
+import { AdminDashboardService } from './services/admin-dashboard.service';
+import { AdminFeatureFlagsService } from './services/admin-feature-flags.service';
+import { AdminUsersService } from './services/admin-users.service';
+import { AdminBetaController } from './controllers/admin-beta.controller';
+import { AdminBetaService } from './services/admin-beta.service';
+import { AdminRecommendationsController } from './controllers/admin-recommendations.controller';
+import { AdminRecommendationsService } from './services/admin-recommendations.service';
 
 @Module({
-  imports: [PrismaModule, BullModule.registerQueue({ name: SCRAPE_QUEUE })],
+  imports: [
+    PrismaModule, 
+    BullModule.registerQueue({ name: SCRAPE_QUEUE }),
+    BullModule.registerQueue({ name: EMBEDDING_QUEUE })
+  ],
   controllers: [
     AdminDashboardController,
     AdminUsersController,
     AdminCompaniesController,
     AdminLogsController,
     AdminFeatureFlagsController,
+    AdminBetaController,
+    AdminRecommendationsController,
   ],
   providers: [
     AdminAuditService,
@@ -28,6 +40,8 @@ import { SCRAPE_QUEUE } from '../queues/queue.constants';
     AdminUsersService,
     AdminCompaniesService,
     AdminFeatureFlagsService,
+    AdminBetaService,
+    AdminRecommendationsService,
   ],
   exports: [AdminAuditService],
 })

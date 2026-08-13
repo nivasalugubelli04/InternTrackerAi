@@ -4,6 +4,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 
 import { ScrapersModule } from '../scrapers/scrapers.module';
 
+import { DeadLetterListener } from './listeners/dead-letter.listener';
 import { ScrapeProcessor } from './processors/scrape.processor';
 import { CLEANUP_QUEUE, HEALTH_QUEUE, PARSER_QUEUE, SCRAPE_QUEUE } from './queue.constants';
 import { ScrapeSchedulerService } from './schedulers/scrape-scheduler.service';
@@ -39,7 +40,7 @@ import { ScrapeSchedulerService } from './schedulers/scrape-scheduler.service';
     ),
     ScrapersModule,
   ],
-  providers: [ScrapeProcessor, ScrapeSchedulerService],
+  providers: [ScrapeProcessor, ScrapeSchedulerService, DeadLetterListener],
   exports: [BullModule, ScrapeSchedulerService],
 })
 export class QueuesModule {}

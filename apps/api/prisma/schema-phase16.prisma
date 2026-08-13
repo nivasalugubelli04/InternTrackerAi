@@ -1,0 +1,90 @@
+
+// =============================================================================
+// Phase 16 — Growth, Referral, Engagement & Retention
+// =============================================================================
+
+enum ReferralStatus {
+  CREATED
+  CLICKED
+  REGISTERED
+  ACTIVATED
+  QUALIFIED
+  REWARDED
+  REJECTED
+  FLAGGED
+}
+
+model ReferralCampaign {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name            String   @db.VarChar(100)
+  description     String?  @db.Text
+  isActive        Boolean  @default(true)
+  rewardRulesJson Json     // E.g., { referrerReward: { type: 'PREMIUM_TRIAL', days: 7 }, refereeReward: { type: 'PREMIUM_TRIAL', days: 7 } }
+  qualifyRulesJson Json    // E.g., { requiredActions: ['PROFILE_COMPLETE', 'JOB_SAVED'] }
+  startDate       DateTime?
+  endDate         DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  referrals       Referral[]
+}
+
+model Referral {
+  id              String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  campaignId      String         @db.Uuid
+  referrerId      String         @db.Uuid
+  refereeId       String?        @unique @db.Uuid
+  referralCode    String         @unique @db.VarChar(50)
+  status          ReferralStatus @default(CREATED)
+  metadataJson    Json?          // IP address hash, user agent hash for anti-abuse
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  campaign        ReferralCampaign @relation(fields: [campaignId], references: [id])
+  referrer        User             @relation("ReferrerRelation", fields: [referrerId], references: [id], onDelete: Cascade)
+  referee         User?            @relation("RefereeRelation", fields: [refereeId], references: [id], onDelete: SetNull)
+  rewards         ReferralReward[]
+
+  @@index([referrerId])
+  @@index([status])
+}
+
+model ReferralReward {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  referralId   String   @db.Uuid
+  userId       String   @db.Uuid
+  rewardType   String   @db.VarChar(50) // e.g., 'PREMIUM_TRIAL', 'AI_USAGE_BONUS'
+  rewardValue  Int      // e.g., 7 (days), 50 (tokens)
+  isRedeemed   Boolean  @default(false)
+  redeemedAt   DateTime?
+  createdAt    DateTime @default(now())
+
+  referral     Referral @relation(fields: [referralId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Achievement {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name            String   @unique @db.VarChar(100)
+  description     String   @db.Text
+  iconUrl         String?  @db.VarChar(255)
+  criteriaJson    Json     // E.g., { event: 'profile_complete', count: 1 }
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  userAchievements UserAchievement[]
+}
+
+model UserAchievement {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId        String   @db.Uuid
+  achievementId String   @db.Uuid
+  unlockedAt    DateTime @default(now())
+
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+}

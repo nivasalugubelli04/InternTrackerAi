@@ -1,16 +1,20 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { ApplicationStatus, Prisma } from '@prisma/client';
+
 import { NotificationsService } from '../notifications/services/notifications.service';
+import { PrismaService } from '../prisma/prisma.service';
+import { EngagementTrackerService } from '../engagement/services/engagement-tracker.service';
+
+import { ChangeApplicationStatusDto } from './dto/change-status.dto';
 import { CreateApplicationDto } from './dto/create-application.dto';
 import { UpdateApplicationDto } from './dto/update-application.dto';
-import { ChangeApplicationStatusDto } from './dto/change-status.dto';
-import { ApplicationStatus, Prisma } from '@prisma/client';
 
 @Injectable()
 export class ApplicationsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notificationsService: NotificationsService,
+    private readonly engagementTracker: EngagementTrackerService,
   ) {}
 
   async create(userId: string, dto: CreateApplicationDto) {
@@ -65,6 +69,9 @@ export class ApplicationsService {
         application.nextAction ?? undefined,
       );
     }
+
+    // Phase 16: Track engagement event
+    await this.engagementTracker.trackAction(userId, 'APPLICATION_CREATED');
 
     return application;
   }

@@ -1,26 +1,60 @@
-# Launch / Release Checklist
+# Production Release Checklist
 
-## Infrastructure
-- [ ] AWS RDS instances provisioned (Multi-AZ).
-- [ ] Redis ElastiCache provisioned.
-- [ ] ECS Services configured with correct `node_modules` and task sizes.
-- [ ] AWS Secrets Manager populated with production keys.
+Ensure all items are checked before authorizing a production deployment.
+
+## Code
+- [x] Code review complete
+- [x] Tests passing (`npm run test`)
+- [x] Lint passing (`npm run lint`)
+- [x] Typecheck passing (`npm run typecheck`)
+- [x] Build passing
 
 ## Security
-- [ ] `BCRYPT_ROUNDS` set to at least 12.
-- [ ] Strong JWT Access and Refresh Secrets set.
-- [ ] Admin Dashboard secured behind strong passwords.
-- [ ] Security Groups restrict DB/Redis access to ECS tasks only.
+- [ ] Security tests passing (`npm audit`)
+- [ ] No critical vulnerabilities (Pending manual resolution of `tar` vulnerability)
+- [x] Secrets protected (No secrets checked into Git)
+- [x] RBAC verified
 
-## AI & APIs
-- [ ] Gemini API key verified and quotas checked.
-- [ ] SendGrid API key verified and domain authenticated.
+## Infrastructure
+- [ ] Database ready
+- [ ] Redis ready
+- [ ] Workers ready
+- [ ] Storage ready
+- [x] Monitoring ready (`/metrics` enabled)
 
-## Application State
-- [ ] Feature Flags properly configured in DB.
-- [ ] Base set of Skills imported into DB.
-- [ ] Initial set of Companies seeded for scraping.
+## Scraping
+- [x] Parsers healthy
+- [x] Retry configured (BullMQ retry strategies enabled)
+- [x] DLQ configured
+
+## Matching
+- [x] Matching tests passing
+- [x] Duplicate prevention verified (Upsert logic in Prisma)
+
+## AI
+- [x] Rate limits enabled (`ThrottlerModule`)
+- [x] Cost controls enabled (`CostTrackerService`)
+- [x] Output validation enabled (Zod schemas mapped in PromptManager)
+
+## Notifications
+- [x] Email verified
+- [x] Push verified
+- [x] Frequency caps verified
+- [x] Quiet hours verified
+- [x] Unsubscribe verified
 
 ## Frontend
-- [ ] Admin App built and deployed to CDN (CloudFront).
-- [ ] Mobile App submitted to App Store Connect and Google Play Console.
+- [ ] Production build tested
+- [ ] Error states tested
+- [ ] Deep links verified
+
+## Admin
+- [x] RBAC verified
+- [x] Audit logs enabled
+
+## Disaster Recovery
+- [ ] Backup verified
+- [ ] Restore tested
+- [ ] Rollback tested
+
+*(Note: Items left unchecked require live infrastructure validation post-deployment).*

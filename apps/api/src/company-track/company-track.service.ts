@@ -2,6 +2,8 @@ import { Injectable, BadRequestException, NotFoundException, Logger } from '@nes
 import type { TrackingPriority } from '@prisma/client';
 
 import { PrismaService } from '../prisma/prisma.service';
+import { EntitlementService, BILLING_FEATURES } from '../billing/services/entitlement.service';
+import { EngagementTrackerService } from '../engagement/services/engagement-tracker.service';
 
 export interface TrackCompanyDto {
   companyId: string;
@@ -15,9 +17,12 @@ export interface UpdateTrackingDto {
 @Injectable()
 export class CompanyTrackService {
   private readonly logger = new Logger(CompanyTrackService.name);
-  private readonly MAX_FREE_TRACKED = 5;
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly entitlementService: EntitlementService,
+    private readonly engagementTracker: EngagementTrackerService,
+  ) {}
 
   async trackCompany(userId: string, dto: TrackCompanyDto) {
     // Check if already tracking
@@ -29,14 +34,15 @@ export class CompanyTrackService {
       throw new BadRequestException('Company is already tracked');
     }
 
-    // Check limit
+    // Check limit dynamically via EntitlementService
     const count = await this.prisma.trackedCompany.count({
       where: { userId },
     });
 
-    if (count >= this.MAX_FREE_TRACKED) {
+    const limit = await this.entitlementService.getLimit(userId, BILLING_FEATURES.COMPANY_TRACKING);
+    if (count >= limit) {
       throw new BadRequestException(
-        `Free tier limit reached. You can only track up to ${this.MAX_FREE_TRACKED} companies.`,
+        `You have reached your limit of ${limit} tracked companies. Please upgrade to track more.`,
       );
     }
 
@@ -49,6 +55,10 @@ export class CompanyTrackService {
     });
 
     this.logger.log({ userId, companyId: dto.companyId }, 'Company tracked');
+    
+    // Phase 16: Track engagement event
+    await this.engagementTracker.trackAction(userId, 'COMPANY_TRACKED');
+
     return tracked;
   }
 

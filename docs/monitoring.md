@@ -1,6 +1,14 @@
 # Monitoring & Alerting
 
-InternTracker AI utilizes structured logging (`nestjs-pino`) and relies on CloudWatch (or equivalent APM) for metrics and alerting.
+InternTracker AI utilizes structured logging (`nestjs-pino`) and relies on Prometheus (`@willsoto/nestjs-prometheus`) for telemetry collection. A `/metrics` endpoint is exposed for Prometheus scraping, which is then typically visualized in Grafana.
+
+## Available Metrics
+
+The `/metrics` endpoint exposes:
+- **API Metrics**: `http_request_duration_seconds`, `http_request_errors_total`
+- **Database Metrics**: `prisma_client_queries_active`, `prisma_client_connections_idle`, `prisma_client_queries_wait`
+- **Queue Metrics**: `bullmq_queue_waiting`, `bullmq_queue_active`, `bullmq_queue_completed`, `bullmq_queue_failed`
+- **AI Metrics**: `ai_cost_usd_total`, `ai_tokens_total`, `ai_request_duration_seconds`
 
 ## Alerting Rules
 

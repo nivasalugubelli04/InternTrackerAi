@@ -74,3 +74,9 @@ jobs:
           REDIS_HOST: localhost
           REDIS_PORT: 6379
         run: npm run test
+
+      - name: Build API Docker Image
+        run: docker build -t interntracker-api:pr-test -f apps/api/Dockerfile .
+
+      - name: Build Admin Docker Image
+        run: docker build -t interntracker-admin:pr-test -f apps/admin/Dockerfile .

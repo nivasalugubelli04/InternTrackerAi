@@ -1,9 +1,8 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { ScrapeJobStatus } from '@prisma/client';
 import type { Job } from 'bullmq';
-
-import { ConfigService } from '@nestjs/config';
 
 import { PrismaService } from '../../prisma/prisma.service';
 import { ScraperManager } from '../../scrapers/scraper.manager';

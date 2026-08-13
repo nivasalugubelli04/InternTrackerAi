@@ -1,7 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
-import { Queue } from 'bullmq';
 import { InjectQueue } from '@nestjs/bullmq';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { Queue } from 'bullmq';
+
+import { PrismaService } from '../../prisma/prisma.service';
 import { SCRAPE_QUEUE } from '../../queues/queue.constants';
 
 @Injectable()

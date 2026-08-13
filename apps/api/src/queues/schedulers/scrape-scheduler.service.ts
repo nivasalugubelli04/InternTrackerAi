@@ -51,6 +51,7 @@ export class ScrapeSchedulerService implements OnApplicationBootstrap {
       `scrape-${company.slug}`,
       { companyId: company.id },
       {
+        jobId: `scrape-${company.id}-${new Date().toISOString().split('T')[0]}`,
         attempts: this.configService.get<number>('scrapers.retryCount', 3),
         backoff: {
           type: 'exponential',
@@ -82,6 +83,7 @@ export class ScrapeSchedulerService implements OnApplicationBootstrap {
         `scrape-${company.slug}`,
         { companyId: company.id },
         {
+          jobId: `scrape-${company.id}-${new Date().toISOString().split('T')[0]}`,
           attempts: this.configService.get<number>('scrapers.retryCount', 3),
           backoff: {
             type: 'exponential',

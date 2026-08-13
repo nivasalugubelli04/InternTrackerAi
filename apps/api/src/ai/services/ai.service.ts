@@ -1,6 +1,7 @@
 import { Injectable, Inject, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
+import { sanitizeHtml } from '../../common/utils/sanitize.util';
 import type { AppConfig } from '../../config/configuration';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PromptManager } from '../prompts/prompt-manager';
@@ -21,6 +22,7 @@ import { AIProvider, AI_PROVIDER_TOKEN } from '../providers/ai-provider.interfac
 import { AiCacheService } from './ai-cache.service';
 import { AiRateLimiterService } from './ai-rate-limiter.service';
 import { CostTrackerService } from './cost-tracker.service';
+import { EntitlementService, BILLING_FEATURES } from '../../billing/services/entitlement.service';
 
 @Injectable()
 export class AiService {
@@ -34,6 +36,7 @@ export class AiService {
     private readonly cacheService: AiCacheService,
     private readonly costTracker: CostTrackerService,
     private readonly rateLimiter: AiRateLimiterService,
+    private readonly entitlementService: EntitlementService,
   ) {
     // Register templates
     this.promptManager.register(resumeAnalysisPrompt);
@@ -74,6 +77,7 @@ export class AiService {
     }
 
     await this.rateLimiter.checkLimit(userId, 'resume');
+    await this.entitlementService.enforceUsage(userId, BILLING_FEATURES.RESUME_ANALYSIS);
 
     const profile = await this.prisma.profile.findUnique({ where: { userId } });
     const prefs = await this.prisma.careerPreference.findUnique({ where: { userId } });
@@ -106,10 +110,12 @@ export class AiService {
       );
 
       const duration = Date.now() - startTime;
-      const cost = this.costTracker.calculateCost(
+      const cost = this.costTracker.recordMetrics(
         result.model,
+        'ai-feature',
         result.usage.inputTokens,
         result.usage.outputTokens,
+        duration,
       );
 
       await this.cacheService.saveAnalysis(
@@ -427,10 +433,12 @@ export class AiService {
       const result = await this.aiProvider.generateText(user, system);
       const duration = Date.now() - startTime;
 
-      const cost = this.costTracker.calculateCost(
+      const cost = this.costTracker.recordMetrics(
         result.model,
+        'ai-feature',
         result.usage.inputTokens,
         result.usage.outputTokens,
+        duration,
       );
 
       await this.prisma.generatedDocument.create({
@@ -438,7 +446,7 @@ export class AiService {
           userId,
           jobId,
           documentType: 'COVER_LETTER',
-          content: result.text,
+          content: sanitizeHtml(result.text),
         },
       });
 
@@ -455,7 +463,7 @@ export class AiService {
         'Cover letter generated',
       );
 
-      return { content: result.text };
+      return { content: sanitizeHtml(result.text) };
     } catch (err) {
       this.logger.error({ err, jobId }, 'Cover letter generation failed');
       throw err;
@@ -758,6 +766,7 @@ export class AiService {
     }
 
     await this.rateLimiter.checkLimit(userId, 'chat');
+    await this.entitlementService.enforceUsage(userId, BILLING_FEATURES.AI_CHAT);
 
     let convId = conversationId;
     let conversation;
@@ -849,10 +858,12 @@ export class AiService {
     try {
       const result = await this.aiProvider.generateText(user, system);
       const duration = Date.now() - startTime;
-      const cost = this.costTracker.calculateCost(
+      const cost = this.costTracker.recordMetrics(
         result.model,
+        'ai-feature',
         result.usage.inputTokens,
         result.usage.outputTokens,
+        duration,
       );
 
       // Save assistant message
@@ -1000,10 +1011,12 @@ export class AiService {
       }
       const result = await this.aiProvider.generateText(user, system, options);
       const duration = Date.now() - startTime;
-      const cost = this.costTracker.calculateCost(
+      const cost = this.costTracker.recordMetrics(
         result.model,
+        'ai-feature',
         result.usage.inputTokens,
         result.usage.outputTokens,
+        duration,
       );
 
       // Save assistant message
@@ -1081,5 +1094,20 @@ export class AiService {
     }
     await this.prisma.aiConversation.delete({ where: { id } });
     return { success: true };
+  }
+
+  /**
+   * Internal generic completion generation for backward compatibility with other modules
+   * (e.g. interviews.service.ts, resume-builder.service.ts)
+   */
+  async generateCompletion(options: {
+    prompt: string;
+    userId: string;
+    useCache?: boolean;
+  }): Promise<{ text: string }> {
+    this.checkAiEnabled();
+    const { prompt } = options;
+    const result = await this.aiProvider.generateText(prompt, 'You are a helpful assistant.');
+    return { text: result.text };
   }
 }

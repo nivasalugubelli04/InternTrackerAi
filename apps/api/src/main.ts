@@ -1,12 +1,12 @@
 import 'reflect-metadata';
 
+import helmet from '@fastify/helmet';
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import type { NestFastifyApplication } from '@nestjs/platform-fastify';
 import { FastifyAdapter } from '@nestjs/platform-fastify';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import helmet from '@fastify/helmet';
 import { Logger } from 'nestjs-pino';
 
 import { AppModule } from './app.module';
@@ -25,7 +25,7 @@ import type { AppConfig } from './config/configuration';
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
-    new FastifyAdapter({ logger: false }),
+    new FastifyAdapter({ logger: false, bodyLimit: 5242880 }), // 5MB limit
     { bufferLogs: true },
   );
 
@@ -47,8 +47,17 @@ async function bootstrap(): Promise<void> {
   });
 
   // ── CORS ──────────────────────────────────────────────────────────────────
+  let allowedOrigins = corsConfig.origins;
+  if (appConfig.nodeEnv === 'production' && allowedOrigins.includes('*')) {
+    logger.warn(
+      'WARNING: CORS origin "*" is not allowed in production. Falling back to strict default.',
+      'Bootstrap',
+    );
+    allowedOrigins = []; // Fallback to block in production if misconfigured
+  }
+
   app.enableCors({
-    origin: corsConfig.origins,
+    origin: allowedOrigins,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     credentials: true,
   });
@@ -58,6 +67,7 @@ async function bootstrap(): Promise<void> {
     new ValidationPipe({
       whitelist: true, // Strip unknown properties
       forbidNonWhitelisted: true, // Reject requests with unknown properties
+      forbidUnknownValues: true, // Reject unknown objects completely
       transform: true, // Auto-transform payloads to DTO instances
       transformOptions: { enableImplicitConversion: true },
     }),

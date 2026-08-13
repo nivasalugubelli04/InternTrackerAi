@@ -1,5 +1,5 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import type { RecommendationPriority, RecommendationType } from '@prisma/client';
+import type { RecommendationPriority, RecommendationType, RecommendationFeedbackType } from '@prisma/client';
 
 import { PrismaService } from '../../prisma/prisma.service';
 import { RedisService } from '../../redis/redis.service';
@@ -8,6 +8,7 @@ import type { MatchReasonData } from '../providers/matching-provider.interface';
 import { JobAnalyzerService } from './job-analyzer.service';
 import { ProfileAnalyzerService } from './profile-analyzer.service';
 import { ScoringEngineService } from './scoring-engine.service';
+import { SemanticMatchingService } from './semantic-matching.service';
 
 export interface RecommendationQueryFilter {
   recommendationType?: RecommendationType;
@@ -29,6 +30,7 @@ export class RecommendationService {
     private readonly profileAnalyzer: ProfileAnalyzerService,
     private readonly jobAnalyzer: JobAnalyzerService,
     private readonly scoringEngine: ScoringEngineService,
+    private readonly semanticMatching: SemanticMatchingService,
   ) {}
 
   /**
@@ -69,9 +71,19 @@ export class RecommendationService {
       activeJobs.map(async (job) => {
         const normalizedJob = this.jobAnalyzer.normalizeJobData(job);
         const evalResult = await this.scoringEngine.evaluateMatch(profile, normalizedJob);
+        
+        // Phase 13: Fetch Semantic Score
+        const semanticScore = await this.semanticMatching.computeSemanticScore(userId, job.id);
+        
+        // Blend Scores (Configurable later, hardcoded for now 60/40)
+        if (semanticScore !== null) {
+          evalResult.overallScore = Math.round((evalResult.overallScore * 0.6) + (semanticScore * 0.4));
+        }
+
         return {
           jobId: job.id,
           evalResult,
+          semanticScore,
         };
       }),
     );
@@ -99,6 +111,7 @@ export class RecommendationService {
           userId,
           jobId,
           overallScore: evalResult.overallScore,
+          semanticScore: item.semanticScore,
           skillScore: evalResult.skillScore,
           educationScore: evalResult.educationScore,
           locationScore: evalResult.locationScore,
@@ -109,6 +122,7 @@ export class RecommendationService {
         },
         update: {
           overallScore: evalResult.overallScore,
+          semanticScore: item.semanticScore,
           skillScore: evalResult.skillScore,
           educationScore: evalResult.educationScore,
           locationScore: evalResult.locationScore,
@@ -319,6 +333,19 @@ export class RecommendationService {
     }
 
     return matchScore;
+  }
+
+  /**
+   * Submits user feedback for a recommendation.
+   */
+  async submitFeedback(userId: string, jobId: string, feedback: RecommendationFeedbackType) {
+    return this.prisma.recommendationFeedback.create({
+      data: {
+        userId,
+        jobId,
+        feedback,
+      },
+    });
   }
 
   private async clearUserMatchCache(userId: string): Promise<void> {

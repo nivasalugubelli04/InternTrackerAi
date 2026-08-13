@@ -60,6 +60,22 @@ export class AuthService {
 
   // ── Register ────────────────────────────────────────────────────────────────
   async register(dto: RegisterDto): Promise<{ message: string }> {
+    if (!dto.invitationCode) {
+      throw new BadRequestException('A valid beta invitation code is required for registration.');
+    }
+
+    const invitation = await this.prisma.betaInvitation.findUnique({
+      where: { code: dto.invitationCode.toUpperCase() },
+    });
+
+    if (!invitation || !invitation.isActive || (invitation.expiresAt && invitation.expiresAt < new Date())) {
+      throw new BadRequestException('Invalid or expired beta invitation code.');
+    }
+
+    if (invitation.usedCount >= invitation.maxUses) {
+      throw new BadRequestException('This beta invitation code has reached its maximum usage limit.');
+    }
+
     const { bcryptRounds } = this.configService.get('security', { infer: true });
     const passwordHash = await bcrypt.hash(dto.password, bcryptRounds);
 
@@ -69,6 +85,21 @@ export class AuthService {
       ...(dto.firstName ? { firstName: dto.firstName } : {}),
       ...(dto.lastName ? { lastName: dto.lastName } : {}),
     });
+
+    // Create beta access and update invitation
+    await this.prisma.$transaction([
+      this.prisma.betaAccess.create({
+        data: {
+          userId: user.id,
+          invitationId: invitation.id,
+          cohort: invitation.cohort,
+        },
+      }),
+      this.prisma.betaInvitation.update({
+        where: { id: invitation.id },
+        data: { usedCount: { increment: 1 } },
+      }),
+    ]);
 
     // Send verification email (non-blocking)
     const token = await this.createEmailVerificationToken(user.id);
@@ -292,7 +323,18 @@ export class AuthService {
     ipAddress?: string,
     userAgent?: string,
   ): Promise<AuthTokens> {
-    const payload: JwtPayload = { sub: user.id, email: user.email, role: user.role };
+    const betaAccess = await this.prisma.betaAccess.findUnique({
+      where: { userId: user.id },
+    });
+
+    const isBeta = betaAccess && !betaAccess.isRevoked ? true : false;
+
+    const payload: JwtPayload = {
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+      isBeta,
+    };
     const jwtConfig = this.configService.get('jwt', { infer: true });
 
     const accessToken = this.jwtService.sign(payload, {

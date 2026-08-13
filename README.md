@@ -4,12 +4,12 @@
 
 ### Mobile-First Internship Monitoring Platform
 
-[![Phase](https://img.shields.io/badge/Phase-1%20%E2%80%93%20Authentication-7c3aed?style=for-the-badge)]()
-[![NestJS](https://img.shields.io/badge/NestJS-10-e0234e?style=for-the-badge&logo=nestjs)]()
-[![Expo](https://img.shields.io/badge/Expo-51-000020?style=for-the-badge&logo=expo)]()
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?style=for-the-badge&logo=postgresql)]()
-[![Redis](https://img.shields.io/badge/Redis-7-dc382d?style=for-the-badge&logo=redis)]()
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.4%20Strict-3178c6?style=for-the-badge&logo=typescript)]()
+[![Phase](https://img.shields.io/badge/Phase-1%20%E2%80%93%20Authentication-7c3aed?style=for-the-badge)](<>)
+[![NestJS](https://img.shields.io/badge/NestJS-10-e0234e?style=for-the-badge&logo=nestjs)](<>)
+[![Expo](https://img.shields.io/badge/Expo-51-000020?style=for-the-badge&logo=expo)](<>)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?style=for-the-badge&logo=postgresql)](<>)
+[![Redis](https://img.shields.io/badge/Redis-7-dc382d?style=for-the-badge&logo=redis)](<>)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.4%20Strict-3178c6?style=for-the-badge&logo=typescript)](<>)
 
 </div>
 
@@ -27,6 +27,7 @@
 - [Environment Variables](#environment-variables)
 - [Tooling & Code Quality](#tooling--code-quality)
 - [Architectural Decisions](#architectural-decisions)
+- [Infrastructure Documentation](#infrastructure-documentation)
 - [Roadmap](#roadmap)
 
 ---
@@ -37,15 +38,15 @@ InternTracker AI is a **mobile-first platform** that helps organisations monitor
 
 This repository contains **Phase 0 + Phase 1** — the production-ready foundation with a complete authentication system:
 
-| Layer | Technology | Purpose |
-|---|---|---|
-| Mobile | React Native (Expo 51) | iOS & Android app |
-| API | NestJS 10 + Fastify | REST backend |
-| Auth | JWT (access + refresh) | Stateless authentication |
-| Database | PostgreSQL 16 + Prisma | Relational data store |
-| Cache / Queue | Redis 7 + BullMQ | Caching & background jobs |
-| Containerisation | Docker + Compose | Local & production environments |
-| Docs | Swagger / OpenAPI | Interactive API documentation |
+| Layer            | Technology             | Purpose                         |
+| ---------------- | ---------------------- | ------------------------------- |
+| Mobile           | React Native (Expo 51) | iOS & Android app               |
+| API              | NestJS 10 + Fastify    | REST backend                    |
+| Auth             | JWT (access + refresh) | Stateless authentication        |
+| Database         | PostgreSQL 16 + Prisma | Relational data store           |
+| Cache / Queue    | Redis 7 + BullMQ       | Caching & background jobs       |
+| Containerisation | Docker + Compose       | Local & production environments |
+| Docs             | Swagger / OpenAPI      | Interactive API documentation   |
 
 ---
 
@@ -53,37 +54,37 @@ This repository contains **Phase 0 + Phase 1** — the production-ready foundati
 
 All endpoints are prefixed with `/api/v1`.
 
-| Method | Endpoint | Auth Required | Description |
-|---|---|---|---|
-| **Auth** | | | |
-| `POST` | `/auth/register` | ❌ | Register new account |
-| `POST` | `/auth/login` | ❌ | Login → access + refresh tokens |
-| `POST` | `/auth/refresh` | Refresh Token | Rotate refresh token |
-| `POST` | `/auth/logout` | ✅ Access Token | Revoke refresh token |
-| `GET` | `/auth/me` | ✅ Access Token | Get current user |
-| **Profile** | | | |
-| `GET` | `/profile` | ✅ Access Token | Get profile + skills + completion |
-| `POST` | `/profile` | ✅ Access Token | Create profile (Onboarding) |
-| `PATCH` | `/profile` | ✅ Access Token | Update profile |
-| `POST` | `/profile/complete-onboarding`| ✅ Access Token | Mark onboarding as complete |
-| **Skills** | | | |
-| `GET` | `/skills` | ✅ Access Token | Search global skills catalog |
-| `POST` | `/profile/skills` | ✅ Access Token | Add skill to profile |
-| `DELETE` | `/profile/skills/:id` | ✅ Access Token | Remove skill from profile |
-| **Resume** | | | |
-| `POST` | `/resume/upload` | ✅ Access Token | Upload/upsert resume metadata |
-| `GET` | `/resume` | ✅ Access Token | Get current user's resume |
-| `DELETE` | `/resume` | ✅ Access Token | Delete resume |
-| **Preferences** | | | |
-| `GET` | `/preferences` | ✅ Access Token | Get all preferences (career + notification) |
-| `PUT` | `/preferences/career` | ✅ Access Token | Update career preferences |
-| **Phase 4 — Scrapers & Jobs Engine** | | | |
-| `GET` | `/scrapers/status` | Internal/Admin | System health, success rates, active telemetry |
-| `GET` | `/scrapers/history` | Internal/Admin | Historical scrape execution logs |
-| `POST` | `/scrapers/run/:companyId` | Internal/Admin | Trigger scrape job for single company |
-| `POST` | `/scrapers/run-all` | Internal/Admin | Trigger batch scrape jobs for all active companies |
-| `GET` | `/jobs/raw` | Internal/Admin | Query raw JSON/HTML snapshots |
-| `GET` | `/jobs/normalized` | Internal/Admin | Query normalized, deduplicated internship listings |
+| Method                               | Endpoint                       | Auth Required   | Description                                        |
+| ------------------------------------ | ------------------------------ | --------------- | -------------------------------------------------- |
+| **Auth**                             |                                |                 |                                                    |
+| `POST`                               | `/auth/register`               | ❌              | Register new account                               |
+| `POST`                               | `/auth/login`                  | ❌              | Login → access + refresh tokens                    |
+| `POST`                               | `/auth/refresh`                | Refresh Token   | Rotate refresh token                               |
+| `POST`                               | `/auth/logout`                 | ✅ Access Token | Revoke refresh token                               |
+| `GET`                                | `/auth/me`                     | ✅ Access Token | Get current user                                   |
+| **Profile**                          |                                |                 |                                                    |
+| `GET`                                | `/profile`                     | ✅ Access Token | Get profile + skills + completion                  |
+| `POST`                               | `/profile`                     | ✅ Access Token | Create profile (Onboarding)                        |
+| `PATCH`                              | `/profile`                     | ✅ Access Token | Update profile                                     |
+| `POST`                               | `/profile/complete-onboarding` | ✅ Access Token | Mark onboarding as complete                        |
+| **Skills**                           |                                |                 |                                                    |
+| `GET`                                | `/skills`                      | ✅ Access Token | Search global skills catalog                       |
+| `POST`                               | `/profile/skills`              | ✅ Access Token | Add skill to profile                               |
+| `DELETE`                             | `/profile/skills/:id`          | ✅ Access Token | Remove skill from profile                          |
+| **Resume**                           |                                |                 |                                                    |
+| `POST`                               | `/resume/upload`               | ✅ Access Token | Upload/upsert resume metadata                      |
+| `GET`                                | `/resume`                      | ✅ Access Token | Get current user's resume                          |
+| `DELETE`                             | `/resume`                      | ✅ Access Token | Delete resume                                      |
+| **Preferences**                      |                                |                 |                                                    |
+| `GET`                                | `/preferences`                 | ✅ Access Token | Get all preferences (career + notification)        |
+| `PUT`                                | `/preferences/career`          | ✅ Access Token | Update career preferences                          |
+| **Phase 4 — Scrapers & Jobs Engine** |                                |                 |                                                    |
+| `GET`                                | `/scrapers/status`             | Internal/Admin  | System health, success rates, active telemetry     |
+| `GET`                                | `/scrapers/history`            | Internal/Admin  | Historical scrape execution logs                   |
+| `POST`                               | `/scrapers/run/:companyId`     | Internal/Admin  | Trigger scrape job for single company              |
+| `POST`                               | `/scrapers/run-all`            | Internal/Admin  | Trigger batch scrape jobs for all active companies |
+| `GET`                                | `/jobs/raw`                    | Internal/Admin  | Query raw JSON/HTML snapshots                      |
+| `GET`                                | `/jobs/normalized`             | Internal/Admin  | Query normalized, deduplicated internship listings |
 
 ### Swagger UI
 
@@ -236,13 +237,13 @@ intern-tracker-ai/                ← Monorepo root (Yarn Workspaces)
 
 ## Prerequisites
 
-| Tool | Version | Install |
-|---|---|---|
-| Node.js | ≥ 20.0.0 | [nodejs.org](https://nodejs.org) |
-| Yarn | ≥ 1.22 | `npm install -g yarn` |
-| Docker | ≥ 24.0 | [docker.com](https://www.docker.com) |
-| Docker Compose | ≥ 2.20 | Included with Docker Desktop |
-| Expo CLI | ≥ 0.18 | `npm install -g expo-cli` (optional) |
+| Tool           | Version  | Install                              |
+| -------------- | -------- | ------------------------------------ |
+| Node.js        | ≥ 20.0.0 | [nodejs.org](https://nodejs.org)     |
+| Yarn           | ≥ 1.22   | `npm install -g yarn`                |
+| Docker         | ≥ 24.0   | [docker.com](https://www.docker.com) |
+| Docker Compose | ≥ 2.20   | Included with Docker Desktop         |
+| Expo CLI       | ≥ 0.18   | `npm install -g expo-cli` (optional) |
 
 ---
 
@@ -273,9 +274,9 @@ Expected response:
   "timestamp": "2024-01-01T00:00:00.000Z",
   "uptime": 12.34,
   "components": {
-    "api":      { "status": "ok" },
+    "api": { "status": "ok" },
     "database": { "status": "ok", "latencyMs": 2 },
-    "redis":    { "status": "ok", "latencyMs": 1 }
+    "redis": { "status": "ok", "latencyMs": 1 }
   }
 }
 ```
@@ -356,9 +357,9 @@ http://localhost:3000/api/v1
 
 ### Endpoints
 
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| `GET` | `/health` | None | Reports API, database, and Redis health |
+| Method | Path      | Auth | Description                             |
+| ------ | --------- | ---- | --------------------------------------- |
+| `GET`  | `/health` | None | Reports API, database, and Redis health |
 
 ### GET /api/v1/health
 
@@ -366,18 +367,27 @@ http://localhost:3000/api/v1
 
 ```typescript
 {
-  status: "ok" | "degraded";
-  timestamp: string;           // ISO 8601
-  uptime: number;              // seconds since process start
+  status: 'ok' | 'degraded';
+  timestamp: string; // ISO 8601
+  uptime: number; // seconds since process start
   components: {
-    api:      { status: "ok" | "down" };
-    database: { status: "ok" | "down"; latencyMs: number };
-    redis:    { status: "ok" | "down"; latencyMs: number };
-  };
+    api: {
+      status: 'ok' | 'down';
+    }
+    database: {
+      status: 'ok' | 'down';
+      latencyMs: number;
+    }
+    redis: {
+      status: 'ok' | 'down';
+      latencyMs: number;
+    }
+  }
 }
 ```
 
 **HTTP status codes:**
+
 - `200` — status is `"ok"` or `"degraded"` (still serving)
 
 ---
@@ -386,24 +396,24 @@ http://localhost:3000/api/v1
 
 Copy `.env.example` to `apps/api/.env` and adjust values:
 
-| Variable | Default | Description |
-|---|---|---|
-| `NODE_ENV` | `development` | Runtime environment |
-| `APP_PORT` | `3000` | Port the API listens on |
-| `APP_NAME` | `InternTrackerAPI` | Application name in logs |
-| `API_PREFIX` | `api/v1` | Global API route prefix |
-| `POSTGRES_HOST` | `localhost` | PostgreSQL hostname |
-| `POSTGRES_PORT` | `5432` | PostgreSQL port |
-| `POSTGRES_USER` | `intern_user` | Database user |
-| `POSTGRES_PASSWORD` | — | **Required** — set a strong password |
-| `POSTGRES_DB` | `intern_tracker_db` | Database name |
-| `DATABASE_URL` | — | Full Prisma connection string |
-| `REDIS_HOST` | `localhost` | Redis hostname |
-| `REDIS_PORT` | `6379` | Redis port |
-| `REDIS_PASSWORD` | — | Redis AUTH password (leave empty if none) |
-| `LOG_LEVEL` | `info` | Pino log level (`fatal`/`error`/`warn`/`info`/`debug`/`trace`) |
-| `LOG_PRETTY` | `true` | Pretty-print logs in development |
-| `CORS_ORIGINS` | `http://localhost:3000` | Comma-separated allowed CORS origins |
+| Variable            | Default                 | Description                                                    |
+| ------------------- | ----------------------- | -------------------------------------------------------------- |
+| `NODE_ENV`          | `development`           | Runtime environment                                            |
+| `APP_PORT`          | `3000`                  | Port the API listens on                                        |
+| `APP_NAME`          | `InternTrackerAPI`      | Application name in logs                                       |
+| `API_PREFIX`        | `api/v1`                | Global API route prefix                                        |
+| `POSTGRES_HOST`     | `localhost`             | PostgreSQL hostname                                            |
+| `POSTGRES_PORT`     | `5432`                  | PostgreSQL port                                                |
+| `POSTGRES_USER`     | `intern_user`           | Database user                                                  |
+| `POSTGRES_PASSWORD` | —                       | **Required** — set a strong password                           |
+| `POSTGRES_DB`       | `intern_tracker_db`     | Database name                                                  |
+| `DATABASE_URL`      | —                       | Full Prisma connection string                                  |
+| `REDIS_HOST`        | `localhost`             | Redis hostname                                                 |
+| `REDIS_PORT`        | `6379`                  | Redis port                                                     |
+| `REDIS_PASSWORD`    | —                       | Redis AUTH password (leave empty if none)                      |
+| `LOG_LEVEL`         | `info`                  | Pino log level (`fatal`/`error`/`warn`/`info`/`debug`/`trace`) |
+| `LOG_PRETTY`        | `true`                  | Pretty-print logs in development                               |
+| `CORS_ORIGINS`      | `http://localhost:3000` | Comma-separated allowed CORS origins                           |
 
 > **Security**: Never commit `apps/api/.env` to version control. The `.gitignore` already excludes it.
 
@@ -435,9 +445,9 @@ yarn typecheck     # Run tsc --noEmit across all packages
 
 Hooks are installed automatically after `yarn install` (via the `prepare` script):
 
-| Hook | Action |
-|---|---|
-| `pre-commit` | Runs lint-staged (ESLint + Prettier on staged files) |
+| Hook         | Action                                                |
+| ------------ | ----------------------------------------------------- |
+| `pre-commit` | Runs lint-staged (ESLint + Prettier on staged files)  |
 | `commit-msg` | Validates commit message against Conventional Commits |
 
 ### Commit Message Format
@@ -459,34 +469,42 @@ Allowed types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `buil
 ## Architectural Decisions
 
 ### ADR-001: Yarn Workspaces Monorepo
+
 **Decision**: Single repository for API and mobile app.  
 **Rationale**: Shared TypeScript types, consistent tooling, atomic cross-package commits, simplified CI.
 
 ### ADR-002: NestJS + Fastify (not Express)
+
 **Decision**: `@nestjs/platform-fastify` instead of the default Express adapter.  
 **Rationale**: Fastify benchmarks 20-30% higher throughput. Schema serialisation support will be valuable for input validation in Phase 1.
 
 ### ADR-003: Centralised Configuration Factory
+
 **Decision**: All `process.env` reads happen in `configuration.ts` only.  
 **Rationale**: Typed configuration, single place to audit env-var usage, fail-fast on misconfiguration.
 
 ### ADR-004: Global PrismaModule and RedisModule
+
 **Decision**: Both infrastructure modules are `@Global()`.  
 **Rationale**: Database and cache clients are true application-wide singletons. Global modules prevent repeated imports in feature modules while keeping the DI graph clean.
 
 ### ADR-005: Independent Health Checks (Promise.allSettled)
+
 **Decision**: DB and Redis checks run concurrently and independently.  
 **Rationale**: A failing DB check must not hide Redis status and vice versa. `Promise.allSettled` guarantees both results are always reported.
 
 ### ADR-006: Non-Root Docker User
+
 **Decision**: Production Docker image runs as `nestjs:nodejs` (UID 1001).  
 **Rationale**: Security best practice — container compromise gives attacker non-root access only.
 
 ### ADR-007: Structured Logging (Pino)
+
 **Decision**: `nestjs-pino` replaces NestJS's default `ConsoleLogger`.  
 **Rationale**: JSON-structured logs are machine-parseable by log aggregators (Datadog, CloudWatch, Loki). Pino is the fastest Node.js logger.
 
 ### ADR-008: UUID Primary Keys (Future Tables)
+
 **Decision**: Business entities will use `String @db.Uuid @default(dbgenerated("gen_random_uuid()"))`.  
 **Rationale**: UUIDs avoid sequential ID enumeration attacks, support multi-region data generation, and are portable across databases.
 
@@ -500,15 +518,15 @@ Implements a scalable, intelligent notification delivery platform that integrate
 
 All endpoints are prefixed with `/api/v1`. JWT Bearer token required.
 
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/notifications` | Paginated list of user's notifications |
-| `GET` | `/notifications/:id` | Single notification with delivery events |
-| `PATCH` | `/notifications/read` | Bulk mark as read |
-| `GET` | `/notifications/history` | Delivery history with attempt details |
-| `POST` | `/notifications/test` | Send a test notification |
-| `GET` | `/preferences/notifications` | Get notification preferences |
-| `PATCH` | `/preferences/notifications` | Update notification preferences |
+| Method  | Endpoint                     | Description                              |
+| ------- | ---------------------------- | ---------------------------------------- |
+| `GET`   | `/notifications`             | Paginated list of user's notifications   |
+| `GET`   | `/notifications/:id`         | Single notification with delivery events |
+| `PATCH` | `/notifications/read`        | Bulk mark as read                        |
+| `GET`   | `/notifications/history`     | Delivery history with attempt details    |
+| `POST`  | `/notifications/test`        | Send a test notification                 |
+| `GET`   | `/preferences/notifications` | Get notification preferences             |
+| `PATCH` | `/preferences/notifications` | Update notification preferences          |
 
 ### Decision Engine Guards
 
@@ -524,20 +542,20 @@ Every recommendation passes through 7 guards before delivery:
 
 ### Score → Channel Routing
 
-| Match Score | Delivery Mode |
-|---|---|
-| ≥ 90 | Instant Push **+** Email |
-| 80–89 | Instant Push only |
-| 70–79 | Instant Email only |
-| 50–69 | Daily Digest |
-| < 50 | Skip |
+| Match Score | Delivery Mode            |
+| ----------- | ------------------------ |
+| ≥ 90        | Instant Push **+** Email |
+| 80–89       | Instant Push only        |
+| 70–79       | Instant Email only       |
+| 50–69       | Daily Digest             |
+| < 50        | Skip                     |
 
 ### Digest Schedule
 
-| Digest | Schedule |
-|---|---|
-| Daily | Mon–Fri, 17:00 (server time) |
-| Weekly | Sunday, 18:00 (server time) |
+| Digest | Schedule                     |
+| ------ | ---------------------------- |
+| Daily  | Mon–Fri, 17:00 (server time) |
+| Weekly | Sunday, 18:00 (server time)  |
 
 ### Queue Architecture
 
@@ -552,35 +570,49 @@ dead-letter-queue    → Failed jobs after max retries
 
 ### New Environment Variables (Phase 6)
 
-| Variable | Default | Description |
-|---|---|---|
-| `SENDGRID_API_KEY` | — | SendGrid API key (or any SMTP) |
-| `FCM_PROJECT_ID` | — | Firebase project ID |
-| `FCM_PRIVATE_KEY` | — | Firebase service account private key |
-| `FCM_CLIENT_EMAIL` | — | Firebase service account email |
-| `TWILIO_ENABLED` | `false` | Enable SMS via Twilio |
-| `NOTIF_THRESHOLD_INSTANT_PUSH_EMAIL` | `90` | Score for Push + Email |
-| `NOTIF_THRESHOLD_PUSH_ONLY` | `80` | Score for Push only |
-| `NOTIF_THRESHOLD_EMAIL_ONLY` | `70` | Score for Email only |
-| `NOTIF_THRESHOLD_DIGEST_ONLY` | `50` | Score for Digest |
-| `NOTIF_MAX_PER_DAY` | `10` | Global daily notification limit |
-| `NOTIF_MAX_INSTANT_PER_DAY` | `5` | Global instant alert limit |
-| `NOTIF_MAX_RETRIES` | `3` | Max delivery retry attempts |
+| Variable                             | Default | Description                          |
+| ------------------------------------ | ------- | ------------------------------------ |
+| `SENDGRID_API_KEY`                   | —       | SendGrid API key (or any SMTP)       |
+| `FCM_PROJECT_ID`                     | —       | Firebase project ID                  |
+| `FCM_PRIVATE_KEY`                    | —       | Firebase service account private key |
+| `FCM_CLIENT_EMAIL`                   | —       | Firebase service account email       |
+| `TWILIO_ENABLED`                     | `false` | Enable SMS via Twilio                |
+| `NOTIF_THRESHOLD_INSTANT_PUSH_EMAIL` | `90`    | Score for Push + Email               |
+| `NOTIF_THRESHOLD_PUSH_ONLY`          | `80`    | Score for Push only                  |
+| `NOTIF_THRESHOLD_EMAIL_ONLY`         | `70`    | Score for Email only                 |
+| `NOTIF_THRESHOLD_DIGEST_ONLY`        | `50`    | Score for Digest                     |
+| `NOTIF_MAX_PER_DAY`                  | `10`    | Global daily notification limit      |
+| `NOTIF_MAX_INSTANT_PER_DAY`          | `5`     | Global instant alert limit           |
+| `NOTIF_MAX_RETRIES`                  | `3`     | Max delivery retry attempts          |
 
 ---
 
 ## Roadmap
 
-| Phase | Description |
-|---|---|
-| ✅ **Phase 0** | Foundation — monorepo, infra, health endpoint, logging |
-| ✅ **Phase 1** | Authentication — JWT + refresh tokens, user model |
+| Phase          | Description                                                       |
+| -------------- | ----------------------------------------------------------------- |
+| ✅ **Phase 0** | Foundation — monorepo, infra, health endpoint, logging            |
+| ✅ **Phase 1** | Authentication — JWT + refresh tokens, user model                 |
 | ✅ **Phase 2** | Core Profiles & Onboarding — Profile, Skills, Resume, Preferences |
-| ✅ **Phase 3** | Company Intelligence & Tracking |
-| ✅ **Phase 4** | Internship Collection Engine (BullMQ scrapers) |
-| ✅ **Phase 5** | AI Matching & Recommendation Engine |
-| ✅ **Phase 6** | Notification Intelligence Engine (Email/Push/SMS/Digest) |
-| Phase 7 | Analytics Dashboard & Reporting |
+| ✅ **Phase 3** | Company Intelligence & Tracking                                   |
+| ✅ **Phase 4** | Internship Collection Engine (BullMQ scrapers)                    |
+| ✅ **Phase 5** | AI Matching & Recommendation Engine                               |
+| ✅ **Phase 6** | Notification Intelligence Engine (Email/Push/SMS/Digest)          |
+| ✅ **Phase 11** | Production Infrastructure, Docker & CI/CD (Milestone 1)           |
+| Phase 7        | Analytics Dashboard & Reporting                                   |
+
+---
+
+## Infrastructure Documentation
+
+Please refer to the following documentation for deploying and managing the InternTracker AI infrastructure:
+
+- 🐳 [Docker Architecture](docs/docker.md)
+- 🚀 [Deployment Guide](docs/deployment.md)
+- 🔄 [CI/CD Workflows](docs/ci-cd.md)
+- 🌍 [Environment Management](docs/environment.md)
+- 🔐 [Secrets Management](docs/secrets.md)
+- 🏗️ [Staging Environment](docs/staging.md)
 
 ---
 

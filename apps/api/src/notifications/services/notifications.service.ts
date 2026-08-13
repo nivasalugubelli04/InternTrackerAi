@@ -260,6 +260,7 @@ export class NotificationsService {
 
     await this.notificationQueue.add(JOB_PROCESS_NOTIFICATION, jobData, {
       ...DEFAULT_JOB_OPTIONS,
+      jobId: `notify-${notification.id}`,
       delay,
     });
   }

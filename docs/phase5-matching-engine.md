@@ -65,15 +65,15 @@ User / API Request / Cron Job
 
 ## Weighted Scoring Criteria
 
-| Category | Default Weight | Description |
-| :--- | :---: | :--- |
-| **Skills** | **35%** | Overlap between user skills/resume keywords and job required/preferred skills. |
-| **Role Match** | **20%** | Similarity between user target roles and job title/department. |
-| **Location** | **15%** | Match between user preferred locations/work modes and job location/work mode. |
-| **Company Preference** | **10%** | Boost if job company is in user preferred/tracked target list. |
-| **CGPA** | **10%** | User CGPA vs job minimum requirements. |
-| **Stipend** | **5%** | Offered stipend vs user minimum requested stipend. |
-| **Experience / Duration**| **5%** | Educational level / year of study vs job experience expectations. |
+| Category                  | Default Weight | Description                                                                    |
+| :------------------------ | :------------: | :----------------------------------------------------------------------------- |
+| **Skills**                |    **35%**     | Overlap between user skills/resume keywords and job required/preferred skills. |
+| **Role Match**            |    **20%**     | Similarity between user target roles and job title/department.                 |
+| **Location**              |    **15%**     | Match between user preferred locations/work modes and job location/work mode.  |
+| **Company Preference**    |    **10%**     | Boost if job company is in user preferred/tracked target list.                 |
+| **CGPA**                  |    **10%**     | User CGPA vs job minimum requirements.                                         |
+| **Stipend**               |     **5%**     | Offered stipend vs user minimum requested stipend.                             |
+| **Experience / Duration** |     **5%**     | Educational level / year of study vs job experience expectations.              |
 
 All weights are configurable via environment variables in `configuration.ts`:
 
@@ -101,6 +101,7 @@ PRIORITY_THRESHOLD_MEDIUM=60
 ## Database Models
 
 ### `MatchScore`
+
 Stores detailed component scores per user-job comparison.
 
 - `id`: UUID (Primary Key)
@@ -117,6 +118,7 @@ Stores detailed component scores per user-job comparison.
 - `createdAt` / `updatedAt`: DateTime
 
 ### `Recommendation`
+
 Persists prioritized recommendation items for user feeds.
 
 - `id`: UUID (Primary Key)
@@ -128,6 +130,7 @@ Persists prioritized recommendation items for user feeds.
 - `isViewed` / `isSaved` / `isDismissed`: Boolean flags
 
 ### `RecommendationReason`
+
 Stores structured explanation reasons attached to a recommendation.
 
 - `id`: UUID (Primary Key)
@@ -141,26 +144,32 @@ Stores structured explanation reasons attached to a recommendation.
 ## API Endpoints
 
 ### 1. Trigger User Matching
+
 `POST /api/v1/matching/run/:userId`
 Runs the matching engine synchronously for a specific user ID and updates recommendations.
 
 ### 2. Trigger System-Wide Batch Matching
+
 `POST /api/v1/matching/run-all`
 Queues a background job in `matching-queue` (BullMQ) to process all active users system-wide.
 
 ### 3. Get Ranked Recommendations
+
 `GET /api/v1/recommendations`
 Supports query parameters:
+
 - `recommendationType`: Filter by match tier (`PERFECT_MATCH`, `STRONG_MATCH`, etc.)
 - `priority`: Filter by priority (`HIGH`, `MEDIUM`, `LOW`)
 - `isSaved` / `isDismissed`: Filter saved or dismissed items
 - `page` / `limit`: Pagination parameters
 
 ### 4. Get Recommendation Details
+
 `GET /api/v1/recommendations/:id`
 Returns full recommendation details, job details, company information, component scores, and explanation reasons. Automatically marks `isViewed: true`.
 
 ### 5. Get Job Match Score
+
 `GET /api/v1/match-score/:jobId`
 Retrieves cached or on-demand match score for the authenticated user and specified job posting.
 

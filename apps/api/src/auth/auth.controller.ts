@@ -3,6 +3,8 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiBody } from '@nes
 import type { User } from '@prisma/client';
 import { FastifyRequest } from 'fastify';
 
+import { RateLimitProfile } from '../common/decorators/rate-limit.decorator';
+
 import type { AuthResponse, AuthTokens } from './auth.service';
 import { AuthService } from './auth.service';
 import { CurrentUser } from './decorators/current-user.decorator';
@@ -17,7 +19,6 @@ import { VerifyEmailDto } from './dto/verify-email.dto';
 import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
 import { JwtRefreshPayload } from './strategies/jwt-refresh.strategy';
 import { JwtPayload } from './strategies/jwt.strategy';
-import { Throttle } from '@nestjs/throttler';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -26,7 +27,7 @@ export class AuthController {
 
   // ── Registration ─────────────────────────────────────────────────────────────
   @Public()
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @RateLimitProfile('register')
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Register a new user account' })
@@ -38,7 +39,7 @@ export class AuthController {
 
   // ── Login ─────────────────────────────────────────────────────────────────────
   @Public()
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @RateLimitProfile('login')
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Login with email and password' })
@@ -103,7 +104,7 @@ export class AuthController {
 
   // ── Forgot Password ───────────────────────────────────────────────────────────
   @Public()
-  @Throttle({ default: { limit: 3, ttl: 60000 } })
+  @RateLimitProfile('forgot_password')
   @Post('forgot-password')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Request a password reset email' })
@@ -117,7 +118,7 @@ export class AuthController {
 
   // ── Reset Password ────────────────────────────────────────────────────────────
   @Public()
-  @Throttle({ default: { limit: 3, ttl: 60000 } })
+  @RateLimitProfile('forgot_password')
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Reset password using token from email' })

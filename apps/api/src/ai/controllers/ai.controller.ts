@@ -13,10 +13,10 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { Observable, Subject } from 'rxjs';
-import { Throttle } from '@nestjs/throttler';
 
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { JwtPayload } from '../../auth/strategies/jwt.strategy';
+import { RateLimitProfile } from '../../common/decorators/rate-limit.decorator';
 import { ResumeAnalysisDto, CompareJobsDto, LearningRoadmapDto, ChatDto } from '../dto/ai.dto';
 import { AiService } from '../services/ai.service';
 
@@ -28,7 +28,7 @@ export class AiController {
 
   @Post('resume-analysis')
   @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: 3, ttl: 86400000 } }) // 3 per day
+  @RateLimitProfile('ai_resume')
   @ApiOperation({ summary: 'Analyze the user resume text' })
   @ApiResponse({ status: 200, description: 'Analysis complete' })
   analyzeResume(@CurrentUser() user: JwtPayload, @Body() dto: ResumeAnalysisDto) {
@@ -58,7 +58,7 @@ export class AiController {
 
   @Post('cover-letter/:jobId')
   @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: 10, ttl: 86400000 } }) // 10 per day
+  @RateLimitProfile('ai_cover_letter')
   @ApiOperation({ summary: 'Generate a personalized cover letter' })
   generateCoverLetter(@CurrentUser() user: JwtPayload, @Param('jobId') jobId: string) {
     return this.aiService.generateCoverLetter(user.sub, jobId);
@@ -73,7 +73,7 @@ export class AiController {
 
   @Post('interview-prep/:jobId')
   @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: 10, ttl: 86400000 } }) // 10 per day
+  @RateLimitProfile('ai_interview')
   @ApiOperation({ summary: 'Generate interview preparation guidelines' })
   generateInterviewPrep(@CurrentUser() user: JwtPayload, @Param('jobId') jobId: string) {
     return this.aiService.generateInterviewPrep(user.sub, jobId);
@@ -95,14 +95,14 @@ export class AiController {
 
   @Post('chat')
   @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: 30, ttl: 3600000 } }) // 30 per hour
+  @RateLimitProfile('ai_chat')
   @ApiOperation({ summary: 'Send message to AI Career Copilot' })
   chat(@CurrentUser() user: JwtPayload, @Body() dto: ChatDto) {
     return this.aiService.handleChat(user.sub, dto.message, dto.conversationId, dto.jobId);
   }
 
   @Sse('chat/stream')
-  @Throttle({ default: { limit: 30, ttl: 3600000 } }) // 30 per hour
+  @RateLimitProfile('ai_chat')
   @ApiOperation({ summary: 'Stream AI Copilot responses via SSE' })
   chatStream(
     @CurrentUser() user: JwtPayload,

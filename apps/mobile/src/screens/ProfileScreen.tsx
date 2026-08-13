@@ -161,8 +161,19 @@ export default function ProfileScreen({ navigation }: Props): React.ReactElement
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <Text style={styles.cardTitle}>Preferences</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('ManagePreferences')}>
-              <Text style={styles.manageLink}>Manage →</Text>
+            <TouchableOpacity 
+              style={styles.actionButton}
+              onPress={() => navigation.navigate('ResumeBuilder' as never)}
+            >
+              <Ionicons name="document-text" size={24} color="#007BFF" />
+              <Text style={styles.actionButtonText}>Resume Builder</Text>
+              <Ionicons name="chevron-forward" size={20} color="#666" style={styles.actionButtonArrow} />
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.actionButton}
+              onPress={() => navigation.navigate('ManagePreferences')}
+            >  <Text style={styles.manageLink}>Manage →</Text>
             </TouchableOpacity>
           </View>
           <Text style={styles.emptyText}>Update career goals and notification settings</Text>

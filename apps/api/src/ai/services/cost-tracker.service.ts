@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { Counter, Histogram } from 'prom-client';
 
 export interface TokenCost {
   inputCostPerMillion: number;
@@ -8,6 +9,31 @@ export interface TokenCost {
 @Injectable()
 export class CostTrackerService {
   private readonly logger = new Logger(CostTrackerService.name);
+
+  private aiCostTotal: Counter<string>;
+  private aiTokensTotal: Counter<string>;
+  private aiLatency: Histogram<string>;
+
+  constructor() {
+    this.aiCostTotal = new Counter({
+      name: 'ai_cost_usd_total',
+      help: 'Total estimated AI cost in USD',
+      labelNames: ['model', 'feature'],
+    });
+
+    this.aiTokensTotal = new Counter({
+      name: 'ai_tokens_total',
+      help: 'Total tokens used by AI',
+      labelNames: ['model', 'type'],
+    });
+
+    this.aiLatency = new Histogram({
+      name: 'ai_request_duration_seconds',
+      help: 'Latency of AI provider requests',
+      labelNames: ['model', 'feature'],
+      buckets: [0.5, 1, 2, 5, 10, 20, 30, 60],
+    });
+  }
 
   private readonly pricing: Record<string, TokenCost> = {
     'gpt-4o-mini': { inputCostPerMillion: 0.15, outputCostPerMillion: 0.6 },
@@ -40,5 +66,20 @@ export class CostTrackerService {
     );
 
     return totalCost;
+  }
+
+  recordMetrics(
+    model: string,
+    feature: string,
+    inputTokens: number,
+    outputTokens: number,
+    latencyMs: number,
+  ): number {
+    const cost = this.calculateCost(model, inputTokens, outputTokens);
+    this.aiCostTotal.labels(model, feature).inc(cost);
+    this.aiTokensTotal.labels(model, 'input').inc(inputTokens);
+    this.aiTokensTotal.labels(model, 'output').inc(outputTokens);
+    this.aiLatency.labels(model, feature).observe(latencyMs / 1000);
+    return cost;
   }
 }

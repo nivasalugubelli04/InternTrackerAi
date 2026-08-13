@@ -3,7 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 
-export type HealthStatus = 'ok' | 'degraded' | 'down';
+export type HealthStatus = 'HEALTHY' | 'DEGRADED' | 'UNAVAILABLE';
 
 export interface ComponentHealth {
   status: HealthStatus;
@@ -49,16 +49,16 @@ export class HealthService {
     const database =
       dbResult.status === 'fulfilled'
         ? dbResult.value
-        : { status: 'down' as HealthStatus, error: String(dbResult.reason) };
+        : { status: 'UNAVAILABLE' as HealthStatus, error: String(dbResult.reason) };
     const redis =
       redisResult.status === 'fulfilled'
         ? redisResult.value
-        : { status: 'down' as HealthStatus, error: String(redisResult.reason) };
+        : { status: 'UNAVAILABLE' as HealthStatus, error: String(redisResult.reason) };
 
-    const api: ComponentHealth = { status: 'ok' };
+    const api: ComponentHealth = { status: 'HEALTHY' };
 
     const overallStatus: HealthStatus =
-      database.status === 'ok' && redis.status === 'ok' ? 'ok' : 'degraded';
+      database.status === 'HEALTHY' && redis.status === 'HEALTHY' ? 'HEALTHY' : 'DEGRADED';
 
     return {
       status: overallStatus,
@@ -72,13 +72,13 @@ export class HealthService {
     const start = Date.now();
     const healthy = await this.prisma.isHealthy();
     const latencyMs = Date.now() - start;
-    return { status: healthy ? 'ok' : 'down', latencyMs };
+    return { status: healthy ? 'HEALTHY' : 'UNAVAILABLE', latencyMs };
   }
 
   private async checkRedis(): Promise<ComponentHealth> {
     const start = Date.now();
     const healthy = await this.redis.isHealthy();
     const latencyMs = Date.now() - start;
-    return { status: healthy ? 'ok' : 'down', latencyMs };
+    return { status: healthy ? 'HEALTHY' : 'UNAVAILABLE', latencyMs };
   }
 }

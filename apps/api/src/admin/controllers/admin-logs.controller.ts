@@ -1,13 +1,16 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
+
+import { Roles } from '../../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
-import { Roles } from '../../auth/decorators/roles.decorator';
+import { RateLimitProfile } from '../../common/decorators/rate-limit.decorator';
 import { AdminAuditService } from '../services/admin-audit.service';
 
 @Controller('v1/admin/logs')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.SUPER_ADMIN) // Only SUPER_ADMIN can view audit logs
+@RateLimitProfile('admin')
 export class AdminLogsController {
   constructor(private readonly auditService: AdminAuditService) {}
 

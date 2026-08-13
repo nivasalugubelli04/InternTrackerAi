@@ -1,6 +1,6 @@
-import { IsUUID, IsEnum, IsOptional, IsString, IsUrl, IsInt, IsDateString } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ApplicationStatus } from '@prisma/client';
+import { IsUUID, IsEnum, IsOptional, IsString, IsUrl, IsInt, IsDateString } from 'class-validator';
 
 export class CreateApplicationDto {
   @ApiProperty({ description: 'ID of the JobPosting' })

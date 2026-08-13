@@ -9,6 +9,7 @@ export interface JwtPayload {
   sub: string; // userId
   email: string;
   role: string;
+  isBeta?: boolean;
   iat?: number;
   exp?: number;
 }

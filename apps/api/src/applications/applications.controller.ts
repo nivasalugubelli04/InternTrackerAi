@@ -12,12 +12,14 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
+
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtPayload } from '../auth/strategies/jwt.strategy';
+
 import { ApplicationsService } from './applications.service';
+import { ChangeApplicationStatusDto } from './dto/change-status.dto';
 import { CreateApplicationDto } from './dto/create-application.dto';
 import { UpdateApplicationDto } from './dto/update-application.dto';
-import { ChangeApplicationStatusDto } from './dto/change-status.dto';
 
 @ApiTags('Applications')
 @ApiBearerAuth()

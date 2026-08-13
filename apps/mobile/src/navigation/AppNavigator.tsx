@@ -7,12 +7,17 @@ import { Colors } from '../theme';
 import AuthNavigator from './AuthNavigator';
 import BottomTabNavigator from './BottomTabNavigator';
 import OnboardingNavigator from './OnboardingNavigator';
+import MockInterviewScreen from '../screens/ai/MockInterviewScreen';
+import ResumeBuilderScreen from '../screens/resume-builder/ResumeBuilderScreen';
 import { profileApi } from '../services/profile.service';
 
 export type RootStackParamList = {
   Auth: undefined;
   Onboarding: undefined;
   App: undefined;
+  Main: undefined;
+  MockInterview: undefined;
+  ResumeBuilder: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -57,7 +62,20 @@ export default function AppNavigator(): React.ReactElement {
       ) : !onboardingComplete ? (
         <Stack.Screen name="Onboarding" component={OnboardingNavigator} />
       ) : (
-        <Stack.Screen name="App" component={BottomTabNavigator} />
+        <>
+          <Stack.Screen name="Main" component={BottomTabNavigator} />
+          
+          <Stack.Screen 
+            name="MockInterview" 
+            component={MockInterviewScreen} 
+            options={{ presentation: 'fullScreenModal' }}
+          />
+          <Stack.Screen 
+            name="ResumeBuilder" 
+            component={ResumeBuilderScreen}
+            options={{ presentation: 'fullScreenModal' }}
+          />
+        </>
       )}
     </Stack.Navigator>
   );

@@ -18,6 +18,7 @@ import { KeywordNormalizerService } from './services/keyword-normalizer.service'
 import { ProfileAnalyzerService } from './services/profile-analyzer.service';
 import { RecommendationService } from './services/recommendation.service';
 import { ScoringEngineService } from './services/scoring-engine.service';
+import { SemanticMatchingService } from './services/semantic-matching.service';
 
 @Module({
   imports: [
@@ -33,6 +34,8 @@ import { ScoringEngineService } from './services/scoring-engine.service';
     KeywordNormalizerService,
     ProfileAnalyzerService,
     JobAnalyzerService,
+    ScoringEngineService,
+    SemanticMatchingService,
     ExplanationGeneratorService,
     RuleBasedMatchingProvider,
     OpenAiMatchingProvider,
@@ -51,8 +54,6 @@ import { ScoringEngineService } from './services/scoring-engine.service';
       },
       inject: [ConfigService, RuleBasedMatchingProvider, OpenAiMatchingProvider],
     },
-    ScoringEngineService,
-    RecommendationService,
     MatchingProcessor,
   ],
   exports: [RecommendationService, ScoringEngineService, KeywordNormalizerService],

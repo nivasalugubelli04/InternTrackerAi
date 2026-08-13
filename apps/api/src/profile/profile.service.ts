@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, ConflictException, Logger } from '@nestj
 import type { Profile, UserSkill, Skill, Prisma } from '@prisma/client';
 
 import { PrismaService } from '../prisma/prisma.service';
+import { EngagementTrackerService } from '../engagement/services/engagement-tracker.service';
 
 import type { AddSkillDto } from './dto/add-skill.dto';
 import type { CreateProfileDto } from './dto/create-profile.dto';
@@ -36,7 +37,10 @@ export type ProfileWithSkills = Profile & {
 export class ProfileService {
   private readonly logger = new Logger(ProfileService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly engagementTracker: EngagementTrackerService,
+  ) {}
 
   // ── Create ────────────────────────────────────────────────────────────────
   async create(userId: string, dto: CreateProfileDto): Promise<Profile> {
@@ -84,6 +88,10 @@ export class ProfileService {
     });
 
     this.logger.log({ userId }, 'Profile updated');
+
+    // Phase 16: Track engagement event
+    await this.engagementTracker.trackAction(userId, 'PROFILE_COMPLETE');
+
     return profile;
   }
 

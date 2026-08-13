@@ -1,24 +1,61 @@
 # Deployment Guide
 
-This guide covers the deployment process for InternTracker AI.
+This document outlines the procedures for deploying InternTracker AI to production.
+**WARNING:** Do not include real credentials in this file.
 
-## CI/CD Pipeline
-- Pull Requests to `main` trigger the `pr.yml` workflow (Lint, Typecheck, Test).
-- Pushes to `main` trigger the `deploy-staging.yml` workflow, which builds Docker images and pushes them to the container registry (e.g., ECR).
+## Prerequisites
+- Docker & Docker Compose installed on deployment target.
+- Access to the target environment's secrets management (e.g., AWS Secrets Manager).
+- CI/CD pipeline access for automated deployments.
 
-## Environments
-1. **Development**: Local Docker Compose with `.env`.
-2. **Testing**: GitHub Actions with ephemeral DB/Redis.
-3. **Staging**: Automated deployment from `main`. Uses isolated RDS/ElastiCache.
-4. **Production**: Manual promotion from Staging. Uses AWS Secrets Manager for configuration.
+## Environment Setup
+- Ensure the production environment has sufficient resources (minimum 2 vCPU, 4GB RAM).
+- Setup IAM roles and security groups allowing traffic on port 80/443 and restricting DB/Redis ports internally.
 
-## Manual Deployment Steps (Emergency)
-If CI/CD fails, you can deploy manually:
-1. `docker build -t interntracker-api:latest -f apps/api/Dockerfile .`
-2. `docker push <your-registry>/interntracker-api:latest`
-3. Update the ECS Task Definition to use the new image hash.
-4. Force new deployment on the ECS Service.
+## Secrets Setup
+- Pull secrets from AWS Secrets Manager or secure vault.
+- Ensure `.env.prod` is populated via the CI/CD pipeline using securely stored GitHub Actions secrets.
+- Required secrets include `DATABASE_URL`, `JWT_SECRET`, `GEMINI_API_KEY`, `SENDGRID_API_KEY`.
 
-## Mobile Deployment
-- Android: `eas build --platform android --profile production`
-- iOS: `eas build --platform ios --profile production` (Requires Apple Developer account)
+## Build
+- The CI pipeline (`pr.yml`) automatically lints and typechecks the code.
+- Run `npm run build` for both API and Admin apps.
+
+## Docker Images
+- Use the multi-stage `Dockerfile` to build the `runner` image.
+- Tag images with the specific `<git-hash>`.
+- Push images to ECR (Elastic Container Registry).
+
+## Database Migration
+- Run `npx prisma migrate deploy` inside a temporary ECS task or CI runner.
+- Never run `--down` migrations in production. Ensure migrations are backwards compatible.
+
+## API Deployment
+- Update the ECS Task Definition for the API service with the new ECR image tag.
+- Trigger an ECS rolling update.
+
+## Worker Deployment
+- Workers run in the same container as the API (NestJS BullMQ integration).
+- The rolling update for the API will automatically cycle the workers.
+- Ensure grace periods allow BullMQ to drain active jobs before termination.
+
+## Admin Deployment
+- Admin is built as a static SPA via Vite.
+- Upload the `dist/` output to an S3 bucket fronted by CloudFront.
+- Invalidate the CloudFront cache.
+
+## Health Validation
+- Poll the `/api/v1/health` endpoint until it returns 200 OK.
+- Verify `health/live` and `health/ready` endpoints.
+
+## Smoke Testing
+- Perform a manual login using a test account.
+- Verify the opportunity feed loads.
+- Ensure no 500 errors appear in the browser console.
+
+## Monitoring Verification
+- Check CloudWatch / Datadog dashboards to ensure metrics are being ingested.
+- Verify latency is nominal.
+
+## Rollback
+- If health validation fails, execute the rollback procedure (see `docs/rollback.md`).

@@ -1,14 +1,18 @@
 import { Controller, Get, Param, Patch, Body, Query, UseGuards, Req } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
+
+import { Roles } from '../../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
-import { Roles } from '../../auth/decorators/roles.decorator';
-import { AdminUsersService } from '../services/admin-users.service';
+import { RateLimitProfile } from '../../common/decorators/rate-limit.decorator';
+import { UpdateUserStatusDto } from '../dto/update-user.dto';
 import { AdminAuditService } from '../services/admin-audit.service';
+import { AdminUsersService } from '../services/admin-users.service';
 
 @Controller('v1/admin/users')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+@RateLimitProfile('admin')
 export class AdminUsersController {
   constructor(
     private readonly usersService: AdminUsersService,
@@ -30,16 +34,12 @@ export class AdminUsersController {
   }
 
   @Patch(':id/status')
-  async updateStatus(
-    @Req() req: any,
-    @Param('id') id: string,
-    @Body('isActive') isActive: boolean,
-  ) {
-    const result = await this.usersService.updateStatus(id, isActive);
+  async updateStatus(@Req() req: any, @Param('id') id: string, @Body() body: UpdateUserStatusDto) {
+    const result = await this.usersService.updateStatus(id, body.isActive);
 
     void this.auditService.logAction(
       req.user.id,
-      isActive ? 'ENABLE_USER' : 'DISABLE_USER',
+      body.isActive ? 'ENABLE_USER' : 'DISABLE_USER',
       'USER',
       id,
       undefined,

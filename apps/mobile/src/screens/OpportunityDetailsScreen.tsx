@@ -152,8 +152,19 @@ export default function OpportunityDetailsScreen(): React.ReactElement {
         <Text style={styles.errorEmoji}>😕</Text>
         <Text style={styles.errorTitle}>Opportunity Not Found</Text>
         <Text style={styles.errorSubtitle}>This internship may no longer be available.</Text>
-        <TouchableOpacity style={styles.backBtnLg} onPress={() => navigation.goBack()}>
-          <Text style={styles.backBtnLgText}>← Go Back</Text>
+        <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={() => navigation.navigate('MockInterview' as never, { jobId: job?.id } as never)}
+          >
+            <Ionicons name="mic-outline" size={24} color="#007BFF" />
+            <Text style={styles.actionButtonText}>Mock Interview</Text>
+            <Ionicons name="chevron-forward" size={20} color="#666" style={styles.actionButtonArrow} />
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={() => navigation.goBack()}
+          ><Text style={styles.backBtnLgText}>← Go Back</Text>
         </TouchableOpacity>
       </View>
     );

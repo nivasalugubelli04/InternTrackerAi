@@ -6,9 +6,11 @@
 #
 # This file provides production-specific overrides:
 #   - Builds from the production multi-stage Dockerfile (not Dockerfile.dev)
+#   - Adds admin service
 #   - Removes source bind mounts
 #   - Disables debug logging
 #   - Adds resource limits
+#   - Secures networking (DB/Redis not exposed)
 # =============================================================================
 
 version: '3.9'
@@ -26,6 +28,9 @@ services:
       LOG_PRETTY: "false"
     # No source bind mounts in production
     volumes: []
+    networks:
+      - internal
+      - public
     deploy:
       resources:
         limits:
@@ -35,8 +40,26 @@ services:
           cpus: '0.25'
           memory: 128M
 
+  admin:
+    build:
+      context: .
+      dockerfile: apps/admin/Dockerfile
+    restart: always
+    ports:
+      - "80:80"
+    networks:
+      - public
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
   postgres:
     restart: always
+    networks:
+      - internal
+    ports: [] # Do not expose to host in production
     deploy:
       resources:
         limits:
@@ -44,7 +67,16 @@ services:
 
   redis:
     restart: always
+    networks:
+      - internal
+    ports: [] # Do not expose to host in production
     deploy:
       resources:
         limits:
           memory: 512M
+
+networks:
+  internal:
+    internal: true
+  public:
+    driver: bridge

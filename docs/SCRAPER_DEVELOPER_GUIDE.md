@@ -11,7 +11,7 @@ flowchart TD
     Scheduler[ScrapeSchedulerService] -->|Push Jobs| Queue[BullMQ ScrapeQueue]
     Queue -->|Process Job| Worker[ScrapeProcessor]
     Worker -->|Select Adapter| Manager[ScraperManager]
-    
+
     subgraph ATS Adapters
         Manager --> GH[GreenhouseAdapter]
         Manager --> LV[LeverAdapter]
@@ -20,10 +20,10 @@ flowchart TD
         Manager --> WD[WorkdayAdapter]
         Manager --> HTML[GenericHtmlAdapter]
     end
-    
+
     GH & LV & AB & SR & WD & HTML -->|Raw Jobs Payload| Normalizer[NormalizerService]
     Normalizer -->|Normalized DTO + SHA-256 Hash| Dedup[DeduplicationService]
-    
+
     Dedup -->|Upsert| DB[(PostgreSQL Database)]
     Worker -->|Telemetry| Health[HealthMonitoringService]
     Health -->|Update Status| DB
@@ -52,12 +52,12 @@ sequenceDiagram
     Manager-->>Processor: Returns matching AtsAdapter
     Processor->>Adapter: scrape(company)
     Adapter-->>Processor: Returns { jobs, rawPayloads, parserVersion }
-    
+
     loop For each job
         Processor->>Normalizer: normalize(companyId, job, parserType)
         Normalizer-->>Processor: Return NormalizedJobData (with SHA-256 hash)
     end
-    
+
     Processor->>Dedup: processJobPostings(companyId, normalizedJobs)
     Dedup->>DB: Check & Upsert JobPosting by SHA-256 Hash / External ID
     Dedup->>DB: Save RawJobPosting snapshot
@@ -72,7 +72,9 @@ sequenceDiagram
 The system is designed with the **Open-Closed Principle (SOLID)**. Adding support for a new ATS provider (e.g. `Workable`, `Teamtailor`, or `BambooHR`) requires zero changes to existing adapters or core workers.
 
 ### Step 1: Add new `ParserType` in Prisma Schema
+
 Edit `apps/api/prisma/schema.prisma`:
+
 ```prisma
 enum ParserType {
   GREENHOUSE
@@ -86,9 +88,11 @@ enum ParserType {
   UNASSIGNED
 }
 ```
+
 Then run: `npm --workspace=apps/api run prisma:generate`
 
 ### Step 2: Implement the `AtsAdapter` interface
+
 Create a new file `apps/api/src/scrapers/adapters/workable.adapter.ts`:
 
 ```typescript
@@ -146,6 +150,7 @@ export class WorkableAdapter extends BaseAtsAdapter {
 ```
 
 ### Step 3: Register in `ScraperManager` & `ScrapersModule`
+
 1. Inject your new adapter into `ScraperManager` constructor and add it to `this.adapters`.
 2. Add your new adapter to the `providers` array in `apps/api/src/scrapers/scrapers.module.ts`.
 
@@ -164,5 +169,6 @@ If the hash already exists in PostgreSQL, the engine updates `updatedAt` and ens
 ## 📊 Health Monitoring Metrics
 
 Every scrape execution records metrics in two tables:
+
 - `ScrapeJob`: Historical record of individual execution runs (duration, jobs found, jobs added, jobs updated, error message).
 - `ParserHealth`: Moving-average success rates and average runtime per company parser.

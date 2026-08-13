@@ -52,8 +52,12 @@ export interface AppConfig {
     lockoutDurationMinutes: number;
   };
   throttle: {
-    ttl: number;
-    limit: number;
+    default: { ttl: number; limit: number };
+    login: { ttl: number; limit: number };
+    register: { ttl: number; limit: number };
+    forgotPassword: { ttl: number; limit: number };
+    admin: { ttl: number; limit: number };
+    scraper: { ttl: number; limit: number };
   };
   scrapers: {
     intervalMs: number;
@@ -201,8 +205,30 @@ export default (): AppConfig => ({
     lockoutDurationMinutes: parseInt(process.env['LOCKOUT_DURATION_MINUTES'] ?? '15', 10),
   },
   throttle: {
-    ttl: parseInt(process.env['THROTTLE_TTL'] ?? '60000', 10),
-    limit: parseInt(process.env['THROTTLE_LIMIT'] ?? '100', 10),
+    default: {
+      ttl: parseInt(process.env['THROTTLE_TTL'] ?? '60000', 10),
+      limit: parseInt(process.env['THROTTLE_LIMIT'] ?? '100', 10),
+    },
+    login: {
+      ttl: parseInt(process.env['THROTTLE_LOGIN_TTL'] ?? '60000', 10),
+      limit: parseInt(process.env['THROTTLE_LOGIN_LIMIT'] ?? '5', 10),
+    },
+    register: {
+      ttl: parseInt(process.env['THROTTLE_REGISTER_TTL'] ?? '3600000', 10),
+      limit: parseInt(process.env['THROTTLE_REGISTER_LIMIT'] ?? '5', 10),
+    },
+    forgotPassword: {
+      ttl: parseInt(process.env['THROTTLE_FORGOT_PWD_TTL'] ?? '3600000', 10),
+      limit: parseInt(process.env['THROTTLE_FORGOT_PWD_LIMIT'] ?? '3', 10),
+    },
+    admin: {
+      ttl: parseInt(process.env['THROTTLE_ADMIN_TTL'] ?? '60000', 10),
+      limit: parseInt(process.env['THROTTLE_ADMIN_LIMIT'] ?? '100', 10),
+    },
+    scraper: {
+      ttl: parseInt(process.env['THROTTLE_SCRAPER_TTL'] ?? '60000', 10),
+      limit: parseInt(process.env['THROTTLE_SCRAPER_LIMIT'] ?? '20', 10),
+    },
   },
   scrapers: {
     intervalMs: parseInt(process.env['SCRAPE_INTERVAL_MS'] ?? '21600000', 10), // Default 6 hours

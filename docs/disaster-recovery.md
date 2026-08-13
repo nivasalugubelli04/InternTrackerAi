@@ -1,23 +1,39 @@
-# Disaster Recovery
+# Disaster Recovery Plan
 
-## Database Failure
-If the primary RDS PostgreSQL instance fails:
-1. Multi-AZ (if enabled) will automatically failover in ~60-120 seconds.
-2. If the entire cluster is lost, follow the PITR restore procedure in `database-backups.md`.
+This document outlines the disaster recovery procedures for InternTracker AI.
 
-## Redis Failure
-If ElastiCache Redis fails:
-1. All background jobs in BullMQ will pause.
-2. Multi-AZ (if enabled) will auto-failover.
-3. Cache misses will occur, resulting in higher DB load. Monitor DB connections.
+## RPO & RTO Objectives
+- **RPO (Recovery Point Objective)**: 5 Minutes (Database), 0 Minutes (Redis/Ephemeral)
+- **RTO (Recovery Time Objective)**: 15 Minutes (API), 30 Minutes (Database Restore)
 
-## Queue / Worker Failure
-If scraper or notification workers fail:
-1. BullMQ handles automatic retries with exponential backoff (configured in `queues.module.ts`).
-2. If jobs repeatedly fail, they are sent to the Dead Letter Queue (DLQ).
-3. The Admin Dashboard (Bull Board) can be used to manually inspect and retry DLQ jobs.
+## Scenarios
 
-## LLM Provider Failure (Gemini/OpenAI)
-If the AI provider is down or rate-limiting heavily:
-1. `AiController` endpoints will return 503 or 429.
-2. Fallback: Administrators can toggle off AI features via the Admin Dashboard feature flags.
+### 1. Database Failure (PostgreSQL)
+- **Detection**: CloudWatch alarms for `DatabaseConnections` or `/metrics` indicating high `prisma_client_queries_wait`. API returns 500s.
+- **Immediate Action**: Ensure automated Multi-AZ failover is triggered by AWS RDS.
+- **Recovery**: If the primary cluster is corrupted, trigger Point-In-Time-Recovery (PITR) to a snapshot 5 minutes prior to the event.
+- **Validation**: Verify `/health/ready` endpoint returns `HEALTHY` and user authentication is functional.
+- **Escalation**: Data Engineering Team, DevOps Lead.
+
+### 2. Redis Failure (ElastiCache)
+- **Detection**: API timeouts, Background Jobs (BullMQ) stop processing. `bullmq_queue_active` metric drops to 0.
+- **Immediate Action**: Reboot primary node. ElastiCache should promote the replica automatically.
+- **Recovery**: If the cluster is destroyed, recreate it via Terraform. No persistent data is strictly required as Redis only holds ephemeral job state and caches.
+- **Validation**: Verify `/health/ready` endpoint.
+
+### 3. API or Worker Failure (ECS/Containers)
+- **Detection**: Target Group 5xx errors > 1%. Health check failures.
+- **Immediate Action**: ECS Auto-Scaling replaces unhealthy tasks automatically.
+- **Recovery**: If crash-looping, revert to the previous Docker image tag via ECS redeployment (see `rollback.md`).
+- **Validation**: Monitor HTTP 200 rates on the load balancer.
+
+### 4. Scraper Failure / Unreliable Target
+- **Detection**: Repeated `ScrapeJobStatus.FAILED` logs or high `bullmq_queue_failed` count.
+- **Immediate Action**: The system's exponential backoff and circuit breaker isolate the failure.
+- **Recovery**: Disable the specific company scraper in the Admin Dashboard until the adapter is updated.
+
+### 5. AI Provider Outage (OpenAI/Gemini)
+- **Detection**: High `ai_request_duration_seconds` or 5xx responses from the AI provider.
+- **Immediate Action**: The Throttler and Timeout interceptors will fail the requests gracefully.
+- **Recovery**: If prolonged, switch the `AI_PROVIDER` environment variable to a fallback provider (e.g., from `gpt-4o` to `gemini-1.5-pro`) and restart the API.
+- **Validation**: Execute a test "Resume Analysis" to confirm completion.

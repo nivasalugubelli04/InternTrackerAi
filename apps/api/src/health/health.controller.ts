@@ -14,18 +14,18 @@ import { HealthService } from './health.service';
  * without credentials.
  *
  * HTTP status codes:
- *  - 200  status === "ok"
- *  - 200  status === "degraded"  (still serving, but monitor closely)
+ *  - 200  status === "HEALTHY"
+ *  - 200  status === "DEGRADED"  (still serving, but monitor closely)
  *
  * Response shape:
  * {
- *   "status": "ok" | "degraded",
+ *   "status": "HEALTHY" | "DEGRADED",
  *   "timestamp": "<ISO8601>",
  *   "uptime": <seconds>,
  *   "components": {
- *     "api":      { "status": "ok" },
- *     "database": { "status": "ok", "latencyMs": 2 },
- *     "redis":    { "status": "ok", "latencyMs": 1 }
+ *     "api":      { "status": "HEALTHY" },
+ *     "database": { "status": "HEALTHY", "latencyMs": 2 },
+ *     "redis":    { "status": "HEALTHY", "latencyMs": 1 }
  *   }
  * }
  */
@@ -44,7 +44,7 @@ export class HealthController {
   @Public()
   @HttpCode(HttpStatus.OK)
   live(): { status: string } {
-    return { status: 'ok' };
+    return { status: 'HEALTHY' };
   }
 
   @Get('ready')

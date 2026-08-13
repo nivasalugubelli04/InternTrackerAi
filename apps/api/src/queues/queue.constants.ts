@@ -4,6 +4,7 @@ export const PARSER_QUEUE = 'parser-queue';
 export const CLEANUP_QUEUE = 'cleanup-queue';
 export const HEALTH_QUEUE = 'health-queue';
 export const MATCHING_QUEUE = 'matching-queue';
+export const EMBEDDING_QUEUE = 'embeddings';
 
 // Phase 6 — Notification queues (canonical names — also defined in notifications/constants)
 export const NOTIFICATION_QUEUE = 'notification-queue';

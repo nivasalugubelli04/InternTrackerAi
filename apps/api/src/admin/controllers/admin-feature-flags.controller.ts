@@ -1,14 +1,18 @@
 import { Controller, Get, Param, Patch, Post, Body, UseGuards, Req } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
+
+import { Roles } from '../../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
-import { Roles } from '../../auth/decorators/roles.decorator';
-import { AdminFeatureFlagsService } from '../services/admin-feature-flags.service';
+import { RateLimitProfile } from '../../common/decorators/rate-limit.decorator';
+import { CreateFeatureFlagDto, UpdateFeatureFlagDto } from '../dto/feature-flag.dto';
 import { AdminAuditService } from '../services/admin-audit.service';
+import { AdminFeatureFlagsService } from '../services/admin-feature-flags.service';
 
 @Controller('v1/admin/feature-flags')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+@RateLimitProfile('admin')
 export class AdminFeatureFlagsController {
   constructor(
     private readonly flagsService: AdminFeatureFlagsService,
@@ -22,10 +26,7 @@ export class AdminFeatureFlagsController {
 
   @Post()
   @Roles(UserRole.SUPER_ADMIN) // Only SUPER_ADMIN can create flags
-  async createFlag(
-    @Req() req: any,
-    @Body() body: { key: string; isEnabled: boolean; description?: string },
-  ) {
+  async createFlag(@Req() req: any, @Body() body: CreateFeatureFlagDto) {
     const result = await this.flagsService.create({ ...body, updatedByAdminId: req.user.id });
 
     void this.auditService.logAction(
@@ -42,11 +43,7 @@ export class AdminFeatureFlagsController {
 
   @Patch(':id')
   @Roles(UserRole.SUPER_ADMIN) // Only SUPER_ADMIN can edit flags for safety
-  async updateFlag(
-    @Req() req: any,
-    @Param('id') id: string,
-    @Body() body: { isEnabled?: boolean; description?: string },
-  ) {
+  async updateFlag(@Req() req: any, @Param('id') id: string, @Body() body: UpdateFeatureFlagDto) {
     const result = await this.flagsService.update(id, { ...body, updatedByAdminId: req.user.id });
 
     void this.auditService.logAction(

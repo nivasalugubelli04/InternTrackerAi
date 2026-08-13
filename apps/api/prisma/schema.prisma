@@ -1,10 +1,12 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["metrics", "postgresqlExtensions"]
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [vector]
 }
 
 // =============================================================================
@@ -88,6 +90,36 @@ model User {
   // Phase 10
   adminAuditLogs      AdminAuditLog[]
   updatedFeatureFlags FeatureFlag[]
+
+  // Phase 12
+  generatedResumes        GeneratedResume[]
+  mockInterviews          MockInterview[]
+  betaInvitations         BetaInvitation[]
+  betaAccess              BetaAccess?
+  feedbacks               UserFeedback[]
+  recommendationFeedbacks RecommendationFeedback[]
+  recommendationSignals   RecommendationSignal[]
+
+  // Phase 14
+  careerGoals      CareerGoal[]
+  preparationPlans PreparationPlan[]
+
+  // Phase 15
+  subscriptions     Subscription[]
+  payments          Payment[]
+  invoices          Invoice[]
+  entitlementUsages EntitlementUsage[]
+
+  // Phase 16
+  referralsMade    Referral[]        @relation("ReferrerRelation")
+  referralReceived Referral?         @relation("RefereeRelation")
+  referralRewards  ReferralReward[]
+  userAchievements UserAchievement[]
+
+  // Phase 17
+  organizationMembers OrganizationMember[] @relation("OrgMemberRelation")
+  invitedMembers      OrganizationMember[] @relation("OrgInviterRelation")
+  sentInvitations     OrganizationInvitation[] @relation("SentInvitationsRelation")
 
   @@index([email])
   @@map("users")
@@ -468,22 +500,27 @@ model JobPosting {
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 
-  company               Company                @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  matchScores           MatchScore[]
-  recommendations       Recommendation[]
+  company                 Company                  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  matchScores             MatchScore[]
+  recommendations         Recommendation[]
   // Phase 6
-  notifications         Notification[]
+  notifications           Notification[]
   // Phase 7
-  aiAnalyses            AiAnalysis[]
-  generatedDocuments    GeneratedDocument[]
-  interviewPreparations InterviewPreparation[]
+  aiAnalyses              AiAnalysis[]
+  generatedDocuments      GeneratedDocument[]
+  interviewPreparations   InterviewPreparation[]
   // Phase 8
-  savedByUsers          SavedJob[]
-  dismissedByUsers      DismissedJob[]
-  interactions          JobInteraction[]
+  savedJobs               SavedJob[]
+  dismissedJobs           DismissedJob[]
+  jobInteractions         JobInteraction[]
+  applications            Application[]
+  generatedResumes        GeneratedResume[]
+  mockInterviews          MockInterview[]
+  recommendationFeedbacks RecommendationFeedback[]
+  recommendationSignals   RecommendationSignal[]
 
-  // Phase 9
-  applications Application[]
+  // Phase 14
+  preparationPlans PreparationPlan[]
 
   @@index([companyId])
   @@index([title])
@@ -567,6 +604,7 @@ model MatchScore {
   userId                 String   @db.Uuid
   jobId                  String   @db.Uuid
   overallScore           Float
+  semanticScore          Float?
   skillScore             Float
   educationScore         Float
   locationScore          Float
@@ -1017,4 +1055,638 @@ model FeatureFlag {
 
   @@index([key])
   @@map("feature_flags")
+}
+
+// =============================================================================
+// Phase 12 — AI Resume Builder & Interview Simulator
+// =============================================================================
+
+model GeneratedResume {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @db.Uuid
+  jobId     String?  @db.Uuid
+  name      String   @db.VarChar(100)
+  content   Json
+  pdfUrl    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job  JobPosting? @relation(fields: [jobId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([jobId])
+  @@map("generated_resumes")
+}
+
+enum InterviewStatus {
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
+}
+
+model MockInterview {
+  id        String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String          @db.Uuid
+  jobId     String?         @db.Uuid
+  status    InterviewStatus @default(IN_PROGRESS)
+  score     Int?
+  feedback  String?         @db.Text
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  user      User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job       JobPosting?             @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  questions MockInterviewQuestion[]
+
+  @@index([userId])
+  @@index([jobId])
+  @@map("mock_interviews")
+}
+
+model MockInterviewQuestion {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  interviewId String   @db.Uuid
+  question    String   @db.Text
+  answer      String?  @db.Text
+  feedback    String?  @db.Text
+  score       Int?
+  orderIndex  Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  interview MockInterview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+
+  @@index([interviewId])
+  @@map("mock_interview_questions")
+}
+
+// =============================================================================
+// Phase 12 — Beta Management & User Feedback
+// =============================================================================
+
+model BetaInvitation {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code      String    @unique @db.VarChar(50)
+  email     String?   @db.VarChar(255) // Optional, restricted to a specific email
+  cohort    String?   @db.VarChar(100)
+  maxUses   Int       @default(1)
+  usedCount Int       @default(0)
+  expiresAt DateTime?
+  isActive  Boolean   @default(true)
+  createdBy String    @db.Uuid
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  adminUser User         @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  betaUsers BetaAccess[]
+
+  @@index([code])
+  @@index([email])
+  @@map("beta_invitations")
+}
+
+model BetaAccess {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId       String    @unique @db.Uuid
+  invitationId String?   @db.Uuid
+  cohort       String?   @db.VarChar(100)
+  isRevoked    Boolean   @default(false)
+  grantedAt    DateTime  @default(now())
+  revokedAt    DateTime?
+
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invitation BetaInvitation? @relation(fields: [invitationId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([cohort])
+  @@map("beta_accesses")
+}
+
+enum FeedbackType {
+  BUG
+  FEATURE_REQUEST
+  GENERAL
+  MATCH_QUALITY
+  AI_QUALITY
+}
+
+enum FeedbackStatus {
+  OPEN
+  IN_REVIEW
+  RESOLVED
+  IGNORED
+}
+
+model UserFeedback {
+  id         String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String         @db.Uuid
+  type       FeedbackType
+  status     FeedbackStatus @default(OPEN)
+  /// Target resource, e.g. Job ID for match quality, AI Message ID for AI quality
+  resourceId String?        @db.Uuid
+  rating     Int? // 1-5 rating or -1/1 for helpful/not helpful
+  message    String?        @db.Text
+  category   String?        @db.VarChar(100)
+  severity   String?        @db.VarChar(20) // P0, P1, P2, P3, P4
+  metadata   Json?
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([type])
+  @@index([status])
+  @@map("user_feedbacks")
+}
+
+// =============================================================================
+// Phase 13 — Semantic NLP, Advanced Matching & Personalized Recommendations
+// =============================================================================
+
+model NormalizedSkill {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  canonicalName String   @unique @db.VarChar(100)
+  aliases       String[] // Array of alternative names (e.g., ["JS", "ReactJS"])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([canonicalName])
+  @@map("normalized_skills")
+}
+
+enum EntityType {
+  USER_PROFILE
+  RESUME
+  JOB_POSTING
+  SKILL
+}
+
+model ContentEmbedding {
+  id         String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  entityType EntityType
+  entityId   String     @db.Uuid
+  inputHash  String     @db.VarChar(64) // SHA-256 hash of the source text
+  model      String     @db.VarChar(100) // e.g., 'text-embedding-3-small'
+  dimension  Int        @default(1536)
+
+  // Requires pgvector extension in PostgreSQL
+  embedding Unsupported("vector")?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([entityType, entityId])
+  @@index([inputHash])
+  @@map("content_embeddings")
+}
+
+enum RecommendationFeedbackType {
+  RELEVANT
+  NOT_RELEVANT
+  WRONG_LOCATION
+  MISSING_SKILLS
+  ALREADY_APPLIED
+  NOT_INTERESTED
+}
+
+model RecommendationFeedback {
+  id        String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String                     @db.Uuid
+  jobId     String                     @db.Uuid
+  feedback  RecommendationFeedbackType
+  createdAt DateTime                   @default(now())
+
+  user User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job  JobPosting @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([jobId])
+  @@map("recommendation_feedbacks")
+}
+
+model RecommendationSignal {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String   @db.Uuid
+  jobId      String   @db.Uuid
+  signalType String   @db.VarChar(100) // 'VIEWED', 'SAVED', 'APPLIED', etc.
+  weight     Float    @default(1.0)
+  createdAt  DateTime @default(now())
+
+  user User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job  JobPosting @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([jobId])
+  @@map("recommendation_signals")
+}
+
+// =============================================================================
+// Phase 14 — AI Career Preparation & Application Intelligence
+// =============================================================================
+
+model CareerGoal {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId        String    @db.Uuid
+  targetRole    String    @db.VarChar(255)
+  targetCompany String?   @db.VarChar(255)
+  targetDate    DateTime?
+  hoursPerWeek  Int       @default(5)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("career_goals")
+}
+
+enum PreparationTaskStatus {
+  TODO
+  IN_PROGRESS
+  COMPLETED
+}
+
+model PreparationPlan {
+  id                  String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId              String  @db.Uuid
+  jobId               String  @db.Uuid
+  applicationId       String? @db.Uuid // Optional tie to an application
+  overallReadiness    Float?
+  skillsReadiness     Float?
+  resumeReadiness     Float?
+  technicalReadiness  Float?
+  behavioralReadiness Float?
+
+  planSummary String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user  User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job   JobPosting        @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  tasks PreparationTask[]
+
+  @@unique([userId, jobId])
+  @@index([userId])
+  @@index([jobId])
+  @@map("preparation_plans")
+}
+
+model PreparationTask {
+  id                String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  preparationPlanId String                @db.Uuid
+  title             String                @db.VarChar(500)
+  description       String?               @db.Text
+  category          String                @db.VarChar(100) // 'TECHNICAL', 'BEHAVIORAL', 'COMPANY', 'RESUME'
+  priority          String                @db.VarChar(50) // 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW'
+  status            PreparationTaskStatus @default(TODO)
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+
+  plan PreparationPlan @relation(fields: [preparationPlanId], references: [id], onDelete: Cascade)
+
+  @@index([preparationPlanId])
+  @@index([status])
+  @@map("preparation_tasks")
+}
+
+// =============================================================================
+// Phase 15 — Monetization, Subscriptions, Premium Features & Billing
+// =============================================================================
+
+enum BillingInterval {
+  MONTHLY
+  YEARLY
+  LIFETIME
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  PAUSED
+  CANCELED
+  EXPIRED
+  PAYMENT_FAILED
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum WebhookStatus {
+  PENDING
+  PROCESSED
+  FAILED
+}
+
+model SubscriptionPlan {
+  id              String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name            String          @db.VarChar(100)
+  slug            String          @unique @db.VarChar(100)
+  description     String?         @db.Text
+  billingInterval BillingInterval
+  price           Decimal         @db.Decimal(10, 2)
+  currency        String          @default("INR") @db.VarChar(10)
+  isActive        Boolean         @default(true)
+  featuresJson    Json? // Array of string features
+  limitsJson      Json? // Key-value mapping of feature limits
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  subscriptions Subscription[]
+}
+
+model Subscription {
+  id                     String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId                 String?            @db.Uuid // Usually 1:1 active per user
+  organizationId         String?            @db.Uuid // For B2B
+  planId                 String             @db.Uuid
+  provider               String             @db.VarChar(50) // e.g. "RAZORPAY"
+  providerSubscriptionId String             @unique @db.VarChar(100)
+  status                 SubscriptionStatus
+  currentPeriodStart     DateTime
+  currentPeriodEnd       DateTime
+  cancelAtPeriodEnd      Boolean            @default(false)
+  cancelledAt            DateTime?
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+
+  user         User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization?    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  plan     SubscriptionPlan @relation(fields: [planId], references: [id])
+  payments Payment[]
+  invoices Invoice[]
+
+  @@index([userId])
+  @@index([status])
+}
+
+model Payment {
+  id                String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId            String?       @db.Uuid
+  organizationId    String?       @db.Uuid
+  subscriptionId    String?       @db.Uuid
+  provider          String        @db.VarChar(50)
+  providerPaymentId String        @unique @db.VarChar(100)
+  amount            Decimal       @db.Decimal(10, 2)
+  currency          String        @default("INR") @db.VarChar(10)
+  status            PaymentStatus
+  paymentMethod     String?       @db.VarChar(100)
+  failureReason     String?       @db.Text
+  createdAt         DateTime      @default(now())
+
+  user         User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  subscription Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+}
+
+model Invoice {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId            String?  @db.Uuid
+  organizationId    String?  @db.Uuid
+  subscriptionId    String   @db.Uuid
+  providerInvoiceId String   @unique @db.VarChar(100)
+  amount            Decimal  @db.Decimal(10, 2)
+  currency          String   @default("INR") @db.VarChar(10)
+  status            String   @db.VarChar(50)
+  invoiceUrl        String?  @db.Text
+  createdAt         DateTime @default(now())
+
+  user         User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model EntitlementUsage {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String?  @db.Uuid
+  organizationId String? @db.Uuid
+  feature     String   @db.VarChar(100)
+  usageCount  Int      @default(0)
+  periodStart DateTime
+  periodEnd   DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user         User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, feature, periodStart])
+  @@unique([organizationId, feature, periodStart])
+  @@index([userId])
+  @@index([organizationId])
+}
+
+model WebhookEvent {
+  id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  provider    String        @db.VarChar(50)
+  eventId     String        @unique @db.VarChar(100)
+  eventType   String        @db.VarChar(100)
+  payloadHash String        @db.VarChar(255)
+  status      WebhookStatus @default(PENDING)
+  processedAt DateTime?
+  createdAt   DateTime      @default(now())
+
+  @@index([status])
+}
+
+// =============================================================================
+// Phase 16 — Growth, Referral, Engagement & Retention
+// =============================================================================
+
+enum ReferralStatus {
+  CREATED
+  CLICKED
+  REGISTERED
+  ACTIVATED
+  QUALIFIED
+  REWARDED
+  REJECTED
+  FLAGGED
+}
+
+model ReferralCampaign {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name             String    @db.VarChar(100)
+  description      String?   @db.Text
+  isActive         Boolean   @default(true)
+  rewardRulesJson  Json // E.g., { referrerReward: { type: 'PREMIUM_TRIAL', days: 7 }, refereeReward: { type: 'PREMIUM_TRIAL', days: 7 } }
+  qualifyRulesJson Json // E.g., { requiredActions: ['PROFILE_COMPLETE', 'JOB_SAVED'] }
+  startDate        DateTime?
+  endDate          DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  referrals Referral[]
+}
+
+model Referral {
+  id           String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  campaignId   String         @db.Uuid
+  referrerId   String         @db.Uuid
+  refereeId    String?        @unique @db.Uuid
+  referralCode String         @unique @db.VarChar(50)
+  status       ReferralStatus @default(CREATED)
+  metadataJson Json? // IP address hash, user agent hash for anti-abuse
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  campaign ReferralCampaign @relation(fields: [campaignId], references: [id])
+  referrer User             @relation("ReferrerRelation", fields: [referrerId], references: [id], onDelete: Cascade)
+  referee  User?            @relation("RefereeRelation", fields: [refereeId], references: [id], onDelete: SetNull)
+  rewards  ReferralReward[]
+
+  @@index([referrerId])
+  @@index([status])
+}
+
+model ReferralReward {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  referralId  String    @db.Uuid
+  userId      String    @db.Uuid
+  rewardType  String    @db.VarChar(50) // e.g., 'PREMIUM_TRIAL', 'AI_USAGE_BONUS'
+  rewardValue Int // e.g., 7 (days), 50 (tokens)
+  isRedeemed  Boolean   @default(false)
+  redeemedAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  referral Referral @relation(fields: [referralId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Achievement {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name         String   @unique @db.VarChar(100)
+  description  String   @db.Text
+  iconUrl      String?  @db.VarChar(255)
+  criteriaJson Json // E.g., { event: 'profile_complete', count: 1 }
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  userAchievements UserAchievement[]
+}
+
+model UserAchievement {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId        String   @db.Uuid
+  achievementId String   @db.Uuid
+  unlockedAt    DateTime @default(now())
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+}
+
+// =============================================================================
+// Phase 17 — B2B, College Placement & Enterprise Platform
+// =============================================================================
+
+enum OrganizationType {
+  COLLEGE
+  UNIVERSITY
+  TRAINING_INSTITUTE
+  CAREER_CENTER
+  ENTERPRISE
+  OTHER
+}
+
+enum OrganizationRole {
+  OWNER
+  ADMIN
+  PLACEMENT_OFFICER
+  COUNSELOR
+  ANALYST
+  MEMBER
+  STUDENT
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}
+
+model Organization {
+  id           String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name         String           @db.VarChar(255)
+  slug         String           @unique @db.VarChar(100)
+  type         OrganizationType @default(COLLEGE)
+  logoUrl      String?          @db.VarChar(255)
+  website      String?          @db.VarChar(255)
+  contactEmail String?          @db.VarChar(255)
+  contactPhone String?          @db.VarChar(50)
+  status       String           @default("ACTIVE") @db.VarChar(50)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  members      OrganizationMember[]
+  invitations  OrganizationInvitation[]
+  settings     OrganizationSettings?
+
+  // B2B Billing
+  subscriptions    Subscription[]
+  payments         Payment[]
+  invoices         Invoice[]
+  entitlementUsages EntitlementUsage[]
+}
+
+model OrganizationSettings {
+  id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String       @unique @db.Uuid
+  primaryColor   String?      @db.VarChar(50)
+  flagsJson      Json?        // Org-level feature flags
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+model OrganizationMember {
+  id             String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String           @db.Uuid
+  userId         String           @db.Uuid
+  role           OrganizationRole @default(STUDENT)
+  status         String           @default("ACTIVE") @db.VarChar(50)
+  joinedAt       DateTime         @default(now())
+  invitedById    String?          @db.Uuid
+  consentGiven   Boolean          @default(true) // aggregate data sharing consent
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User             @relation("OrgMemberRelation", fields: [userId], references: [id], onDelete: Cascade)
+  invitedBy      User?            @relation("OrgInviterRelation", fields: [invitedById], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, userId])
+}
+
+model OrganizationInvitation {
+  id             String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String           @db.Uuid
+  email          String           @db.VarChar(255)
+  role           OrganizationRole @default(STUDENT)
+  status         InvitationStatus @default(PENDING)
+  token          String           @unique @db.VarChar(255)
+  invitedById    String           @db.Uuid
+  expiresAt      DateTime
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invitedBy      User             @relation("SentInvitationsRelation", fields: [invitedById], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, email])
 }

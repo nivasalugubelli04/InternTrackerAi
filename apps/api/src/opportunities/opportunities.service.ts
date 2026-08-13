@@ -2,6 +2,7 @@ import { Injectable, Logger, NotFoundException, ConflictException } from '@nestj
 import { JobPostingStatus, DismissReason, InteractionType, Prisma } from '@prisma/client';
 
 import { PrismaService } from '../prisma/prisma.service';
+import { EngagementTrackerService } from '../engagement/services/engagement-tracker.service';
 import { RedisService } from '../redis/redis.service';
 
 import type { DismissJobDto } from './dto/dismiss-job.dto';
@@ -43,6 +44,7 @@ export class OpportunitiesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
+    private readonly engagementTracker: EngagementTrackerService,
   ) {}
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -100,7 +102,7 @@ export class OpportunitiesService {
           },
         },
       },
-      savedByUsers: {
+      savedJobs: {
         where: { userId },
         select: { id: true },
       },
@@ -114,7 +116,7 @@ export class OpportunitiesService {
   private formatJob(job: any) {
     const matchScore = job.matchScores?.[0] ?? null;
     const recommendation = job.recommendations?.[0] ?? null;
-    const isSaved = (job.savedByUsers?.length ?? 0) > 0;
+    const isSaved = (job.savedJobs?.length ?? 0) > 0;
     const isDismissed = (job.dismissedByUsers?.length ?? 0) > 0;
     const deadlineUrgency = this.classifyDeadline(job.deadline);
 
@@ -305,7 +307,7 @@ export class OpportunitiesService {
         job: {
           include: {
             company: JOB_COMPANY_SELECT,
-            savedByUsers: { where: { userId }, select: { id: true } },
+            savedJobs: { where: { userId }, select: { id: true } },
           },
         },
         reasons: { select: { reasonType: true, description: true, weight: true } },
@@ -321,7 +323,7 @@ export class OpportunitiesService {
     return recommendations.map((rec) => ({
       ...rec.job,
       deadlineUrgency: this.classifyDeadline(rec.job.deadline),
-      isSaved: (rec.job.savedByUsers?.length ?? 0) > 0,
+      isSaved: (rec.job.savedJobs?.length ?? 0) > 0,
       matchScore: scoreMap.get(rec.jobId) ?? null,
       recommendation: {
         rank: rec.rank,
@@ -580,6 +582,10 @@ export class OpportunitiesService {
       }).catch(() => {});
 
       this.logger.log(`User ${userId} saved job ${jobId}`);
+
+      // Phase 16: Track engagement event
+      await this.engagementTracker.trackAction(userId, 'JOB_SAVED');
+
       return { saved: true, savedAt: saved.createdAt };
     } catch (error: any) {
       if (error?.code === 'P2002') {

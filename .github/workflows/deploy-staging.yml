@@ -25,15 +25,20 @@ jobs:
 
       - name: Build Images
         run: |
-          docker build -t interntracker-api:staging -f apps/api/Dockerfile .
-          docker build -t interntracker-admin:staging -f apps/admin/Dockerfile .
+          docker build -t interntracker-api:${{ github.sha }} -f apps/api/Dockerfile .
+          docker build -t interntracker-admin:${{ github.sha }} -f apps/admin/Dockerfile .
+          # Also tag as staging for latest pointer
+          docker tag interntracker-api:${{ github.sha }} interntracker-api:staging
+          docker tag interntracker-admin:${{ github.sha }} interntracker-admin:staging
 
       # Note: Placeholder for actual deployment logic (e.g., AWS ECS, Vercel, etc.)
       - name: Push to Registry (Placeholder)
         run: |
           echo "Simulating push to container registry (e.g. Amazon ECR)..."
           # aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $ECR_REGISTRY
+          # docker push $ECR_REGISTRY/interntracker-api:${{ github.sha }}
           # docker push $ECR_REGISTRY/interntracker-api:staging
+          # docker push $ECR_REGISTRY/interntracker-admin:${{ github.sha }}
           # docker push $ECR_REGISTRY/interntracker-admin:staging
           echo "Push complete."
 
@@ -41,4 +46,4 @@ jobs:
         run: |
           echo "Simulating ECS service update..."
           # aws ecs update-service --cluster InternTracker-Staging --service api-service --force-new-deployment
-          echo "Deployment triggered."
+          echo "Deployment triggered with image tag ${{ github.sha }}"

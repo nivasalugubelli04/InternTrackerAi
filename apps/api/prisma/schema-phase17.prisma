@@ -1,0 +1,102 @@
+
+// =============================================================================
+// Phase 17 — B2B, College Placement & Enterprise Platform
+// =============================================================================
+
+enum OrganizationType {
+  COLLEGE
+  UNIVERSITY
+  TRAINING_INSTITUTE
+  CAREER_CENTER
+  ENTERPRISE
+  OTHER
+}
+
+enum OrganizationRole {
+  OWNER
+  ADMIN
+  PLACEMENT_OFFICER
+  COUNSELOR
+  ANALYST
+  MEMBER
+  STUDENT
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}
+
+model Organization {
+  id           String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name         String           @db.VarChar(255)
+  slug         String           @unique @db.VarChar(100)
+  type         OrganizationType @default(COLLEGE)
+  logoUrl      String?          @db.VarChar(255)
+  website      String?          @db.VarChar(255)
+  contactEmail String?          @db.VarChar(255)
+  contactPhone String?          @db.VarChar(50)
+  status       String           @default("ACTIVE") @db.VarChar(50)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  members      OrganizationMember[]
+  invitations  OrganizationInvitation[]
+  settings     OrganizationSettings?
+
+  // B2B Billing
+  subscriptions    Subscription[]
+  payments         Payment[]
+  invoices         Invoice[]
+  entitlementUsages EntitlementUsage[]
+}
+
+model OrganizationSettings {
+  id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String       @unique @db.Uuid
+  primaryColor   String?      @db.VarChar(50)
+  flagsJson      Json?        // Org-level feature flags
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+model OrganizationMember {
+  id             String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String           @db.Uuid
+  userId         String           @db.Uuid
+  role           OrganizationRole @default(STUDENT)
+  status         String           @default("ACTIVE") @db.VarChar(50)
+  joinedAt       DateTime         @default(now())
+  invitedById    String?          @db.Uuid
+  consentGiven   Boolean          @default(true) // aggregate data sharing consent
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User             @relation("OrgMemberRelation", fields: [userId], references: [id], onDelete: Cascade)
+  invitedBy      User?            @relation("OrgInviterRelation", fields: [invitedById], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, userId])
+}
+
+model OrganizationInvitation {
+  id             String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String           @db.Uuid
+  email          String           @db.VarChar(255)
+  role           OrganizationRole @default(STUDENT)
+  status         InvitationStatus @default(PENDING)
+  token          String           @unique @db.VarChar(255)
+  invitedById    String           @db.Uuid
+  expiresAt      DateTime
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invitedBy      User             @relation("SentInvitationsRelation", fields: [invitedById], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, email])
+}

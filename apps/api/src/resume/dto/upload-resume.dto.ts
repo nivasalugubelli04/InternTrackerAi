@@ -2,6 +2,8 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsNotEmpty, IsString, IsInt, Min, Max, IsUrl, MaxLength, IsIn } from 'class-validator';
 
+import { IsSafeUrl } from '../../common/validators/is-safe-url.validator';
+
 export class UploadResumeDto {
   @ApiProperty({ example: 'john_doe_resume.pdf' })
   @IsString()
@@ -11,6 +13,7 @@ export class UploadResumeDto {
 
   @ApiProperty({ example: 'https://storage.example.com/resumes/uuid.pdf' })
   @IsUrl({}, { message: 'fileUrl must be a valid URL' })
+  @IsSafeUrl({ message: 'fileUrl must not point to internal infrastructure' })
   @MaxLength(1000)
   fileUrl!: string;
 

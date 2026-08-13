@@ -7,15 +7,23 @@ import {
   ParseUUIDPipe,
   Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { UserRole } from '@prisma/client';
 
-import { Public } from '../../auth/decorators/public.decorator';
+import { Roles } from '../../auth/decorators/roles.decorator';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../../auth/guards/roles.guard';
+import { RateLimitProfile } from '../../common/decorators/rate-limit.decorator';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ScrapeSchedulerService } from '../../queues/schedulers/scrape-scheduler.service';
 import { HealthMonitoringService } from '../services/health-monitoring.service';
 
 @ApiTags('Scrapers (Admin)')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+@RateLimitProfile('scraper')
 @Controller('scrapers')
 export class ScrapersController {
   constructor(
@@ -24,7 +32,6 @@ export class ScrapersController {
     private readonly prisma: PrismaService,
   ) {}
 
-  @Public()
   @Get('status')
   @ApiOperation({ summary: 'Get current scraper system health and telemetry' })
   @ApiResponse({ status: 200, description: 'Scraper metrics and active telemetry.' })
@@ -32,7 +39,6 @@ export class ScrapersController {
     return this.healthMonitoringService.getOverallStatus();
   }
 
-  @Public()
   @Get('history')
   @ApiOperation({ summary: 'Get execution history of scrape jobs' })
   @ApiQuery({ name: 'page', required: false, example: 1 })
@@ -76,7 +82,6 @@ export class ScrapersController {
     };
   }
 
-  @Public()
   @Post('run/:companyId')
   @HttpCode(HttpStatus.ACCEPTED)
   @ApiOperation({ summary: 'Trigger scraping job for a single company' })
@@ -85,7 +90,6 @@ export class ScrapersController {
     return this.scrapeSchedulerService.triggerScrapeCompany(companyId);
   }
 
-  @Public()
   @Post('run-all')
   @HttpCode(HttpStatus.ACCEPTED)
   @ApiOperation({ summary: 'Trigger scraping jobs for all active companies' })
