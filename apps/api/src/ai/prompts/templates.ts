@@ -444,3 +444,167 @@ export const chatPrompt: PromptTemplate = {
   User Message:
   {message}`,
 };
+
+export const resumeParsingPrompt: PromptTemplate = {
+  name: 'resume-parsing',
+  version: '1.0.0',
+  systemInstruction: `You are an expert ATS parser. Extract candidate information from raw resume text.
+  Guidelines:
+  1. Extract only facts directly stated in the text.
+  2. Do not invent degrees, companies, projects, or metrics.
+  3. Provide a confidence score for each extracted block.`,
+  userInstructionTemplate: `Resume Text:
+  {resumeText}`,
+  expectedSchema: {
+    type: 'object',
+    properties: {
+      name: { type: 'string' },
+      email: { type: 'string' },
+      phone: { type: 'string' },
+      education: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            degree: { type: 'string' },
+            college: { type: 'string' },
+            cgpa: { type: 'string' }
+          },
+          required: ['degree', 'college']
+        }
+      },
+      skills: { type: 'array', items: { type: 'string' } },
+      projects: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            name: { type: 'string' },
+            description: { type: 'string' },
+            technologies: { type: 'array', items: { type: 'string' } }
+          },
+          required: ['name', 'description']
+        }
+      },
+      experience: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            role: { type: 'string' },
+            company: { type: 'string' },
+            description: { type: 'array', items: { type: 'string' } }
+          },
+          required: ['role', 'company']
+        }
+      },
+      certifications: { type: 'array', items: { type: 'string' } },
+      achievements: { type: 'array', items: { type: 'string' } },
+      links: { type: 'array', items: { type: 'string' } },
+      confidenceScore: { type: 'number' }
+    },
+    required: ['skills', 'education', 'projects', 'experience']
+  }
+};
+
+export const resumeOptimizationPrompt: PromptTemplate = {
+  name: 'resume-optimization',
+  version: '1.0.0',
+  systemInstruction: `You are an expert technical resume writer. Analyze the resume, user profile, and optionally a target job description to generate targeted resume optimization suggestions.
+  Guidelines:
+  1. Do not invent experience, achievements, certifications, or qualifications.
+  2. For any suggestion, include the original text, the suggested improved text, and the reason.
+  3. Suggest improvements for bullet points, project details, and experience entries based strictly on user data.
+  4. Generate a professional summary if requested, using only real information.
+  5. Organize the user's existing skills into standardized categories: Programming, Frameworks, Databases, Cloud, AI/ML, Tools, Soft Skills. Do not invent skills.
+  6. Calculate the InternTracker Resume Quality Score (0-100) and its breakdown based on the following weights:
+     - ATS Structure: 25%
+     - Skill Alignment: 25%
+     - Content Quality: 20%
+     - Role Relevance: 15%
+     - Completeness: 10%
+     - Consistency: 5%`,
+  userInstructionTemplate: `Resume:
+  {resumeText}
+  
+  User Profile:
+  {profileInfo}
+  
+  Target Job Description (optional):
+  {jobDescription}
+  
+  Optimization Request:
+  {requestType}`,
+  expectedSchema: {
+    type: 'object',
+    properties: {
+      qualityScore: { type: 'number' },
+      scoreBreakdown: {
+        type: 'object',
+        properties: {
+          ats: { type: 'number' },
+          skill: { type: 'number' },
+          content: { type: 'number' },
+          relevance: { type: 'number' },
+          completeness: { type: 'number' },
+          consistency: { type: 'number' }
+        },
+        required: ['ats', 'skill', 'content', 'relevance', 'completeness', 'consistency']
+      },
+      suggestions: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            sectionType: { type: 'string' },
+            originalText: { type: 'string' },
+            suggestedText: { type: 'string' },
+            reason: { type: 'string' }
+          },
+          required: ['sectionType', 'originalText', 'suggestedText', 'reason']
+        }
+      },
+      missingKeywords: { type: 'array', items: { type: 'string' } },
+      matchedKeywords: { type: 'array', items: { type: 'string' } },
+      categorizedSkills: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            category: { type: 'string' },
+            skills: { type: 'array', items: { type: 'string' } }
+          },
+          required: ['category', 'skills']
+        }
+      }
+    },
+    required: ['qualityScore', 'scoreBreakdown', 'suggestions', 'missingKeywords', 'matchedKeywords', 'categorizedSkills']
+  }
+};
+
+export const portfolioOptimizationPrompt: PromptTemplate = {
+  name: 'portfolio-optimization',
+  version: '1.0.0',
+  systemInstruction: `You are an expert career brand strategist. Analyze the user's portfolio and profile to suggest improvements for clarity, role alignment, project description quality, and professional presentation.
+  Guidelines:
+  1. Do not invent any experience, projects, or credentials.
+  2. Flag missing sections.
+  3. Offer clear suggestions for improvement.`,
+  userInstructionTemplate: `Portfolio Content:
+  {portfolioContent}
+  
+  Profile Info:
+  {profileInfo}`,
+  expectedSchema: {
+    type: 'object',
+    properties: {
+      score: { type: 'number' },
+      roleAlignment: { type: 'string' },
+      suggestions: { type: 'array', items: { type: 'string' } },
+      missingSections: { type: 'array', items: { type: 'string' } },
+      improvementSummary: { type: 'string' }
+    },
+    required: ['score', 'roleAlignment', 'suggestions', 'missingSections', 'improvementSummary']
+  }
+};
+

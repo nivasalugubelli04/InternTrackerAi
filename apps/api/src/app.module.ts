@@ -41,7 +41,11 @@ import { ResumeModule } from './resume/resume.module';
 import { ResumeBuilderModule } from './resume-builder/resume-builder.module';
 import { ScrapersModule } from './scrapers/scrapers.module';
 import { SkillsModule } from './skills/skills.module';
-
+import { ResumeStudioModule } from './resume-studio/resume-studio.module';
+import { PortfolioModule } from './portfolio/portfolio.module';
+import { ExtensionModule } from './extension/extension.module';
+import { RecruiterModule } from './recruiter/recruiter.module';
+import { PrivacyModule } from './privacy/privacy.module';
 /**
  * AppModule — root module of the InternTracker API.
  *
@@ -175,6 +179,13 @@ import { SkillsModule } from './skills/skills.module';
     EngagementModule,
     OrganizationsModule,
     MarketModule,
+    // Phase 20
+    ResumeStudioModule,
+    PortfolioModule,
+    ExtensionModule,
+    // Phase 22 — Recruiter Portal
+    RecruiterModule,
+    PrivacyModule,
   ],
 
   providers: [

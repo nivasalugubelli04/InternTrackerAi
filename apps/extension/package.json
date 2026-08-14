@@ -1,0 +1,21 @@
+{
+  "name": "interntracker-extension",
+  "version": "1.0.0",
+  "description": "InternTracker AI Application Assistant",
+  "main": "dist/background.js",
+  "scripts": {
+    "build": "esbuild src/background.ts src/content.ts src/popup.tsx --bundle --outdir=dist --platform=browser",
+    "watch": "esbuild src/background.ts src/content.ts src/popup.tsx --bundle --outdir=dist --platform=browser --watch"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.260",
+    "@types/react": "^18.2.15",
+    "@types/react-dom": "^18.2.7",
+    "esbuild": "^0.18.11",
+    "typescript": "^5.1.6"
+  }
+}

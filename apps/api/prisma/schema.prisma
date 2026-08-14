@@ -121,6 +121,22 @@ model User {
   invitedMembers      OrganizationMember[] @relation("OrgInviterRelation")
   sentInvitations     OrganizationInvitation[] @relation("SentInvitationsRelation")
 
+  // Phase 20
+  resumeDocuments    ResumeDocument[]
+  portfolio          Portfolio?
+
+  // Phase 21
+  assistSessions     ApplicationAssistSession[]
+
+  // Phase 22
+  recruiterProfile   RecruiterProfile?
+  contactRequestsSent     ContactRequest[]  @relation("ContactRequestSender")
+  contactRequestsReceived ContactRequest[]  @relation("ContactRequestReceiver")
+  messagesSent       Message[]         @relation("MessageSender")
+  recruiterReports   RecruiterReport[]  @relation("RecruiterReporter")
+  recruiterAuditEvents RecruiterAuditEvent[]
+  discoverabilitySettings RecruiterDiscoverabilitySettings?
+
   @@index([email])
   @@map("users")
 }
@@ -526,11 +542,27 @@ model JobPosting {
   // Phase 18
   dataQualityMetric DataQualityMetric?
 
+  // Phase 20
+  resumeAnalyses    ResumeAnalysis[]
+
+  // Phase 21
+  assistSessions    ApplicationAssistSession[]
+
+  // Phase 22 — Recruiter Portal (nullable: scraped jobs have no recruiter owner)
+  recruiterProfileId String?            @db.Uuid
+  recruiterOrgId     String?            @db.Uuid
+  recruiterStatus    String?            @db.VarChar(50) // DRAFT | PUBLISHED | PAUSED | CLOSED | ARCHIVED
+
+  recruiterProfile   RecruiterProfile?  @relation(fields: [recruiterProfileId], references: [id], onDelete: SetNull)
+  recruiterOrg       RecruiterOrganization? @relation(fields: [recruiterOrgId], references: [id], onDelete: SetNull)
+  pipelineEntries    RecruitmentPipelineEntry[]
+
   @@index([companyId])
   @@index([title])
   @@index([location])
   @@index([status])
   @@index([hash])
+  @@index([recruiterOrgId])
   @@map("job_postings")
 }
 
@@ -1645,6 +1677,9 @@ model Organization {
   payments         Payment[]
   invoices         Invoice[]
   entitlementUsages EntitlementUsage[]
+
+  // Phase 22
+  recruiterOrganization RecruiterOrganization?
 }
 
 model OrganizationSettings {
@@ -1896,3 +1931,463 @@ model DataQualityMetric {
   @@map("data_quality_metrics")
 }
 
+// =============================================================================
+// Phase 20 — AI Resume, Portfolio & ATS Optimization Studio
+// =============================================================================
+
+model ResumeDocument {
+  id             String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId         String          @db.Uuid
+  name           String          @db.VarChar(255)
+  targetRole     String?         @db.VarChar(255)
+  targetCompany  String?         @db.VarChar(255)
+  isArchived     Boolean         @default(false)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  versions       ResumeVersion[]
+  portfolio      Portfolio?
+
+  @@index([userId])
+  @@map("resume_documents")
+}
+
+model ResumeVersion {
+  id               String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  resumeDocumentId String          @db.Uuid
+  versionName      String          @db.VarChar(255)
+  contentJson      Json
+  atsScore         Int?
+  qualityScore     Int?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  resumeDocument   ResumeDocument  @relation(fields: [resumeDocumentId], references: [id], onDelete: Cascade)
+  analyses         ResumeAnalysis[]
+  suggestions      ResumeSuggestion[]
+
+  @@index([resumeDocumentId])
+  @@map("resume_versions")
+}
+
+model ResumeAnalysis {
+  id               String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  resumeVersionId  String          @db.Uuid
+  jobId            String?         @db.Uuid
+  overallScore     Int
+  scoreBreakdown   Json
+  missingKeywords  String[]        @default([])
+  matchedKeywords  String[]        @default([])
+  analysisJson     Json
+  createdAt        DateTime        @default(now())
+
+  resumeVersion    ResumeVersion   @relation(fields: [resumeVersionId], references: [id], onDelete: Cascade)
+  job              JobPosting?     @relation(fields: [jobId], references: [id], onDelete: SetNull)
+
+  @@index([resumeVersionId])
+  @@index([jobId])
+  @@map("resume_analyses")
+}
+
+model ResumeSuggestion {
+  id               String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  resumeVersionId  String          @db.Uuid
+  sectionType      String          @db.VarChar(100)
+  originalText     String?         @db.Text
+  suggestedText    String          @db.Text
+  reason           String?         @db.Text
+  status           String          @default("PENDING") @db.VarChar(50)
+  createdAt        DateTime        @default(now())
+
+  resumeVersion    ResumeVersion   @relation(fields: [resumeVersionId], references: [id], onDelete: Cascade)
+
+  @@index([resumeVersionId])
+  @@index([status])
+  @@map("resume_suggestions")
+}
+
+model Portfolio {
+  id               String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId           String          @unique @db.Uuid
+  resumeDocumentId String?         @unique @db.Uuid
+  username         String          @unique @db.VarChar(100)
+  visibility       String          @default("PRIVATE") @db.VarChar(50)
+  templateName     String          @default("MINIMAL") @db.VarChar(50)
+  contentJson      Json
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resumeDocument   ResumeDocument? @relation(fields: [resumeDocumentId], references: [id], onDelete: SetNull)
+
+  @@map("portfolios")
+}
+
+// =============================================================================
+// Phase 21 — Application Assistant & Browser Extension
+// =============================================================================
+
+model ApplicationAssistSession {
+  id             String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId         String                   @db.Uuid
+  jobId          String?                  @db.Uuid
+  domain         String                   @db.VarChar(255)
+  url            String                   @db.Text
+  startedAt      DateTime                 @default(now())
+  completedAt    DateTime?
+  status         String                   @db.VarChar(50)
+  fieldsDetected Json?
+  fieldsApproved Json?
+  fieldsFilled   Json?
+  manualFields   Json?
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+
+  user           User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job            JobPosting?              @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  fields         ApplicationAssistField[]
+  drafts         ApplicationAssistDraft[]
+
+  @@index([userId])
+  @@index([jobId])
+  @@map("application_assist_sessions")
+}
+
+model ApplicationAssistField {
+  id           String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sessionId    String                   @db.Uuid
+  fieldName    String                   @db.VarChar(255)
+  fieldType    String                   @db.VarChar(100)
+  suggestedVal String?                  @db.Text
+  approvedVal  String?                  @db.Text
+  confidence   Float
+  status       String                   @db.VarChar(50)
+  createdAt    DateTime                 @default(now())
+
+  session      ApplicationAssistSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@map("application_assist_fields")
+}
+
+model ApplicationAssistDraft {
+  id           String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sessionId    String                   @db.Uuid
+  questionText String                   @db.Text
+  draftText    String                   @db.Text
+  approvedText String?                  @db.Text
+  createdAt    DateTime                 @default(now())
+
+  session      ApplicationAssistSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@map("application_assist_drafts")
+}
+
+// =============================================================================
+// Phase 22 — Recruiter Portal & Talent Discovery Platform
+// =============================================================================
+
+enum RecruiterRole {
+  RECRUITER
+  RECRUITER_ADMIN
+  HIRING_MANAGER
+  INTERVIEWER
+  COMPANY_ADMIN
+}
+
+enum RecruiterOrgVerificationStatus {
+  PENDING
+  UNDER_REVIEW
+  VERIFIED
+  REJECTED
+  SUSPENDED
+}
+
+enum RecruiterDiscoverabilityLevel {
+  PRIVATE
+  VERIFIED_RECRUITERS
+  SPECIFIC_COMPANIES
+  PUBLIC_PROFILE
+}
+
+enum RecruitmentPipelineStage {
+  DISCOVERED
+  SHORTLISTED
+  CONTACTED
+  INTERVIEW
+  ASSESSMENT
+  OFFER
+  HIRED
+  REJECTED
+  WITHDRAWN
+}
+
+enum ContactRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  WITHDRAWN
+}
+
+enum MessageStatus {
+  SENT
+  READ
+  REPORTED
+  BLOCKED
+}
+
+/// Verified recruiter org linked to an existing Phase 17 Organization record.
+model RecruiterOrganization {
+  id                 String                         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId     String                         @unique @db.Uuid
+  verificationStatus RecruiterOrgVerificationStatus @default(PENDING)
+  verifiedAt         DateTime?
+  verifiedByAdminId  String?                        @db.Uuid
+  rejectionReason    String?                        @db.Text
+  companyWebsite     String?                        @db.VarChar(500)
+  linkedinUrl        String?                        @db.VarChar(500)
+  taxId              String?                        @db.VarChar(100)
+  maxActiveJobs      Int                            @default(5)
+  createdAt          DateTime                       @default(now())
+  updatedAt          DateTime                       @updatedAt
+
+  organization       Organization                   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  profiles           RecruiterProfile[]
+  jobPostings        JobPosting[]
+  shortlists         CandidateShortlist[]
+  pipelines          RecruiterPipeline[]
+  contactRequests    ContactRequest[]
+  messageThreads     MessageThread[]
+  auditEvents        RecruiterAuditEvent[]
+
+  @@index([verificationStatus])
+  @@map("recruiter_organizations")
+}
+
+/// Individual recruiter user profile — one User can have one RecruiterProfile.
+model RecruiterProfile {
+  id             String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId         String          @unique @db.Uuid
+  recruiterOrgId String          @db.Uuid
+  recruiterRole  RecruiterRole   @default(RECRUITER)
+  jobTitle       String?         @db.VarChar(255)
+  department     String?         @db.VarChar(255)
+  isVerified     Boolean         @default(false)
+  isSuspended    Boolean         @default(false)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recruiterOrg   RecruiterOrganization @relation(fields: [recruiterOrgId], references: [id], onDelete: Cascade)
+  jobPostings    JobPosting[]
+  shortlists     CandidateShortlist[]
+  pipelines      RecruiterPipeline[]
+  contactRequestsSent ContactRequest[] @relation("RecruiterContactRequestSender")
+
+  @@index([recruiterOrgId])
+  @@index([userId])
+  @@map("recruiter_profiles")
+}
+
+/// Per-candidate opt-in consent for recruiter visibility.
+model RecruiterDiscoverabilitySettings {
+  id                   String                        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId               String                        @unique @db.Uuid
+  discoverabilityLevel RecruiterDiscoverabilityLevel @default(PRIVATE)
+  resumeVisible        Boolean                       @default(false)
+  contactPermitted     Boolean                       @default(false)
+  profileVisible       Boolean                       @default(false)
+  specificCompanyIds   String[]                      @default([]) // allowed company UUIDs when level=SPECIFIC_COMPANIES
+  updatedAt            DateTime                      @updatedAt
+  createdAt            DateTime                      @default(now())
+
+  user                 User                          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([discoverabilityLevel])
+  @@map("recruiter_discoverability_settings")
+}
+
+/// A named shortlist folder owned by a recruiter.
+model CandidateShortlist {
+  id             String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  recruiterOrgId String               @db.Uuid
+  ownerId        String               @db.Uuid // RecruiterProfile.id
+  name           String               @db.VarChar(255)
+  description    String?              @db.Text
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  recruiterOrg   RecruiterOrganization @relation(fields: [recruiterOrgId], references: [id], onDelete: Cascade)
+  owner          RecruiterProfile      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  candidates     ShortlistCandidate[]
+
+  @@index([recruiterOrgId])
+  @@index([ownerId])
+  @@map("candidate_shortlists")
+}
+
+/// Junction between a shortlist and a candidate (userId).
+model ShortlistCandidate {
+  id           String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shortlistId  String          @db.Uuid
+  candidateId  String          @db.Uuid // User.id of the candidate
+  stage        RecruitmentPipelineStage @default(SHORTLISTED)
+  recruiterNote String?        @db.Text // private, never shown to candidate
+  assignedToId String?         @db.Uuid // RecruiterProfile.id
+  addedAt      DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  shortlist    CandidateShortlist @relation(fields: [shortlistId], references: [id], onDelete: Cascade)
+
+  @@unique([shortlistId, candidateId])
+  @@index([shortlistId])
+  @@index([candidateId])
+  @@map("shortlist_candidates")
+}
+
+/// A named recruitment pipeline associated with a job + recruiter org.
+model RecruiterPipeline {
+  id             String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  recruiterOrgId String                     @db.Uuid
+  ownerId        String                     @db.Uuid // RecruiterProfile.id
+  jobId          String?                    @db.Uuid // optional link to specific JobPosting
+  name           String                     @db.VarChar(255)
+  createdAt      DateTime                   @default(now())
+  updatedAt      DateTime                   @updatedAt
+
+  recruiterOrg   RecruiterOrganization      @relation(fields: [recruiterOrgId], references: [id], onDelete: Cascade)
+  owner          RecruiterProfile           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  entries        RecruitmentPipelineEntry[]
+
+  @@index([recruiterOrgId])
+  @@map("recruiter_pipelines")
+}
+
+/// A candidate's position within a recruiter pipeline.
+model RecruitmentPipelineEntry {
+  id           String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  pipelineId   String                   @db.Uuid
+  candidateId  String                   @db.Uuid // User.id of the candidate
+  jobId        String?                  @db.Uuid
+  stage        RecruitmentPipelineStage @default(DISCOVERED)
+  recruiterNote String?                 @db.Text // private recruiter-only note
+  movedAt      DateTime                 @default(now())
+  updatedAt    DateTime                 @updatedAt
+
+  pipeline     RecruiterPipeline        @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  job          JobPosting?              @relation(fields: [jobId], references: [id], onDelete: SetNull)
+
+  @@unique([pipelineId, candidateId])
+  @@index([pipelineId])
+  @@index([candidateId])
+  @@index([stage])
+  @@map("recruitment_pipeline_entries")
+}
+
+/// Controlled contact request: recruiter → candidate (requires candidate approval).
+model ContactRequest {
+  id             String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  recruiterOrgId String               @db.Uuid
+  recruiterId    String               @db.Uuid  // RecruiterProfile.id
+  senderId       String               @db.Uuid  // User.id of recruiter
+  receiverId     String               @db.Uuid  // User.id of candidate
+  jobId          String?              @db.Uuid
+  message        String               @db.Text  // initial contact message
+  status         ContactRequestStatus @default(PENDING)
+  approvedAt     DateTime?
+  rejectedAt     DateTime?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  recruiterOrg   RecruiterOrganization @relation(fields: [recruiterOrgId], references: [id], onDelete: Cascade)
+  recruiterProfile RecruiterProfile   @relation("RecruiterContactRequestSender", fields: [recruiterId], references: [id], onDelete: Cascade)
+  sender         User                 @relation("ContactRequestSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver       User                 @relation("ContactRequestReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  thread         MessageThread?
+
+  @@unique([senderId, receiverId, jobId])
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([status])
+  @@map("contact_requests")
+}
+
+/// Message thread opened after a ContactRequest is approved.
+model MessageThread {
+  id               String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  contactRequestId String               @unique @db.Uuid
+  recruiterOrgId   String               @db.Uuid
+  participantIds   String[]             // [recruiterUserId, candidateUserId]
+  isBlocked        Boolean              @default(false)
+  blockedByUserId  String?              @db.Uuid
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  contactRequest   ContactRequest       @relation(fields: [contactRequestId], references: [id], onDelete: Cascade)
+  recruiterOrg     RecruiterOrganization @relation(fields: [recruiterOrgId], references: [id], onDelete: Cascade)
+  messages         Message[]
+
+  @@index([recruiterOrgId])
+  @@map("message_threads")
+}
+
+/// Individual messages within a MessageThread.
+model Message {
+  id        String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  threadId  String        @db.Uuid
+  senderId  String        @db.Uuid  // User.id
+  content   String        @db.Text
+  status    MessageStatus @default(SENT)
+  readAt    DateTime?
+  createdAt DateTime      @default(now())
+
+  thread    MessageThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  sender    User          @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([threadId])
+  @@index([senderId])
+  @@map("recruiter_messages")
+}
+
+/// Spam/abuse/misconduct reports submitted by candidates or admins.
+model RecruiterReport {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  reporterId   String   @db.Uuid  // User.id of reporter
+  targetType   String   @db.VarChar(50) // "RECRUITER" | "MESSAGE" | "JOB"
+  targetId     String   @db.Uuid
+  reason       String   @db.VarChar(255)
+  details      String?  @db.Text
+  resolved     Boolean  @default(false)
+  resolvedAt   DateTime?
+  resolvedById String?  @db.Uuid
+  createdAt    DateTime @default(now())
+
+  reporter     User     @relation("RecruiterReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+
+  @@index([targetId])
+  @@index([resolved])
+  @@map("recruiter_reports")
+}
+
+/// Immutable audit trail for all recruiter-side sensitive actions.
+model RecruiterAuditEvent {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId         String   @db.Uuid  // User.id who triggered the event
+  recruiterOrgId String?  @db.Uuid
+  action         String   @db.VarChar(100) // e.g. "CANDIDATE_VIEWED", "JOB_PUBLISHED"
+  resourceType   String   @db.VarChar(100)
+  resourceId     String?  @db.VarChar(255)
+  metadata       Json?
+  ipAddress      String?  @db.VarChar(45)
+  createdAt      DateTime @default(now())
+
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recruiterOrg   RecruiterOrganization? @relation(fields: [recruiterOrgId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([recruiterOrgId])
+  @@index([action])
+  @@map("recruiter_audit_events")
+}

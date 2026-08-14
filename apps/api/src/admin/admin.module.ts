@@ -18,10 +18,13 @@ import { AdminDashboardService } from './services/admin-dashboard.service';
 import { AdminFeatureFlagsService } from './services/admin-feature-flags.service';
 import { AdminRecommendationsService } from './services/admin-recommendations.service';
 import { AdminUsersService } from './services/admin-users.service';
+import { AiModule } from '../ai/ai.module';
+import { AdminRecruiterController } from './controllers/admin-recruiter.controller';
 
 @Module({
   imports: [
     PrismaModule,
+    AiModule,
     BullModule.registerQueue({ name: SCRAPE_QUEUE }),
     BullModule.registerQueue({ name: EMBEDDING_QUEUE }),
   ],
@@ -33,6 +36,7 @@ import { AdminUsersService } from './services/admin-users.service';
     AdminFeatureFlagsController,
     AdminBetaController,
     AdminRecommendationsController,
+    AdminRecruiterController, // Phase 22
   ],
   providers: [
     AdminAuditService,

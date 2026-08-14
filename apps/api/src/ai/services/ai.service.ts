@@ -17,6 +17,9 @@ import {
   comparisonPrompt,
   roadmapPrompt,
   chatPrompt,
+  resumeParsingPrompt,
+  resumeOptimizationPrompt,
+  portfolioOptimizationPrompt,
 } from '../prompts/templates';
 import { AIProvider, AI_PROVIDER_TOKEN } from '../providers/ai-provider.interface';
 
@@ -49,6 +52,9 @@ export class AiService {
     this.promptManager.register(comparisonPrompt);
     this.promptManager.register(roadmapPrompt);
     this.promptManager.register(chatPrompt);
+    this.promptManager.register(resumeParsingPrompt);
+    this.promptManager.register(resumeOptimizationPrompt);
+    this.promptManager.register(portfolioOptimizationPrompt);
   }
 
   private get aiConfig() {
@@ -1109,5 +1115,191 @@ export class AiService {
     const { prompt } = options;
     const result = await this.aiProvider.generateText(prompt, 'You are a helpful assistant.');
     return { text: result.text };
+  }
+
+  /**
+   * Parses raw resume text into structured fields.
+   */
+  async parseResumeText(userId: string, resumeText: string): Promise<any> {
+    this.checkAiEnabled();
+    await this.rateLimiter.checkLimit(userId, 'resume');
+    
+    const payload = { resumeText };
+    const hash = this.cacheService.generateInputHash(payload);
+    const cached = await this.cacheService.getAnalysis(userId, null, 'RESUME_PARSING' as any, hash);
+    if (cached) {
+      return cached;
+    }
+
+    const { system, user } = this.promptManager.compile('resume-parsing', {
+      resumeText,
+    });
+
+    const startTime = Date.now();
+    try {
+      const template = this.promptManager.get('resume-parsing');
+      const result = await this.aiProvider.generateStructuredOutput<any>(
+        user,
+        template.expectedSchema,
+        system,
+      );
+
+      const duration = Date.now() - startTime;
+      this.costTracker.recordMetrics(
+        result.model,
+        'resume-parsing',
+        result.usage.inputTokens,
+        result.usage.outputTokens,
+        duration,
+      );
+
+      await this.cacheService.saveAnalysis(
+        userId,
+        null,
+        'RESUME_PARSING' as any,
+        hash,
+        result,
+        this.aiConfig.provider,
+        result.model,
+      );
+      await this.rateLimiter.increment(userId, 'resume');
+
+      const { usage: _usage, model: _model, ...cleanResult } = result;
+      return cleanResult;
+    } catch (err) {
+      this.logger.error({ err, userId }, 'Resume parsing failed');
+      throw err;
+    }
+  }
+
+  /**
+   * Generates targeted resume optimization recommendations and overall quality score.
+   */
+  async optimizeResumeText(
+    userId: string,
+    resumeText: string,
+    profileInfo: any,
+    jobDescription: string = '',
+    requestType: string = 'General Resume Optimization'
+  ): Promise<any> {
+    this.checkAiEnabled();
+    await this.rateLimiter.checkLimit(userId, 'resume');
+
+    const payload = {
+      resumeText,
+      profileInfo: JSON.stringify(profileInfo),
+      jobDescription,
+      requestType,
+    };
+    const hash = this.cacheService.generateInputHash(payload);
+    const cached = await this.cacheService.getAnalysis(userId, null, 'RESUME_OPTIMIZATION' as any, hash);
+    if (cached) {
+      return cached;
+    }
+
+    const { system, user } = this.promptManager.compile('resume-optimization', {
+      resumeText,
+      profileInfo: JSON.stringify(profileInfo),
+      jobDescription: jobDescription || 'Not Provided',
+      requestType,
+    });
+
+    const startTime = Date.now();
+    try {
+      const template = this.promptManager.get('resume-optimization');
+      const result = await this.aiProvider.generateStructuredOutput<any>(
+        user,
+        template.expectedSchema,
+        system,
+      );
+
+      const duration = Date.now() - startTime;
+      this.costTracker.recordMetrics(
+        result.model,
+        'resume-optimization',
+        result.usage.inputTokens,
+        result.usage.outputTokens,
+        duration,
+      );
+
+      await this.cacheService.saveAnalysis(
+        userId,
+        null,
+        'RESUME_OPTIMIZATION' as any,
+        hash,
+        result,
+        this.aiConfig.provider,
+        result.model,
+      );
+      await this.rateLimiter.increment(userId, 'resume');
+
+      const { usage: _usage, model: _model, ...cleanResult } = result;
+      return cleanResult;
+    } catch (err) {
+      this.logger.error({ err, userId }, 'Resume optimization failed');
+      throw err;
+    }
+  }
+
+  /**
+   * Generates portfolio suggestions.
+   */
+  async optimizePortfolioContent(
+    userId: string,
+    portfolioContent: any,
+    profileInfo: any
+  ): Promise<any> {
+    this.checkAiEnabled();
+    await this.rateLimiter.checkLimit(userId, 'chat'); // Reuse chat limit or general limit
+
+    const payload = {
+      portfolioContent: JSON.stringify(portfolioContent),
+      profileInfo: JSON.stringify(profileInfo),
+    };
+    const hash = this.cacheService.generateInputHash(payload);
+    const cached = await this.cacheService.getAnalysis(userId, null, 'PORTFOLIO_OPTIMIZATION' as any, hash);
+    if (cached) {
+      return cached;
+    }
+
+    const { system, user } = this.promptManager.compile('portfolio-optimization', {
+      portfolioContent: JSON.stringify(portfolioContent),
+      profileInfo: JSON.stringify(profileInfo),
+    });
+
+    const startTime = Date.now();
+    try {
+      const template = this.promptManager.get('portfolio-optimization');
+      const result = await this.aiProvider.generateStructuredOutput<any>(
+        user,
+        template.expectedSchema,
+        system,
+      );
+
+      const duration = Date.now() - startTime;
+      this.costTracker.recordMetrics(
+        result.model,
+        'portfolio-optimization',
+        result.usage.inputTokens,
+        result.usage.outputTokens,
+        duration,
+      );
+
+      await this.cacheService.saveAnalysis(
+        userId,
+        null,
+        'PORTFOLIO_OPTIMIZATION' as any,
+        hash,
+        result,
+        this.aiConfig.provider,
+        result.model,
+      );
+
+      const { usage: _usage, model: _model, ...cleanResult } = result;
+      return cleanResult;
+    } catch (err) {
+      this.logger.error({ err, userId }, 'Portfolio optimization failed');
+      throw err;
+    }
   }
 }

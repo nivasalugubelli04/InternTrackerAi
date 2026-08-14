@@ -9,6 +9,7 @@ export interface TokenCost {
 @Injectable()
 export class CostTrackerService {
   private readonly logger = new Logger(CostTrackerService.name);
+  private sessionTotalCost = 0;
 
   private aiCostTotal: Counter<string>;
   private aiTokensTotal: Counter<string>;
@@ -76,10 +77,15 @@ export class CostTrackerService {
     latencyMs: number,
   ): number {
     const cost = this.calculateCost(model, inputTokens, outputTokens);
+    this.sessionTotalCost += cost;
     this.aiCostTotal.labels(model, feature).inc(cost);
     this.aiTokensTotal.labels(model, 'input').inc(inputTokens);
     this.aiTokensTotal.labels(model, 'output').inc(outputTokens);
     this.aiLatency.labels(model, feature).observe(latencyMs / 1000);
     return cost;
+  }
+
+  getTotalCost(): number {
+    return this.sessionTotalCost;
   }
 }

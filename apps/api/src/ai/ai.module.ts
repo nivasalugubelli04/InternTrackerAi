@@ -22,6 +22,6 @@ import { CostTrackerService } from './services/cost-tracker.service';
     GeminiProvider,
     AIProviderFactory,
   ],
-  exports: [AiService],
+  exports: [AiService, CostTrackerService],
 })
 export class AiModule {}
