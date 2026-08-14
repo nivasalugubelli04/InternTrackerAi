@@ -23,6 +23,7 @@ import { GrowthModule } from './growth/growth.module';
 import { HealthModule } from './health/health.module';
 import { InterviewsModule } from './interviews/interviews.module';
 import { JobsModule } from './jobs/jobs.module';
+import { MarketModule } from './market/market.module';
 import { MatchingModule } from './matching/matching.module';
 import { ApiMetricsInterceptor } from './metrics/interceptors/api-metrics.interceptor';
 import { MetricsModule } from './metrics/metrics.module';
@@ -173,7 +174,7 @@ import { SkillsModule } from './skills/skills.module';
     GrowthModule,
     EngagementModule,
     OrganizationsModule,
-    ApplicationsModule,
+    MarketModule,
   ],
 
   providers: [

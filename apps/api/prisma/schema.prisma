@@ -427,6 +427,7 @@ model Company {
   rawJobPostings RawJobPosting[]
   scrapeJobs     ScrapeJob[]
   parserHealth   ParserHealth?
+  activitySnapshots CompanyActivitySnapshot[]
 
   @@index([name])
   @@index([industry])
@@ -521,6 +522,9 @@ model JobPosting {
 
   // Phase 14
   preparationPlans PreparationPlan[]
+
+  // Phase 18
+  dataQualityMetric DataQualityMetric?
 
   @@index([companyId])
   @@index([title])
@@ -1690,3 +1694,205 @@ model OrganizationInvitation {
 
   @@unique([organizationId, email])
 }
+
+// ============================================================
+// PHASE 18: MARKET INTELLIGENCE & CAREER FORECASTING
+// ============================================================
+
+enum TrendDirection {
+  RISING
+  STABLE
+  DECLINING
+  INSUFFICIENT_DATA
+}
+
+enum DataQualityLevel {
+  HIGH_QUALITY
+  MEDIUM_QUALITY
+  LOW_QUALITY
+}
+
+enum MarketMetricCategory {
+  OVERVIEW
+  SKILL
+  ROLE
+  COMPANY
+  LOCATION
+  INDUSTRY
+  DATA_QUALITY
+}
+
+enum SkillGapPriorityLevel {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+model MarketMetric {
+  id           String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  category     MarketMetricCategory
+  metricKey    String               @db.VarChar(100)
+  metricValue  Float
+  unit         String?              @db.VarChar(50)
+  periodStart  DateTime?
+  periodEnd    DateTime?
+  sampleSize   Int                  @default(0)
+  confidence   Float                @default(1.0)
+  metadataJson Json?
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+
+  @@index([category, metricKey])
+  @@index([createdAt])
+  @@map("market_metrics")
+}
+
+model TrendMetric {
+  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  entityType    String         @db.VarChar(50) // SKILL, ROLE, LOCATION, COMPANY, INDUSTRY
+  entityId      String         @db.VarChar(100)
+  currentCount  Int
+  previousCount Int
+  growthRate    Float
+  direction     TrendDirection
+  periodDays    Int            @default(30)
+  periodStart   DateTime
+  periodEnd     DateTime
+  sampleSize    Int
+  confidence    Float          @default(1.0)
+  createdAt     DateTime       @default(now())
+
+  @@index([entityType, entityId])
+  @@index([direction])
+  @@index([createdAt])
+  @@map("trend_metrics")
+}
+
+model MarketInsight {
+  id                   String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title                String               @db.VarChar(255)
+  category             MarketMetricCategory
+  direction            TrendDirection       @default(STABLE)
+  metricName           String               @db.VarChar(100)
+  metricValue          Float
+  periodDays           Int                  @default(30)
+  evidenceSummary      String               @db.Text
+  humanReadableSummary String               @db.Text
+  sampleSize           Int
+  confidence           Float
+  isFeatured           Boolean              @default(false)
+  createdAt            DateTime             @default(now())
+
+  @@index([category, isFeatured])
+  @@index([createdAt])
+  @@map("market_insights")
+}
+
+model SkillDemandSnapshot {
+  id                       String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  skillName                String   @db.VarChar(100)
+  normalizedSkill          String   @db.VarChar(100)
+  demandCount              Int      @default(0)
+  growthRate               Float    @default(0)
+  avgStipend               Float?
+  topCoOccurringSkillsJson Json?
+  topRolesJson             Json?
+  topLocationsJson         Json?
+  periodStart              DateTime
+  periodEnd                DateTime
+  sampleSize               Int      @default(0)
+  createdAt                DateTime @default(now())
+
+  @@index([normalizedSkill])
+  @@index([demandCount])
+  @@index([createdAt])
+  @@map("skill_demand_snapshots")
+}
+
+model RoleDemandSnapshot {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  roleCategory     String   @db.VarChar(100)
+  opportunityCount Int      @default(0)
+  growthRate       Float    @default(0)
+  avgMatchScore    Float?
+  applicationCount Int      @default(0)
+  topSkillsJson    Json?
+  topLocationsJson Json?
+  periodStart      DateTime
+  periodEnd        DateTime
+  sampleSize       Int      @default(0)
+  createdAt        DateTime @default(now())
+
+  @@index([roleCategory])
+  @@index([opportunityCount])
+  @@index([createdAt])
+  @@map("role_demand_snapshots")
+}
+
+model CompanyActivitySnapshot {
+  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId            String   @db.Uuid
+  activeOpenings       Int      @default(0)
+  newOpeningsCount     Int      @default(0)
+  postingFrequency     Float    @default(0)
+  userInterestCount    Int      @default(0)
+  roleDistributionJson Json?
+  topSkillsJson        Json?
+  periodStart          DateTime
+  periodEnd            DateTime
+  sampleSize           Int      @default(0)
+  createdAt            DateTime @default(now())
+
+  company              Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([activeOpenings])
+  @@index([createdAt])
+  @@map("company_activity_snapshots")
+}
+
+model LocationDemandSnapshot {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  locationName     String   @db.VarChar(100)
+  state            String?  @db.VarChar(100)
+  country          String   @default("India") @db.VarChar(100)
+  opportunityCount Int      @default(0)
+  remoteRatio      Float    @default(0)
+  hybridRatio      Float    @default(0)
+  onsiteRatio      Float    @default(0)
+  topRolesJson     Json?
+  topSkillsJson    Json?
+  periodStart      DateTime
+  periodEnd        DateTime
+  sampleSize       Int      @default(0)
+  createdAt        DateTime @default(now())
+
+  @@index([locationName])
+  @@index([opportunityCount])
+  @@index([createdAt])
+  @@map("location_demand_snapshots")
+}
+
+model DataQualityMetric {
+  id               String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  jobId            String           @unique @db.Uuid
+  qualityScore     Float
+  qualityLevel     DataQualityLevel
+  titleScore       Float            @default(100)
+  descriptionScore Float            @default(100)
+  locationScore    Float            @default(100)
+  urlValidityScore Float            @default(100)
+  skillsScore      Float            @default(100)
+  deadlineScore    Float            @default(100)
+  companyScore     Float            @default(100)
+  issuesJson       Json?
+  evaluatedAt      DateTime         @default(now())
+
+  jobPosting       JobPosting       @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([qualityLevel])
+  @@index([qualityScore])
+  @@map("data_quality_metrics")
+}
+

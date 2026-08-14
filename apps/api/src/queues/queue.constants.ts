@@ -13,3 +13,4 @@ export const PUSH_QUEUE = 'push-queue';
 export const SMS_QUEUE = 'sms-queue';
 export const DIGEST_QUEUE = 'digest-queue';
 export const DEAD_LETTER_QUEUE = 'dead-letter-queue';
+export const MARKET_QUEUE = 'market-queue';
