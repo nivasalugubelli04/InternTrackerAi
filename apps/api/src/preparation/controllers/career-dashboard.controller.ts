@@ -1,5 +1,6 @@
 import { Controller, Get, Param, ParseUUIDPipe, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -34,9 +35,9 @@ export class CareerDashboardController {
 
     let totalTasks = 0;
     let completedTasks = 0;
-    plans.forEach(plan => {
+    plans.forEach((plan) => {
       totalTasks += plan.tasks.length;
-      completedTasks += plan.tasks.filter(t => t.status === 'COMPLETED').length;
+      completedTasks += plan.tasks.filter((t) => t.status === 'COMPLETED').length;
     });
 
     const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;

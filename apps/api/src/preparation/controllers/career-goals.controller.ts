@@ -1,5 +1,15 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { UpsertCareerGoalDto } from '../dto/upsert-career-goal.dto';
@@ -22,10 +32,7 @@ export class CareerGoalsController {
   @Post()
   @ApiOperation({ summary: 'Create or update the primary career goal' })
   @ApiResponse({ status: 201, description: 'Career goal upserted' })
-  async upsertCareerGoal(
-    @CurrentUser('id') userId: string,
-    @Body() dto: UpsertCareerGoalDto,
-  ) {
+  async upsertCareerGoal(@CurrentUser('id') userId: string, @Body() dto: UpsertCareerGoalDto) {
     return this.goalsService.upsertCareerGoal(userId, dto);
   }
 

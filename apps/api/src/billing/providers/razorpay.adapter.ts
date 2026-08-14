@@ -1,10 +1,17 @@
+import * as crypto from 'crypto';
+
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as crypto from 'crypto';
-import { CheckoutSessionParams, CheckoutSessionResult, PaymentProvider, WebhookEventPayload } from './payment-provider.interface';
+import Razorpay from 'razorpay';
+
+import {
+  CheckoutSessionParams,
+  CheckoutSessionResult,
+  PaymentProvider,
+  WebhookEventPayload,
+} from './payment-provider.interface';
 
 // Dynamically import razorpay to avoid issues if it fails to install
-import Razorpay from 'razorpay';
 
 @Injectable()
 export class RazorpayAdapter implements PaymentProvider {
@@ -15,7 +22,8 @@ export class RazorpayAdapter implements PaymentProvider {
   constructor(private readonly configService: ConfigService) {
     const keyId = this.configService.get<string>('RAZORPAY_KEY_ID') || 'rzp_test_mock123';
     const keySecret = this.configService.get<string>('RAZORPAY_KEY_SECRET') || 'mock_secret';
-    this.webhookSecret = this.configService.get<string>('RAZORPAY_WEBHOOK_SECRET') || 'mock_webhook_secret';
+    this.webhookSecret =
+      this.configService.get<string>('RAZORPAY_WEBHOOK_SECRET') || 'mock_webhook_secret';
 
     this.razorpay = new Razorpay({
       key_id: keyId,
@@ -62,7 +70,10 @@ export class RazorpayAdapter implements PaymentProvider {
     return payload.payload; // Parsed JSON
   }
 
-  async cancelSubscription(providerSubscriptionId: string, cancelAtPeriodEnd: boolean): Promise<boolean> {
+  async cancelSubscription(
+    providerSubscriptionId: string,
+    cancelAtPeriodEnd: boolean,
+  ): Promise<boolean> {
     try {
       const cancelOption = cancelAtPeriodEnd ? 1 : 0;
       await this.razorpay.subscriptions.cancel(providerSubscriptionId, cancelOption);

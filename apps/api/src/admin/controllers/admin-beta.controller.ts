@@ -1,9 +1,10 @@
 import { Controller, Post, Get, Put, Body, Param, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { UserRole } from '@prisma/client';
+
+import { Roles } from '../../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
-import { Roles } from '../../auth/decorators/roles.decorator';
-import { UserRole } from '@prisma/client';
 import { AdminBetaService } from '../services/admin-beta.service';
 
 @ApiTags('Admin Beta')
@@ -18,7 +19,7 @@ export class AdminBetaController {
   @ApiOperation({ summary: 'Generate a beta invitation' })
   async createInvitation(
     @Request() req: any,
-    @Body() dto: { email?: string; cohort?: string; maxUses?: number; expiresAt?: string }
+    @Body() dto: { email?: string; cohort?: string; maxUses?: number; expiresAt?: string },
   ) {
     return this.betaService.createInvitation(req.user.id, {
       ...(dto.email !== undefined && { email: dto.email }),

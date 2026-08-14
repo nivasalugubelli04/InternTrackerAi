@@ -1,5 +1,9 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import type { RecommendationPriority, RecommendationType, RecommendationFeedbackType } from '@prisma/client';
+import type {
+  RecommendationPriority,
+  RecommendationType,
+  RecommendationFeedbackType,
+} from '@prisma/client';
 
 import { PrismaService } from '../../prisma/prisma.service';
 import { RedisService } from '../../redis/redis.service';
@@ -71,13 +75,13 @@ export class RecommendationService {
       activeJobs.map(async (job) => {
         const normalizedJob = this.jobAnalyzer.normalizeJobData(job);
         const evalResult = await this.scoringEngine.evaluateMatch(profile, normalizedJob);
-        
+
         // Phase 13: Fetch Semantic Score
         const semanticScore = await this.semanticMatching.computeSemanticScore(userId, job.id);
-        
+
         // Blend Scores (Configurable later, hardcoded for now 60/40)
         if (semanticScore !== null) {
-          evalResult.overallScore = Math.round((evalResult.overallScore * 0.6) + (semanticScore * 0.4));
+          evalResult.overallScore = Math.round(evalResult.overallScore * 0.6 + semanticScore * 0.4);
         }
 
         return {

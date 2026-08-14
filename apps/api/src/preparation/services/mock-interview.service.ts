@@ -1,8 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
-import { AiService } from '../../ai/services/ai.service';
-import { mockInterviewQuestionPrompt, mockInterviewEvaluationPrompt } from '../../ai/prompts/mock-interview-template';
 import { InterviewStatus } from '@prisma/client';
+
+import {
+  mockInterviewQuestionPrompt,
+  mockInterviewEvaluationPrompt,
+} from '../../ai/prompts/mock-interview-template';
+import { AiService } from '../../ai/services/ai.service';
+import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
 export class MockInterviewService {
@@ -16,7 +20,7 @@ export class MockInterviewService {
     if (!job) throw new Error('Job not found');
 
     const provider = (this.aiService as any).aiProvider;
-    let system = mockInterviewQuestionPrompt.systemPrompt;
+    const system = mockInterviewQuestionPrompt.systemPrompt;
     let userPrompt = mockInterviewQuestionPrompt.userPromptTemplate;
     userPrompt = userPrompt.replace('{{jobRequirements}}', JSON.stringify(job.requirements));
     userPrompt = userPrompt.replace('{{userProfile}}', 'General Software Engineering Candidate');
@@ -64,7 +68,7 @@ export class MockInterviewService {
     }
 
     const provider = (this.aiService as any).aiProvider;
-    let system = mockInterviewEvaluationPrompt.systemPrompt;
+    const system = mockInterviewEvaluationPrompt.systemPrompt;
     let userPrompt = mockInterviewEvaluationPrompt.userPromptTemplate;
     userPrompt = userPrompt.replace('{{question}}', question.question);
     userPrompt = userPrompt.replace('{{answer}}', answer);
@@ -103,10 +107,11 @@ export class MockInterviewService {
       throw new Error('Interview not found');
     }
 
-    const answered = interview.questions.filter(q => q.score !== null);
-    const avgScore = answered.length > 0 
-      ? Math.round(answered.reduce((sum, q) => sum + (q.score || 0), 0) / answered.length)
-      : 0;
+    const answered = interview.questions.filter((q) => q.score !== null);
+    const avgScore =
+      answered.length > 0
+        ? Math.round(answered.reduce((sum, q) => sum + (q.score || 0), 0) / answered.length)
+        : 0;
 
     return this.prisma.mockInterview.update({
       where: { id: interviewId },

@@ -2,6 +2,7 @@ import { ConflictException, NotFoundException } from '@nestjs/common';
 import type { TestingModule } from '@nestjs/testing';
 import { Test } from '@nestjs/testing';
 
+import { EngagementTrackerService } from '../engagement/services/engagement-tracker.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 import { ProfileService } from './profile.service';
@@ -30,12 +31,20 @@ const mockPrismaService = {
   },
 };
 
+const mockEngagementTracker = {
+  trackAction: jest.fn().mockResolvedValue(undefined),
+};
+
 describe('ProfileService', () => {
   let service: ProfileService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [ProfileService, { provide: PrismaService, useValue: mockPrismaService }],
+      providers: [
+        ProfileService,
+        { provide: PrismaService, useValue: mockPrismaService },
+        { provide: EngagementTrackerService, useValue: mockEngagementTracker },
+      ],
     }).compile();
 
     service = module.get<ProfileService>(ProfileService);

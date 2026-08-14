@@ -1,10 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
-import { AiService } from '../../ai/services/ai.service';
-import { SkillGapPrioritizationService } from './skill-gap-prioritization.service';
-import { ReadinessScoreService } from './readiness-score.service';
-import { preparationPlanPrompt } from '../../ai/prompts/preparation-template';
 import { PreparationTaskStatus } from '@prisma/client';
+
+import { preparationPlanPrompt } from '../../ai/prompts/preparation-template';
+import { AiService } from '../../ai/services/ai.service';
+import { PrismaService } from '../../prisma/prisma.service';
+
+import { ReadinessScoreService } from './readiness-score.service';
+import { SkillGapPrioritizationService } from './skill-gap-prioritization.service';
 
 @Injectable()
 export class PreparationPlanService {
@@ -19,7 +21,7 @@ export class PreparationPlanService {
 
   async generatePreparationPlan(userId: string, jobId: string) {
     // 1. Check if plan already exists
-    let existingPlan = await this.prisma.preparationPlan.findUnique({
+    const existingPlan = await this.prisma.preparationPlan.findUnique({
       where: { userId_jobId: { userId, jobId } },
       include: { tasks: true },
     });
@@ -57,13 +59,15 @@ export class PreparationPlanService {
     // Let's use the underlying generateCompletion logic from AiService.
     const promptInputs = {
       jobRequirements: JSON.stringify(job.requirements),
-      userSkills: JSON.stringify(user.userSkills.map(s => s.skill.name)),
+      userSkills: JSON.stringify(user.userSkills.map((s) => s.skill.name)),
       missingSkills: JSON.stringify(missingSkills),
-      careerGoal: JSON.stringify(goal ? { hoursPerWeek: goal.hoursPerWeek, targetDate: goal.targetDate } : {}),
+      careerGoal: JSON.stringify(
+        goal ? { hoursPerWeek: goal.hoursPerWeek, targetDate: goal.targetDate } : {},
+      ),
     };
 
     // Replace templates manually if AiService doesn't have a public compile method for one-off prompts.
-    let system = preparationPlanPrompt.systemPrompt;
+    const system = preparationPlanPrompt.systemPrompt;
     let userPrompt = preparationPlanPrompt.userPromptTemplate;
     for (const [key, value] of Object.entries(promptInputs)) {
       userPrompt = userPrompt.replace(new RegExp(`{{${key}}}`, 'g'), value);
@@ -74,10 +78,10 @@ export class PreparationPlanService {
     // Actually, AiService has `promptManager` and expects registered templates.
     // Let's assume we can call aiService.generateCompletion directly if we bypass AiService cache, or better yet
     // I will just use the AiService if I can.
-    
+
     // Using a safer approach:
     // Any logic calling the raw AI provider is fine, but I'll add `generateCustomCompletion` to AiService or use standard.
-    // Assuming AiService doesn't have it, I'll use the raw provider. But wait, I'm injecting AiService. 
+    // Assuming AiService doesn't have it, I'll use the raw provider. But wait, I'm injecting AiService.
     // Let's look at `AiService` in `src/ai/services/ai.service.ts` again.
 
     // For now, I'll use the existing `analyzeResume` approach or similar.

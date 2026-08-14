@@ -1,12 +1,17 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
 import { randomBytes } from 'crypto';
+
+import { Injectable, NotFoundException } from '@nestjs/common';
+
+import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
 export class AdminBetaService {
   constructor(private prisma: PrismaService) {}
 
-  async createInvitation(adminId: string, dto: { email?: string; cohort?: string; maxUses?: number; expiresAt?: Date }) {
+  async createInvitation(
+    adminId: string,
+    dto: { email?: string; cohort?: string; maxUses?: number; expiresAt?: Date },
+  ) {
     const code = randomBytes(8).toString('hex').toUpperCase();
     return this.prisma.betaInvitation.create({
       data: {

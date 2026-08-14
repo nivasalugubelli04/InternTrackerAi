@@ -1,8 +1,10 @@
+import * as crypto from 'crypto';
+
 import { Injectable, Inject, Logger } from '@nestjs/common';
+import { SubscriptionStatus, PaymentStatus, WebhookStatus } from '@prisma/client';
+
 import { PrismaService } from '../../prisma/prisma.service';
 import { PAYMENT_PROVIDER_TOKEN, PaymentProvider } from '../providers/payment-provider.interface';
-import * as crypto from 'crypto';
-import { SubscriptionStatus, PaymentStatus, WebhookStatus } from '@prisma/client';
 
 export interface RawWebhookInput {
   provider: string;
@@ -73,7 +75,7 @@ export class WebhookService {
 
       await this.prisma.webhookEvent.update({
         where: { id: webhookEvent.id },
-        data: { 
+        data: {
           status: WebhookStatus.PROCESSED,
           processedAt: new Date(),
         },
@@ -91,7 +93,7 @@ export class WebhookService {
   private async handleProviderEvent(eventType: string, payload: any) {
     // Razorpay specific event mapping for this MVP
     // Examples: 'subscription.charged', 'subscription.cancelled', 'subscription.halted'
-    
+
     // Safety check - depending on provider format, extract the right entity
     const entity = payload?.payload?.subscription?.entity || payload?.payload?.payment?.entity;
 
@@ -125,8 +127,7 @@ export class WebhookService {
           },
         });
       }
-    } 
-    else if (eventType === 'subscription.halted' || eventType === 'subscription.pending') {
+    } else if (eventType === 'subscription.halted' || eventType === 'subscription.pending') {
       const subId = entity.id;
       const subscription = await this.prisma.subscription.findUnique({
         where: { providerSubscriptionId: subId },
@@ -150,8 +151,7 @@ export class WebhookService {
           },
         });
       }
-    }
-    else if (eventType === 'subscription.cancelled') {
+    } else if (eventType === 'subscription.cancelled') {
       const subId = entity.id;
       const subscription = await this.prisma.subscription.findUnique({
         where: { providerSubscriptionId: subId },
@@ -159,7 +159,7 @@ export class WebhookService {
       if (subscription) {
         await this.prisma.subscription.update({
           where: { id: subscription.id },
-          data: { 
+          data: {
             status: SubscriptionStatus.CANCELED,
             cancelledAt: new Date(),
           },

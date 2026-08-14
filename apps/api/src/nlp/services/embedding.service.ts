@@ -1,8 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
-import { NlpPreprocessingService } from './nlp-preprocessing.service';
-import { OpenAiEmbeddingProvider } from '../providers/openai-embedding.provider';
 import { EntityType } from '@prisma/client';
+
+import { PrismaService } from '../../prisma/prisma.service';
+import { OpenAiEmbeddingProvider } from '../providers/openai-embedding.provider';
+
+import { NlpPreprocessingService } from './nlp-preprocessing.service';
 
 @Injectable()
 export class EmbeddingService {
@@ -11,7 +13,7 @@ export class EmbeddingService {
   constructor(
     private prisma: PrismaService,
     private nlpService: NlpPreprocessingService,
-    private embeddingProvider: OpenAiEmbeddingProvider // Dependency injection, could use IEmbeddingProvider token in the future
+    private embeddingProvider: OpenAiEmbeddingProvider, // Dependency injection, could use IEmbeddingProvider token in the future
   ) {}
 
   /**
@@ -21,7 +23,7 @@ export class EmbeddingService {
   async getOrGenerateEmbedding(
     entityType: EntityType,
     entityId: string,
-    rawText: string
+    rawText: string,
   ): Promise<void> {
     const inputHash = this.nlpService.generateInputHash(rawText);
 
@@ -41,7 +43,7 @@ export class EmbeddingService {
       const vector = await this.embeddingProvider.generateEmbedding(rawText);
       const vectorString = `[${vector.join(',')}]`;
 
-      // Upsert into DB. Prisma doesn't natively support creating 'Unsupported' types via typical Prisma Client methods easily, 
+      // Upsert into DB. Prisma doesn't natively support creating 'Unsupported' types via typical Prisma Client methods easily,
       // we often need $executeRaw for vector inserts, but Prisma 5.1+ natively supports pgvector if used correctly, or we can use $executeRaw.
       if (existing) {
         await this.prisma.$executeRaw`

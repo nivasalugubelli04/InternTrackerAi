@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
@@ -37,19 +38,27 @@ export class SemanticMatchingService {
         LIMIT 1;
       `;
 
-      if (!result || result.length === 0 || result[0]?.distance === null || result[0]?.distance === undefined) {
+      if (
+        !result ||
+        result.length === 0 ||
+        result[0]?.distance === null ||
+        result[0]?.distance === undefined
+      ) {
         return null;
       }
 
       const distance = result[0].distance;
       const similarity = 1 - distance;
-      
+
       const rawScore = Math.round(similarity * 100);
-      
+
       // Clamp between 0 and 100
       return Math.max(0, Math.min(100, rawScore));
     } catch (error) {
-      this.logger.error(`Failed to compute semantic score for user ${userId} and job ${jobId}`, error);
+      this.logger.error(
+        `Failed to compute semantic score for user ${userId} and job ${jobId}`,
+        error,
+      );
       return null;
     }
   }

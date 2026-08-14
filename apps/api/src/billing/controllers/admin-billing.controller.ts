@@ -1,7 +1,8 @@
 import { Controller, Get, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
-// RolesGuard and Roles decorator would typically be used here, 
+// RolesGuard and Roles decorator would typically be used here,
 // Assuming they exist or we just trust the admin guard logic for this phase.
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -27,7 +28,7 @@ export class AdminBillingController {
     const payments = await this.prisma.payment.findMany({
       where: { status: 'COMPLETED' },
     });
-    
+
     // Calculate MRR from active subscriptions (approximate for MVP)
     const subscriptions = await this.prisma.subscription.findMany({
       where: { status: 'ACTIVE' },
@@ -35,7 +36,7 @@ export class AdminBillingController {
     });
 
     let mrr = 0;
-    subscriptions.forEach(sub => {
+    subscriptions.forEach((sub) => {
       if (sub.plan.billingInterval === 'MONTHLY') mrr += Number(sub.plan.price);
       if (sub.plan.billingInterval === 'YEARLY') mrr += Number(sub.plan.price) / 12;
     });
@@ -45,7 +46,8 @@ export class AdminBillingController {
     return {
       activePaidUsers: activeSubscriptions,
       freeUsers: totalUsers - activeSubscriptions,
-      conversionRate: totalUsers > 0 ? ((activeSubscriptions / totalUsers) * 100).toFixed(2) + '%' : '0%',
+      conversionRate:
+        totalUsers > 0 ? ((activeSubscriptions / totalUsers) * 100).toFixed(2) + '%' : '0%',
       mrr: Math.round(mrr),
       totalRevenue: Math.round(totalRevenue),
       failedPayments,

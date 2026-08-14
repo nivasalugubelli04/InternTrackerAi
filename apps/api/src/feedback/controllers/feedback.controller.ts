@@ -1,9 +1,10 @@
 import { Controller, Post, Body, UseGuards, Request, Get } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { UserRole, FeedbackType } from '@prisma/client';
+
+import { Roles } from '../../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
-import { Roles } from '../../auth/decorators/roles.decorator';
-import { UserRole, FeedbackType } from '@prisma/client';
 import { FeedbackService } from '../services/feedback.service';
 
 @ApiTags('Feedback')
@@ -17,7 +18,14 @@ export class FeedbackController {
   @ApiOperation({ summary: 'Submit general user feedback (bugs, feature requests)' })
   async submitFeedback(
     @Request() req: any,
-    @Body() dto: { type: FeedbackType; resourceId?: string; rating?: number; message?: string; category?: string }
+    @Body()
+    dto: {
+      type: FeedbackType;
+      resourceId?: string;
+      rating?: number;
+      message?: string;
+      category?: string;
+    },
   ) {
     return this.feedbackService.submitFeedback(req.user.id, dto);
   }

@@ -1,7 +1,8 @@
 import { Injectable, Inject, NotFoundException } from '@nestjs/common';
+import { SubscriptionStatus } from '@prisma/client';
+
 import { PrismaService } from '../../prisma/prisma.service';
 import { PAYMENT_PROVIDER_TOKEN, PaymentProvider } from '../providers/payment-provider.interface';
-import { SubscriptionStatus } from '@prisma/client';
 
 @Injectable()
 export class BillingService {
@@ -66,7 +67,9 @@ export class BillingService {
     const activeSub = await this.prisma.subscription.findFirst({
       where: {
         userId,
-        status: { in: [SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIALING, SubscriptionStatus.PAST_DUE] },
+        status: {
+          in: [SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIALING, SubscriptionStatus.PAST_DUE],
+        },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -75,7 +78,10 @@ export class BillingService {
       throw new NotFoundException('No active subscription found');
     }
 
-    const success = await this.paymentProvider.cancelSubscription(activeSub.providerSubscriptionId, true);
+    const success = await this.paymentProvider.cancelSubscription(
+      activeSub.providerSubscriptionId,
+      true,
+    );
     if (!success) {
       throw new Error('Failed to cancel subscription at provider');
     }

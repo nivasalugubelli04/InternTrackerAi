@@ -68,12 +68,18 @@ export class AuthService {
       where: { code: dto.invitationCode.toUpperCase() },
     });
 
-    if (!invitation || !invitation.isActive || (invitation.expiresAt && invitation.expiresAt < new Date())) {
+    if (
+      !invitation ||
+      !invitation.isActive ||
+      (invitation.expiresAt && invitation.expiresAt < new Date())
+    ) {
       throw new BadRequestException('Invalid or expired beta invitation code.');
     }
 
     if (invitation.usedCount >= invitation.maxUses) {
-      throw new BadRequestException('This beta invitation code has reached its maximum usage limit.');
+      throw new BadRequestException(
+        'This beta invitation code has reached its maximum usage limit.',
+      );
     }
 
     const { bcryptRounds } = this.configService.get('security', { infer: true });

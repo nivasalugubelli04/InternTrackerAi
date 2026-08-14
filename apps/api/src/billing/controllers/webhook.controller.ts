@@ -1,6 +1,7 @@
 import { Controller, Post, Req, Headers, BadRequestException, HttpCode } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { Request } from 'express';
+
 import { WebhookService } from '../services/webhook.service';
 
 @ApiTags('Billing')
@@ -20,11 +21,12 @@ export class WebhookController {
     }
 
     const rawBody = (req as any).rawBody || JSON.stringify(req.body);
-    
+
     // We pass to the service for validation and idempotency handling
     await this.webhookService.processWebhook({
       provider: 'RAZORPAY',
-      eventId: req.headers['x-razorpay-event-id'] as string || req.body?.id || `webhook_${Date.now()}`,
+      eventId:
+        (req.headers['x-razorpay-event-id'] as string) || req.body?.id || `webhook_${Date.now()}`,
       eventType: req.body?.event,
       payload: req.body,
       rawBody: rawBody,

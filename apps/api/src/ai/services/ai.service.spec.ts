@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import type { TestingModule } from '@nestjs/testing';
 
+import { EntitlementService } from '../../billing/services/entitlement.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PromptManager } from '../prompts/prompt-manager';
 import { AI_PROVIDER_TOKEN } from '../providers/ai-provider.interface';
@@ -154,6 +155,12 @@ const mockRateLimiter = {
   increment: jest.fn().mockResolvedValue(undefined),
 };
 
+const mockEntitlementService = {
+  enforceUsage: jest.fn().mockResolvedValue(undefined),
+  canUse: jest.fn().mockResolvedValue(true),
+  isPremium: jest.fn().mockResolvedValue(true),
+};
+
 describe('AiService', () => {
   let service: AiService;
 
@@ -169,6 +176,7 @@ describe('AiService', () => {
         { provide: AiCacheService, useValue: mockCache },
         { provide: CostTrackerService, useValue: mockCostTracker },
         { provide: AiRateLimiterService, useValue: mockRateLimiter },
+        { provide: EntitlementService, useValue: mockEntitlementService },
       ],
     }).compile();
 

@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
 import { FeedbackType } from '@prisma/client';
+
+import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
 export class FeedbackService {
@@ -8,13 +9,21 @@ export class FeedbackService {
 
   async submitFeedback(
     userId: string,
-    dto: { type: FeedbackType; resourceId?: string; rating?: number; message?: string; category?: string }
+    dto: {
+      type: FeedbackType;
+      resourceId?: string;
+      rating?: number;
+      message?: string;
+      category?: string;
+    },
   ) {
     if (dto.type === FeedbackType.MATCH_QUALITY && !dto.resourceId) {
       throw new BadRequestException('resourceId (Job ID) is required for match quality feedback');
     }
     if (dto.type === FeedbackType.AI_QUALITY && !dto.resourceId) {
-      throw new BadRequestException('resourceId (AI Message ID) is required for AI quality feedback');
+      throw new BadRequestException(
+        'resourceId (AI Message ID) is required for AI quality feedback',
+      );
     }
 
     return this.prisma.userFeedback.create({

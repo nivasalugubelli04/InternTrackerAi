@@ -1,9 +1,9 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { ApplicationStatus, Prisma } from '@prisma/client';
 
+import { EngagementTrackerService } from '../engagement/services/engagement-tracker.service';
 import { NotificationsService } from '../notifications/services/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { EngagementTrackerService } from '../engagement/services/engagement-tracker.service';
 
 import { ChangeApplicationStatusDto } from './dto/change-status.dto';
 import { CreateApplicationDto } from './dto/create-application.dto';

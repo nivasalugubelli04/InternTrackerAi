@@ -1,8 +1,8 @@
 import { Injectable, Logger, NotFoundException, ConflictException } from '@nestjs/common';
 import { JobPostingStatus, DismissReason, InteractionType, Prisma } from '@prisma/client';
 
-import { PrismaService } from '../prisma/prisma.service';
 import { EngagementTrackerService } from '../engagement/services/engagement-tracker.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 
 import type { DismissJobDto } from './dto/dismiss-job.dto';

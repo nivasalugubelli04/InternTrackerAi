@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
 import { OrganizationRole } from '@prisma/client';
+
+import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
 export class MembersService {
@@ -32,8 +33,9 @@ export class MembersService {
     }
 
     // 3. Create invitation
-    const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-    
+    const token =
+      Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+
     const invite = await this.prisma.organizationInvitation.upsert({
       where: { organizationId_email: { organizationId: orgId, email } },
       create: {

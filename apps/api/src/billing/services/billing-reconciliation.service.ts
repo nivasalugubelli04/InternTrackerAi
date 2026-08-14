@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
 import { SubscriptionStatus } from '@prisma/client';
+
+import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
 export class BillingReconciliationService {
@@ -35,7 +36,9 @@ export class BillingReconciliationService {
             data: { status: SubscriptionStatus.CANCELED },
           });
           revokedCount++;
-          this.logger.warn(`Revoked premium access for user ${sub.userId}, sub ${sub.id} (Grace Period Expired)`);
+          this.logger.warn(
+            `Revoked premium access for user ${sub.userId}, sub ${sub.id} (Grace Period Expired)`,
+          );
         }
       }
     }

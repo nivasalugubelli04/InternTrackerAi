@@ -1,11 +1,12 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
+
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
 export class SkillNormalizationService implements OnModuleInit {
   // Simple in-memory cache to avoid DB lookups for every skill
   private aliasMap = new Map<string, string>();
-  
+
   constructor(private prisma: PrismaService) {}
 
   async onModuleInit() {
@@ -15,14 +16,14 @@ export class SkillNormalizationService implements OnModuleInit {
   async refreshCache() {
     const skills = await this.prisma.normalizedSkill.findMany();
     this.aliasMap.clear();
-    
+
     for (const skill of skills) {
       this.aliasMap.set(skill.canonicalName.toLowerCase(), skill.canonicalName);
       for (const alias of skill.aliases) {
         this.aliasMap.set(alias.toLowerCase(), skill.canonicalName);
       }
     }
-    
+
     // Seed some defaults if empty
     if (this.aliasMap.size === 0) {
       await this.seedDefaults();
@@ -34,7 +35,7 @@ export class SkillNormalizationService implements OnModuleInit {
     const lower = rawSkill.trim().toLowerCase();
     return this.aliasMap.get(lower) || rawSkill.trim();
   }
-  
+
   normalizeList(skills: string[]): string[] {
     const normalized = skills.map((s) => this.normalize(s));
     return [...new Set(normalized)]; // deduplicate

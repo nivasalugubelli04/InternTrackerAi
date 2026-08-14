@@ -1,11 +1,12 @@
 import { Controller, Get, Post, Body, Patch, Param, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
-import { CurrentUser } from '../../auth/decorators/current-user.decorator';
-import { OrganizationsService } from '../services/organizations.service';
-import { MembersService } from '../services/members.service';
-import { OrganizationRolesGuard, OrgRoles } from '../guards/organization-roles.guard';
 import { OrganizationRole } from '@prisma/client';
+
+import { CurrentUser } from '../../auth/decorators/current-user.decorator';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { OrganizationRolesGuard, OrgRoles } from '../guards/organization-roles.guard';
+import { MembersService } from '../services/members.service';
+import { OrganizationsService } from '../services/organizations.service';
 
 @ApiTags('B2B / Organizations')
 @ApiBearerAuth()
@@ -14,7 +15,7 @@ import { OrganizationRole } from '@prisma/client';
 export class OrganizationsController {
   constructor(
     private readonly orgService: OrganizationsService,
-    private readonly membersService: MembersService
+    private readonly membersService: MembersService,
   ) {}
 
   @Post()
@@ -43,7 +44,12 @@ export class OrganizationsController {
 
   @Get(':orgId/members')
   @UseGuards(OrganizationRolesGuard)
-  @OrgRoles(OrganizationRole.OWNER, OrganizationRole.ADMIN, OrganizationRole.PLACEMENT_OFFICER, OrganizationRole.COUNSELOR)
+  @OrgRoles(
+    OrganizationRole.OWNER,
+    OrganizationRole.ADMIN,
+    OrganizationRole.PLACEMENT_OFFICER,
+    OrganizationRole.COUNSELOR,
+  )
   @ApiOperation({ summary: 'List organization members' })
   async getMembers(@Param('orgId') orgId: string) {
     return this.membersService.getMembers(orgId);
@@ -56,7 +62,7 @@ export class OrganizationsController {
   async inviteMember(
     @Param('orgId') orgId: string,
     @Body() dto: { email: string; role: OrganizationRole },
-    @CurrentUser('id') userId: string
+    @CurrentUser('id') userId: string,
   ) {
     return this.membersService.inviteMember(orgId, dto.email, dto.role, userId);
   }

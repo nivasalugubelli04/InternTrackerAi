@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException, ConflictException, Logger } from '@nestjs/common';
 import type { Profile, UserSkill, Skill, Prisma } from '@prisma/client';
 
-import { PrismaService } from '../prisma/prisma.service';
 import { EngagementTrackerService } from '../engagement/services/engagement-tracker.service';
+import { PrismaService } from '../prisma/prisma.service';
 
 import type { AddSkillDto } from './dto/add-skill.dto';
 import type { CreateProfileDto } from './dto/create-profile.dto';

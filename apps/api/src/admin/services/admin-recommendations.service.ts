@@ -1,10 +1,11 @@
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
-import { Queue } from 'bullmq';
 import { InjectQueue } from '@nestjs/bullmq';
-import { EMBEDDING_QUEUE } from '../../queues/queue.constants';
+import { Injectable } from '@nestjs/common';
 import { EntityType } from '@prisma/client';
+import { Queue } from 'bullmq';
+
 import { EmbeddingJobData } from '../../nlp/workers/embedding.worker';
+import { PrismaService } from '../../prisma/prisma.service';
+import { EMBEDDING_QUEUE } from '../../queues/queue.constants';
 
 @Injectable()
 export class AdminRecommendationsService {
@@ -35,7 +36,9 @@ export class AdminRecommendationsService {
 
   async rebuildEmbeddings(resourceType: string) {
     if (resourceType === 'JOB_POSTING') {
-      const jobs = await this.prisma.jobPosting.findMany({ select: { id: true, description: true, requirements: true, title: true } });
+      const jobs = await this.prisma.jobPosting.findMany({
+        select: { id: true, description: true, requirements: true, title: true },
+      });
       for (const job of jobs) {
         const text = `${job.title} ${job.description} ${job.requirements.join(' ')}`;
         await this.embeddingQueue.add('rebuild-job', {
@@ -46,7 +49,7 @@ export class AdminRecommendationsService {
       }
       return { message: `Queued ${jobs.length} jobs for re-embedding` };
     }
-    
+
     if (resourceType === 'USER_PROFILE') {
       const profiles = await this.prisma.profile.findMany({ select: { id: true, bio: true } });
       for (const profile of profiles) {

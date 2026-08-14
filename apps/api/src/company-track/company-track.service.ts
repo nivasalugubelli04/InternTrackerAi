@@ -1,9 +1,9 @@
 import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
 import type { TrackingPriority } from '@prisma/client';
 
-import { PrismaService } from '../prisma/prisma.service';
 import { EntitlementService, BILLING_FEATURES } from '../billing/services/entitlement.service';
 import { EngagementTrackerService } from '../engagement/services/engagement-tracker.service';
+import { PrismaService } from '../prisma/prisma.service';
 
 export interface TrackCompanyDto {
   companyId: string;
@@ -55,7 +55,7 @@ export class CompanyTrackService {
     });
 
     this.logger.log({ userId, companyId: dto.companyId }, 'Company tracked');
-    
+
     // Phase 16: Track engagement event
     await this.engagementTracker.trackAction(userId, 'COMPANY_TRACKED');
 

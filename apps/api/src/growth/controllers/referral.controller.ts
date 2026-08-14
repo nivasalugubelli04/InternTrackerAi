@@ -1,9 +1,10 @@
 import { Controller, Get, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
-import { ReferralService } from '../services/referral.service';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ReferralService } from '../services/referral.service';
 
 @ApiTags('Referrals')
 @ApiBearerAuth()
@@ -34,8 +35,10 @@ export class ReferralController {
       orderBy: { createdAt: 'desc' },
     });
 
-    const registered = referrals.filter(r => r.status === 'REGISTERED').length;
-    const qualified = referrals.filter(r => r.status === 'QUALIFIED' || r.status === 'REWARDED').length;
+    const registered = referrals.filter((r) => r.status === 'REGISTERED').length;
+    const qualified = referrals.filter(
+      (r) => r.status === 'QUALIFIED' || r.status === 'REWARDED',
+    ).length;
 
     const rewards = await this.prisma.referralReward.findMany({
       where: { userId },

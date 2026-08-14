@@ -1,9 +1,10 @@
 import { Processor, WorkerHost, OnWorkerEvent } from '@nestjs/bullmq';
-import { Job } from 'bullmq';
 import { Logger } from '@nestjs/common';
+import { EntityType } from '@prisma/client';
+import { Job } from 'bullmq';
+
 import { EMBEDDING_QUEUE } from '../../queues/queue.constants';
 import { EmbeddingService } from '../services/embedding.service';
-import { EntityType } from '@prisma/client';
 
 export interface EmbeddingJobData {
   entityType: EntityType;

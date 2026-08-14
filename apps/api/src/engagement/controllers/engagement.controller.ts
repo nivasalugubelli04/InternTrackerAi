@@ -1,9 +1,10 @@
 import { Controller, Get, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
-import { CareerProgressService } from '../services/career-progress.service';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { PrismaService } from '../../prisma/prisma.service';
+import { CareerProgressService } from '../services/career-progress.service';
 
 @ApiTags('Engagement')
 @ApiBearerAuth()
@@ -35,7 +36,7 @@ export class EngagementController {
       include: { achievement: true },
       orderBy: { unlockedAt: 'desc' },
     });
-    return userAchievements.map(ua => ua.achievement);
+    return userAchievements.map((ua) => ua.achievement);
   }
 
   @Get('summary')

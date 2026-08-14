@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
+
 import { ReferralService } from '../../growth/services/referral.service';
+import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
 export class EngagementTrackerService {
@@ -28,12 +29,12 @@ export class EngagementTrackerService {
     // Find achievements that match this action
     // In a real app, criteriaJson would be parsed to see if this action is relevant.
     // For MVP, we check specific hardcoded logic based on the actionType.
-    
+
     let achievementName = null;
 
     if (actionType === 'PROFILE_COMPLETE') {
       const profile = await this.prisma.profile.findUnique({ where: { userId } });
-      if (profile && profile.degree && profile.college) {
+      if (profile?.degree && profile?.college) {
         achievementName = 'Profile Complete';
       }
     } else if (actionType === 'COMPANY_TRACKED') {

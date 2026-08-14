@@ -1,29 +1,31 @@
 import { CanActivate, ExecutionContext, Injectable, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { PrismaService } from '../../prisma/prisma.service';
 import { OrganizationRole } from '@prisma/client';
+
+import { PrismaService } from '../../prisma/prisma.service';
 
 export const ORG_ROLES_KEY = 'org_roles';
 
 /**
  * Decorator to enforce Organization Roles on a route.
  */
-export const OrgRoles = (...roles: OrganizationRole[]) => (
-  target: any,
-  _propertyKey?: string,
-  descriptor?: PropertyDescriptor
-) => {
-  if (descriptor) {
-    Reflect.defineMetadata(ORG_ROLES_KEY, roles, descriptor.value);
-    return descriptor;
-  }
-  Reflect.defineMetadata(ORG_ROLES_KEY, roles, target);
-  return target;
-};
+export const OrgRoles =
+  (...roles: OrganizationRole[]) =>
+  (target: any, _propertyKey?: string, descriptor?: PropertyDescriptor) => {
+    if (descriptor) {
+      Reflect.defineMetadata(ORG_ROLES_KEY, roles, descriptor.value);
+      return descriptor;
+    }
+    Reflect.defineMetadata(ORG_ROLES_KEY, roles, target);
+    return target;
+  };
 
 @Injectable()
 export class OrganizationRolesGuard implements CanActivate {
-  constructor(private reflector: Reflector, private prisma: PrismaService) {}
+  constructor(
+    private reflector: Reflector,
+    private prisma: PrismaService,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const requiredRoles = this.reflector.getAllAndOverride<OrganizationRole[]>(ORG_ROLES_KEY, [
@@ -37,7 +39,8 @@ export class OrganizationRolesGuard implements CanActivate {
 
     const request = context.switchToHttp().getRequest();
     const user = request.user;
-    const orgId = request.params.orgId || request.body.organizationId || request.query.organizationId;
+    const orgId =
+      request.params.orgId || request.body.organizationId || request.query.organizationId;
 
     if (!user || !orgId) {
       throw new ForbiddenException('Missing user or organization context');

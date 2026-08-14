@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
@@ -32,7 +33,7 @@ export class ReengagementCron {
       // Create a notification for them
       // In reality, this would push an event to the existing Notification Engine
       // e.g., this.notificationService.send(userId, 'REENGAGEMENT_REMINDER')
-      
+
       // We log for MVP
       this.logger.debug(`Would send re-engagement to ${user.email}`);
     }

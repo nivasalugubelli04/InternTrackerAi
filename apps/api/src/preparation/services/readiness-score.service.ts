@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+
 import { PrismaService } from '../../prisma/prisma.service';
 
 export interface ReadinessScoreResult {
@@ -70,7 +71,7 @@ export class ReadinessScoreService {
         technicalReadiness = 50 + (completedTechTasks / techTasks.length) * 50;
       }
     }
-    
+
     // 4. Behavioral Readiness
     let behavioralReadiness = 50; // Baseline
     if (prepPlan) {
@@ -87,7 +88,8 @@ export class ReadinessScoreService {
     // From matchScore CGPA, Location, Education
     let eligibilityReadiness = 80; // Assume mostly eligible unless match score says otherwise
     if (matchScore) {
-      eligibilityReadiness = (matchScore.educationScore + matchScore.locationScore + matchScore.cgpaScore) / 3;
+      eligibilityReadiness =
+        (matchScore.educationScore + matchScore.locationScore + matchScore.cgpaScore) / 3;
     }
 
     // 6. Company Knowledge
@@ -104,19 +106,19 @@ export class ReadinessScoreService {
     const weights = {
       skills: 0.25,
       resume: 0.15,
-      technical: 0.20,
+      technical: 0.2,
       behavioral: 0.15,
       eligibility: 0.15,
-      company: 0.10,
+      company: 0.1,
     };
 
     const overallReadiness = Math.round(
       skillsReadiness * weights.skills +
-      resumeReadiness * weights.resume +
-      technicalReadiness * weights.technical +
-      behavioralReadiness * weights.behavioral +
-      eligibilityReadiness * weights.eligibility +
-      companyKnowledge * weights.company
+        resumeReadiness * weights.resume +
+        technicalReadiness * weights.technical +
+        behavioralReadiness * weights.behavioral +
+        eligibilityReadiness * weights.eligibility +
+        companyKnowledge * weights.company,
     );
 
     return {

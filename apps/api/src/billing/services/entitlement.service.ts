@@ -1,7 +1,9 @@
 import { Injectable, ForbiddenException } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
-import { UsageTrackerService } from './usage-tracker.service';
 import { SubscriptionStatus } from '@prisma/client';
+
+import { PrismaService } from '../../prisma/prisma.service';
+
+import { UsageTrackerService } from './usage-tracker.service';
 
 export const BILLING_FEATURES = {
   COMPANY_TRACKING: 'COMPANY_TRACKING',
@@ -45,11 +47,10 @@ export class EntitlementService {
   async isPremium(userId: string): Promise<boolean> {
     const activeSub = await this.prisma.subscription.findFirst({
       where: {
-        OR: [
-          { userId },
-          { organization: { members: { some: { userId, status: 'ACTIVE' } } } }
-        ],
-        status: { in: [SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIALING, SubscriptionStatus.PAST_DUE] },
+        OR: [{ userId }, { organization: { members: { some: { userId, status: 'ACTIVE' } } } }],
+        status: {
+          in: [SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIALING, SubscriptionStatus.PAST_DUE],
+        },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -65,7 +66,8 @@ export class EntitlementService {
         orderBy: { createdAt: 'desc' },
       });
       if (lastPayment) {
-        const daysSinceFailure = (Date.now() - lastPayment.createdAt.getTime()) / (1000 * 60 * 60 * 24);
+        const daysSinceFailure =
+          (Date.now() - lastPayment.createdAt.getTime()) / (1000 * 60 * 60 * 24);
         if (daysSinceFailure > 7) {
           return false;
         }
@@ -85,11 +87,15 @@ export class EntitlementService {
 
   async canUse(userId: string, feature: string, throwError: boolean = false): Promise<boolean> {
     const isPrem = await this.isPremium(userId);
-    
+
     // 1. Check if it's a Premium-only feature
     if (PREMIUM_ONLY_FEATURES.includes(feature)) {
       if (!isPrem) {
-        if (throwError) throw new ForbiddenException({ code: 'UPGRADE_REQUIRED', message: 'Premium subscription required' });
+        if (throwError)
+          throw new ForbiddenException({
+            code: 'UPGRADE_REQUIRED',
+            message: 'Premium subscription required',
+          });
         return false;
       }
       return true;
@@ -98,13 +104,21 @@ export class EntitlementService {
     // 2. Check limits
     const limit = await this.getLimit(userId, feature);
     if (limit === 0) {
-      if (throwError) throw new ForbiddenException({ code: 'UPGRADE_REQUIRED', message: 'Feature not available on your plan' });
+      if (throwError)
+        throw new ForbiddenException({
+          code: 'UPGRADE_REQUIRED',
+          message: 'Feature not available on your plan',
+        });
       return false;
     }
 
     const currentUsage = await this.usageTracker.getUsage(userId, feature);
     if (currentUsage >= limit) {
-      if (throwError) throw new ForbiddenException({ code: 'LIMIT_REACHED', message: `You have reached your limit of ${limit} for ${feature}` });
+      if (throwError)
+        throw new ForbiddenException({
+          code: 'LIMIT_REACHED',
+          message: `You have reached your limit of ${limit} for ${feature}`,
+        });
       return false;
     }
 

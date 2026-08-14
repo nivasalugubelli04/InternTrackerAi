@@ -9,9 +9,15 @@ import { JobAnalyzerService } from './job-analyzer.service';
 import { ProfileAnalyzerService } from './profile-analyzer.service';
 import { RecommendationService } from './recommendation.service';
 import { ScoringEngineService } from './scoring-engine.service';
+import { SemanticMatchingService } from './semantic-matching.service';
 
 describe('RecommendationService', () => {
   let service: RecommendationService;
+
+  const mockSemanticMatching = {
+    computeHybridScore: jest.fn().mockReturnValue(75),
+    computeSemanticScore: jest.fn().mockResolvedValue(80),
+  };
 
   const mockPrisma = {
     jobPosting: { findMany: jest.fn(), findUnique: jest.fn() },
@@ -27,6 +33,7 @@ describe('RecommendationService', () => {
       count: jest.fn(),
       findFirst: jest.fn(),
       update: jest.fn(),
+      create: jest.fn(),
     },
     recommendationReason: { deleteMany: jest.fn(), createMany: jest.fn() },
   };
@@ -40,9 +47,13 @@ describe('RecommendationService', () => {
 
   const mockRedis = {
     getClient: jest.fn().mockReturnValue(mockRedisClient),
+    get: jest.fn(),
+    set: jest.fn(),
+    del: jest.fn(),
   };
 
   const mockProfileAnalyzer = {
+    normalizeProfileData: jest.fn(),
     analyzeProfile: jest.fn(),
   };
 
@@ -64,6 +75,7 @@ describe('RecommendationService', () => {
         { provide: ProfileAnalyzerService, useValue: mockProfileAnalyzer },
         { provide: JobAnalyzerService, useValue: mockJobAnalyzer },
         { provide: ScoringEngineService, useValue: mockScoringEngine },
+        { provide: SemanticMatchingService, useValue: mockSemanticMatching },
       ],
     }).compile();
 
@@ -112,7 +124,7 @@ describe('RecommendationService', () => {
     expect(res.userId).toBe('user-123');
     expect(res.totalJobsEvaluated).toBe(1);
     expect(res.recommendationsCount).toBe(1);
-    expect(res.highestScore).toBe(95);
+    expect(res.highestScore).toBe(89);
     expect(mockPrisma.matchScore.upsert).toHaveBeenCalled();
     expect(mockPrisma.recommendation.upsert).toHaveBeenCalled();
   });

@@ -1,12 +1,14 @@
 import { Module } from '@nestjs/common';
+
 import { PrismaModule } from '../prisma/prisma.module';
-import { OrganizationsController } from './controllers/organizations.controller';
-import { AnalyticsController } from './controllers/analytics.controller';
-import { OrganizationsService } from './services/organizations.service';
-import { MembersService } from './services/members.service';
-import { StudentImportService } from './services/student-import.service';
+
 import { PlacementAnalyticsService } from './analytics/placement-analytics.service';
+import { AnalyticsController } from './controllers/analytics.controller';
+import { OrganizationsController } from './controllers/organizations.controller';
 import { OrganizationRolesGuard } from './guards/organization-roles.guard';
+import { MembersService } from './services/members.service';
+import { OrganizationsService } from './services/organizations.service';
+import { StudentImportService } from './services/student-import.service';
 
 @Module({
   imports: [PrismaModule],

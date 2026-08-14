@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { BillingService } from '../services/billing.service';
@@ -29,10 +30,7 @@ export class BillingController {
 
   @Post('checkout')
   @ApiOperation({ summary: 'Create checkout session for a plan' })
-  async createCheckoutSession(
-    @CurrentUser('id') userId: string,
-    @Body() dto: CheckoutDto,
-  ) {
+  async createCheckoutSession(@CurrentUser('id') userId: string, @Body() dto: CheckoutDto) {
     return this.billingService.createCheckoutSession(userId, dto.planId);
   }
 

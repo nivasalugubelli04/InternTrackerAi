@@ -1,14 +1,13 @@
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
 import { ReferralStatus } from '@prisma/client';
+
+import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
 export class ReferralService {
   private readonly logger = new Logger(ReferralService.name);
 
-  constructor(
-    private readonly prisma: PrismaService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   /**
    * Gets or creates a referral code for the user.
@@ -68,18 +67,18 @@ export class ReferralService {
     }
 
     if (referral.status !== ReferralStatus.CREATED && referral.status !== ReferralStatus.CLICKED) {
-       // A referral record was already used. We should create a new record for this specific referee
-       // tying it to the same referrer and campaign.
-       await this.prisma.referral.create({
-         data: {
-           campaignId: referral.campaignId,
-           referrerId: referral.referrerId,
-           refereeId: newUserId,
-           referralCode: `${referral.referralCode}-${Math.random().toString(36).substring(2,6)}`, // Unique proxy code
-           status: ReferralStatus.REGISTERED,
-         }
-       });
-       return;
+      // A referral record was already used. We should create a new record for this specific referee
+      // tying it to the same referrer and campaign.
+      await this.prisma.referral.create({
+        data: {
+          campaignId: referral.campaignId,
+          referrerId: referral.referrerId,
+          refereeId: newUserId,
+          referralCode: `${referral.referralCode}-${Math.random().toString(36).substring(2, 6)}`, // Unique proxy code
+          status: ReferralStatus.REGISTERED,
+        },
+      });
+      return;
     }
 
     // Update the existing base referral code record
@@ -114,14 +113,14 @@ export class ReferralService {
         data: { status: ReferralStatus.QUALIFIED },
       });
       this.logger.log(`Referral ${referral.id} qualified for referee ${refereeId}`);
-      
+
       // Grant rewards
       await this.grantRewards(referral);
     }
   }
 
   private async grantRewards(referral: any): Promise<void> {
-    const rules = referral.campaign.rewardRulesJson as any;
+    const rules = referral.campaign.rewardRulesJson;
 
     if (rules.referrerReward) {
       await this.prisma.referralReward.create({
@@ -130,9 +129,9 @@ export class ReferralService {
           userId: referral.referrerId,
           rewardType: rules.referrerReward.type,
           rewardValue: rules.referrerReward.value,
-        }
+        },
       });
-      // Integrate with EntitlementService logic if needed, e.g., granting a free trial 
+      // Integrate with EntitlementService logic if needed, e.g., granting a free trial
       // by inserting a special Subscription row or bumping EntitlementUsage.
     }
 
@@ -143,7 +142,7 @@ export class ReferralService {
           userId: referral.refereeId,
           rewardType: rules.refereeReward.type,
           rewardValue: rules.refereeReward.value,
-        }
+        },
       });
     }
 

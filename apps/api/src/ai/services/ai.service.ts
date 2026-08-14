@@ -1,6 +1,7 @@
 import { Injectable, Inject, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
+import { EntitlementService, BILLING_FEATURES } from '../../billing/services/entitlement.service';
 import { sanitizeHtml } from '../../common/utils/sanitize.util';
 import type { AppConfig } from '../../config/configuration';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -22,7 +23,6 @@ import { AIProvider, AI_PROVIDER_TOKEN } from '../providers/ai-provider.interfac
 import { AiCacheService } from './ai-cache.service';
 import { AiRateLimiterService } from './ai-rate-limiter.service';
 import { CostTrackerService } from './cost-tracker.service';
-import { EntitlementService, BILLING_FEATURES } from '../../billing/services/entitlement.service';
 
 @Injectable()
 export class AiService {

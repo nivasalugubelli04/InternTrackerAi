@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -8,49 +8,66 @@ import {
   Dimensions,
   ActivityIndicator,
 } from 'react-native';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import { Colors, Spacing, Typography, BorderRadius } from '../theme';
 import { useApplications, ApplicationStatus, Application } from '../services/applications.service';
-import { format } from 'date-fns';
 
 const { width } = Dimensions.get('window');
 const COLUMN_WIDTH = width * 0.85;
 
+const formatDate = (date: string | Date) => {
+  return new Date(date).toLocaleDateString('en-US', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+};
+
 const COLUMNS = [
   { status: ApplicationStatus.SAVED, label: 'Saved', color: Colors.text.muted },
   { status: ApplicationStatus.APPLIED, label: 'Applied', color: Colors.brand.purple },
-  { status: ApplicationStatus.ASSESSMENT, label: 'Assessment', color: Colors.brand.teal },
-  { status: ApplicationStatus.INTERVIEW, label: 'Interview', color: Colors.brand.yellow },
-  { status: ApplicationStatus.OFFER, label: 'Offer', color: Colors.brand.green },
-  { status: ApplicationStatus.REJECTED, label: 'Rejected', color: Colors.status.error },
+  { status: ApplicationStatus.ASSESSMENT, label: 'Assessment', color: Colors.brand.cyan },
+  { status: ApplicationStatus.INTERVIEW, label: 'Interview', color: Colors.warning },
+  { status: ApplicationStatus.OFFER, label: 'Offer', color: Colors.success },
+  { status: ApplicationStatus.REJECTED, label: 'Rejected', color: Colors.error },
 ];
 
 const ApplicationCard = ({ app, onPress }: { app: Application; onPress: () => void }) => {
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7}>
-      <Text style={styles.companyName} numberOfLines={1}>{app.companyNameSnapshot}</Text>
-      <Text style={styles.jobTitle} numberOfLines={2}>{app.jobTitleSnapshot}</Text>
-      
+      <Text style={styles.companyName} numberOfLines={1}>
+        {app.companyNameSnapshot}
+      </Text>
+      <Text style={styles.jobTitle} numberOfLines={2}>
+        {app.jobTitleSnapshot}
+      </Text>
+
       <View style={styles.metaRow}>
-        <Text style={styles.location} numberOfLines={1}>{app.locationSnapshot}</Text>
+        <Text style={styles.location} numberOfLines={1}>
+          {app.locationSnapshot}
+        </Text>
         <View style={styles.badge}>
           <Text style={styles.badgeText}>{app.status}</Text>
         </View>
       </View>
 
       <View style={styles.footerRow}>
-        {app.appliedAt && (
-          <Text style={styles.dateText}>Applied: {format(new Date(app.appliedAt), 'dd MMM yyyy')}</Text>
-        )}
-        {app.nextAction && (
-          <Text style={styles.actionText}>Next: {app.nextAction}</Text>
-        )}
+        {app.appliedAt && <Text style={styles.dateText}>Applied: {formatDate(app.appliedAt)}</Text>}
+        {app.nextAction && <Text style={styles.actionText}>Next: {app.nextAction}</Text>}
       </View>
     </TouchableOpacity>
   );
 };
 
-const KanbanColumn = ({ status, label, color }: { status: ApplicationStatus; label: string; color: string }) => {
+const KanbanColumn = ({
+  status,
+  label,
+  color,
+}: {
+  status: ApplicationStatus;
+  label: string;
+  color: string;
+}) => {
   const navigation = useNavigation<any>();
   const { data, isLoading, refetch } = useApplications(status);
 
@@ -184,7 +201,7 @@ const styles = StyleSheet.create({
   },
   columnList: {
     flexGrow: 1,
-    paddingBottom: Spacing.xxl,
+    paddingBottom: Spacing['2xl'],
   },
   emptyColumnText: {
     textAlign: 'center',
@@ -208,7 +225,7 @@ const styles = StyleSheet.create({
   },
   jobTitle: {
     fontSize: Typography.fontSize.md,
-    fontWeight: Typography.fontWeight.semiBold,
+    fontWeight: Typography.fontWeight.semibold,
     color: Colors.text.primary,
     marginBottom: Spacing.sm,
   },

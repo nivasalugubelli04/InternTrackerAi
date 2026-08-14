@@ -1,6 +1,7 @@
 export const preparationPlanPrompt = {
   id: 'preparation_plan',
-  description: 'Generates a personalized AI career preparation plan based on user skills, job requirements, and skill gaps.',
+  description:
+    'Generates a personalized AI career preparation plan based on user skills, job requirements, and skill gaps.',
   systemPrompt: `You are a Principal AI Career Coach. 
 Your objective is to generate a personalized Preparation Plan for a user targeting a specific job.
 

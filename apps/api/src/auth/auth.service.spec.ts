@@ -51,6 +51,19 @@ const mockPrismaService = {
   user: {
     update: jest.fn(),
   },
+  betaInvitation: {
+    findUnique: jest.fn().mockResolvedValue({
+      code: 'BETA123',
+      isActive: true,
+      usedCount: 0,
+      maxUses: 100,
+    }),
+    update: jest.fn().mockResolvedValue({}),
+  },
+  betaAccess: {
+    findUnique: jest.fn().mockResolvedValue({ id: 'b1', isRevoked: false }),
+    create: jest.fn().mockResolvedValue({}),
+  },
   $transaction: jest.fn((ops: unknown[]) => Promise.all(ops)),
 };
 
@@ -122,6 +135,7 @@ describe('AuthService', () => {
       const result = await service.register({
         email: 'test@example.com',
         password: 'password123',
+        invitationCode: 'BETA123',
       });
 
       expect(result.message).toContain('Registration successful');
@@ -136,7 +150,11 @@ describe('AuthService', () => {
       );
 
       await expect(
-        service.register({ email: 'existing@example.com', password: 'password123' }),
+        service.register({
+          email: 'existing@example.com',
+          password: 'password123',
+          invitationCode: 'BETA123',
+        }),
       ).rejects.toThrow(ConflictException);
     });
   });

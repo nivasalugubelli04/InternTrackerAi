@@ -1,5 +1,5 @@
-import { IsDateString, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { IsDateString, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 
 export class UpsertCareerGoalDto {
   @ApiPropertyOptional({ description: 'The target role the user is aiming for' })
@@ -17,7 +17,9 @@ export class UpsertCareerGoalDto {
   @IsOptional()
   targetDate?: string;
 
-  @ApiPropertyOptional({ description: 'How many hours per week the user can dedicate to preparation' })
+  @ApiPropertyOptional({
+    description: 'How many hours per week the user can dedicate to preparation',
+  })
   @IsInt()
   @Min(1)
   @Max(40)

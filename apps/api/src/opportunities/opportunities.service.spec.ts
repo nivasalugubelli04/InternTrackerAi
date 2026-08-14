@@ -10,12 +10,17 @@ import type { TestingModule } from '@nestjs/testing';
 import { Test } from '@nestjs/testing';
 import { JobPostingStatus, DismissReason, InteractionType } from '@prisma/client';
 
+import { EngagementTrackerService } from '../engagement/services/engagement-tracker.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 
 import { OpportunitiesService } from './opportunities.service';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
+
+const mockEngagementTracker = {
+  trackAction: jest.fn().mockResolvedValue(undefined),
+};
 
 const mockPrisma = {
   jobPosting: {
@@ -119,6 +124,7 @@ describe('OpportunitiesService', () => {
         OpportunitiesService,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: RedisService, useValue: mockRedis },
+        { provide: EngagementTrackerService, useValue: mockEngagementTracker },
       ],
     }).compile();
 

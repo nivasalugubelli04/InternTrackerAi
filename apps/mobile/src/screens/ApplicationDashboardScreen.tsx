@@ -2,9 +2,19 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Colors, Spacing, Typography, BorderRadius } from '../theme';
-import { useApplicationStats, useApplications } from '../services/applications.service';
+import { useApplicationStats } from '../services/applications.service';
 
-const StatCard = ({ label, value, emoji, color }: { label: string; value: number; emoji: string; color: string }) => (
+const StatCard = ({
+  label,
+  value,
+  emoji,
+  color,
+}: {
+  label: string;
+  value: number;
+  emoji: string;
+  color: string;
+}) => (
   <View style={[styles.statCard, { borderColor: `${color}44` }]}>
     <Text style={styles.statEmoji}>{emoji}</Text>
     <Text style={[styles.statValue, { color }]}>{value}</Text>
@@ -15,7 +25,7 @@ const StatCard = ({ label, value, emoji, color }: { label: string; value: number
 export default function ApplicationDashboardScreen() {
   const navigation = useNavigation<any>();
   const { data: stats, isLoading, refetch } = useApplicationStats();
-  
+
   const handleViewAll = () => {
     navigation.navigate('ApplicationList', {});
   };
@@ -27,23 +37,48 @@ export default function ApplicationDashboardScreen() {
         refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} />}
       >
         <Text style={styles.headerTitle}>My Applications</Text>
-        
+
         {stats && stats.totalApplications === 0 ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyEmoji}>🚀</Text>
             <Text style={styles.emptyTitle}>Your internship journey starts here.</Text>
-            <Text style={styles.emptyText}>Save an internship or apply to your first opportunity to start tracking your progress.</Text>
-            <TouchableOpacity style={styles.exploreBtn} onPress={() => navigation.navigate('ExploreTab')}>
+            <Text style={styles.emptyText}>
+              Save an internship or apply to your first opportunity to start tracking your progress.
+            </Text>
+            <TouchableOpacity
+              style={styles.exploreBtn}
+              onPress={() => navigation.navigate('ExploreTab')}
+            >
               <Text style={styles.exploreBtnText}>Explore Internships</Text>
             </TouchableOpacity>
           </View>
         ) : (
           <>
             <View style={styles.statsGrid}>
-              <StatCard label="Applications" value={stats?.totalApplications || 0} emoji="📝" color={Colors.brand.purple} />
-              <StatCard label="Interviews" value={stats?.interviews || 0} emoji="🎯" color={Colors.brand.yellow} />
-              <StatCard label="Offers" value={stats?.offers || 0} emoji="🎉" color={Colors.brand.green} />
-              <StatCard label="Rejected" value={stats?.rejected || 0} emoji="❌" color={Colors.status.error} />
+              <StatCard
+                label="Applications"
+                value={stats?.totalApplications || 0}
+                emoji="📝"
+                color={Colors.brand.purple}
+              />
+              <StatCard
+                label="Interviews"
+                value={stats?.interviews || 0}
+                emoji="🎯"
+                color={Colors.warning}
+              />
+              <StatCard
+                label="Offers"
+                value={stats?.offers || 0}
+                emoji="🎉"
+                color={Colors.success}
+              />
+              <StatCard
+                label="Rejected"
+                value={stats?.rejected || 0}
+                emoji="❌"
+                color={Colors.error}
+              />
             </View>
 
             <View style={styles.progressSection}>
@@ -62,7 +97,15 @@ export default function ApplicationDashboardScreen() {
               <Text style={styles.viewAllBtnText}>View Application Board</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.aiBtn} onPress={() => navigation.navigate('HomeTab', { screen: 'AiCopilot', params: { initialMessage: 'Analyze My Application Progress' } })}>
+            <TouchableOpacity
+              style={styles.aiBtn}
+              onPress={() =>
+                navigation.navigate('HomeTab', {
+                  screen: 'AiCopilot',
+                  params: { initialMessage: 'Analyze My Application Progress' },
+                })
+              }
+            >
               <Text style={styles.aiBtnText}>✨ Analyze My Progress with AI</Text>
             </TouchableOpacity>
           </>
@@ -79,10 +122,10 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: Spacing.xl,
-    paddingTop: Spacing.xxl + Spacing.xl,
+    paddingTop: Spacing['2xl'] + Spacing.xl,
   },
   headerTitle: {
-    fontSize: Typography.fontSize.xxl,
+    fontSize: Typography.fontSize['2xl'],
     fontWeight: Typography.fontWeight.bold,
     color: Colors.text.primary,
     marginBottom: Spacing.xl,
@@ -125,7 +168,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: Typography.fontSize.lg,
-    fontWeight: Typography.fontWeight.semiBold,
+    fontWeight: Typography.fontWeight.semibold,
     color: Colors.text.primary,
     marginBottom: Spacing.md,
   },
@@ -153,7 +196,7 @@ const styles = StyleSheet.create({
   viewAllBtnText: {
     color: Colors.text.inverse,
     fontSize: Typography.fontSize.md,
-    fontWeight: Typography.fontWeight.semiBold,
+    fontWeight: Typography.fontWeight.semibold,
   },
   aiBtn: {
     backgroundColor: Colors.brand.purple + '22',
@@ -166,12 +209,12 @@ const styles = StyleSheet.create({
   aiBtnText: {
     color: Colors.brand.purple,
     fontSize: Typography.fontSize.md,
-    fontWeight: Typography.fontWeight.semiBold,
+    fontWeight: Typography.fontWeight.semibold,
   },
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: Spacing.xxl,
+    paddingVertical: Spacing['2xl'],
   },
   emptyEmoji: {
     fontSize: 64,
@@ -200,6 +243,6 @@ const styles = StyleSheet.create({
   exploreBtnText: {
     color: Colors.text.inverse,
     fontSize: Typography.fontSize.md,
-    fontWeight: Typography.fontWeight.semiBold,
+    fontWeight: Typography.fontWeight.semibold,
   },
 });

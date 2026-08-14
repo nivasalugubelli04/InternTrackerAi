@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
@@ -12,9 +13,9 @@ export class UsageTrackerService {
     const activeSub = await this.prisma.subscription.findFirst({
       where: {
         userId,
-        status: { in: ['ACTIVE', 'TRIALING'] } // We will treat past due under grace period separately
+        status: { in: ['ACTIVE', 'TRIALING'] }, // We will treat past due under grace period separately
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
     });
 
     if (activeSub) {
@@ -25,20 +26,20 @@ export class UsageTrackerService {
     const now = new Date();
     const start = new Date(now.getFullYear(), now.getMonth(), 1);
     const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-    
+
     return { start, end };
   }
 
   async getUsage(userId: string, feature: string): Promise<number> {
     const { start, end } = await this.getCurrentPeriod(userId);
-    
+
     const usage = await this.prisma.entitlementUsage.findFirst({
       where: {
         userId,
         feature,
         periodStart: { lte: end },
-        periodEnd: { gte: start }
-      }
+        periodEnd: { gte: start },
+      },
     });
 
     return usage ? usage.usageCount : 0;
@@ -52,20 +53,20 @@ export class UsageTrackerService {
         userId_feature_periodStart: {
           userId,
           feature,
-          periodStart: start
-        }
+          periodStart: start,
+        },
       },
       update: {
         usageCount: { increment: amount },
-        periodEnd: end
+        periodEnd: end,
       },
       create: {
         userId,
         feature,
         usageCount: amount,
         periodStart: start,
-        periodEnd: end
-      }
+        periodEnd: end,
+      },
     });
 
     return usage.usageCount;
@@ -73,16 +74,16 @@ export class UsageTrackerService {
 
   async resetUsage(userId: string, feature: string): Promise<void> {
     const { start } = await this.getCurrentPeriod(userId);
-    
+
     await this.prisma.entitlementUsage.updateMany({
       where: {
         userId,
         feature,
-        periodStart: start
+        periodStart: start,
       },
       data: {
-        usageCount: 0
-      }
+        usageCount: 0,
+      },
     });
   }
 }

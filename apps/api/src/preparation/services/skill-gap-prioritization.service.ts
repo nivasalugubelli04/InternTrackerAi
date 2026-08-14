@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
+
 import { SemanticMatchingService } from '../../matching/services/semantic-matching.service';
 import { SkillNormalizationService } from '../../nlp/services/skill-normalization.service';
+import { PrismaService } from '../../prisma/prisma.service';
 
 export interface PrioritizedSkill {
   name: string;
@@ -33,32 +34,34 @@ export class SkillGapPrioritizationService {
       throw new Error('User or Job not found');
     }
 
-    const userSkillNames = user.userSkills.map(us => us.skill.name.toLowerCase());
+    const userSkillNames = user.userSkills.map((us) => us.skill.name.toLowerCase());
     const jobSkills = await Promise.all(
-      job.requirements.map(async req => {
+      job.requirements.map(async (req) => {
         const normalized = this.skillNormalizer.normalize(req);
         return { original: req, normalized: normalized.toLowerCase() };
-      })
+      }),
     );
 
     const missingSkills = jobSkills.filter(
-      js => !userSkillNames.includes(js.normalized) && !userSkillNames.includes(js.original.toLowerCase())
+      (js) =>
+        !userSkillNames.includes(js.normalized) &&
+        !userSkillNames.includes(js.original.toLowerCase()),
     );
 
     // Get semantic similarity between job and user profile
     const semanticScore = await this.semanticMatching.computeSemanticScore(userId, jobId);
-    
-    // In a fully integrated vector DB approach, we would compute distance between each missing skill 
+
+    // In a fully integrated vector DB approach, we would compute distance between each missing skill
     // and the user's existing skill embeddings. Here we do a simplified rule/semantic hybrid.
 
     return missingSkills.map((ms, index) => {
-      // Basic heuristic: 
+      // Basic heuristic:
       // First 2 missing skills are CRITICAL if semantic score is low, else HIGH.
       // Next 2 are HIGH or MEDIUM.
       let priority: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' = 'LOW';
-      
+
       if (index === 0 || index === 1) {
-        priority = (semanticScore !== null && semanticScore < 60) ? 'CRITICAL' : 'HIGH';
+        priority = semanticScore !== null && semanticScore < 60 ? 'CRITICAL' : 'HIGH';
       } else if (index === 2 || index === 3) {
         priority = 'MEDIUM';
       }

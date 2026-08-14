@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
@@ -11,7 +12,7 @@ export class PlacementAnalyticsService {
       where: { organizationId: orgId, role: 'STUDENT', status: 'ACTIVE', consentGiven: true },
       select: { userId: true },
     });
-    
+
     const userIds = students.map((s) => s.userId);
     const totalStudents = userIds.length;
 
@@ -20,7 +21,7 @@ export class PlacementAnalyticsService {
       this.prisma.profile.count({ where: { userId: { in: userIds } } }), // basic check, real app uses a completeness score
       this.prisma.application.count({ where: { userId: { in: userIds } } }),
       this.prisma.applicationEvent.count({
-        where: { application: { userId: { in: userIds } }, toStatus: 'INTERVIEWING' },
+        where: { application: { userId: { in: userIds } }, toStatus: 'INTERVIEW' },
       }),
       this.prisma.application.count({ where: { userId: { in: userIds }, status: 'OFFER' } }),
     ]);
@@ -37,7 +38,7 @@ export class PlacementAnalyticsService {
         profileCompletion: totalStudents ? (profilesCompleted / totalStudents) * 100 : 0,
         applicationToInterview: applications ? (interviews / applications) * 100 : 0,
         interviewToOffer: interviews ? (offers / interviews) * 100 : 0,
-      }
+      },
     };
   }
 
@@ -53,7 +54,7 @@ export class PlacementAnalyticsService {
       topSuppliedSkills: [
         { name: 'HTML', supplyCount: 200 },
         { name: 'Java', supplyCount: 180 },
-      ]
+      ],
     };
   }
 }

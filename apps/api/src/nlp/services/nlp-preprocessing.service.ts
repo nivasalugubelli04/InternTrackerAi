@@ -1,3 +1,5 @@
+import * as crypto from 'crypto';
+
 import { Injectable } from '@nestjs/common';
 
 @Injectable()
@@ -18,19 +20,32 @@ export class NlpPreprocessingService {
    * Generates a hash for a given text to check if content changed.
    */
   generateInputHash(text: string): string {
-    const crypto = require('crypto');
     return crypto.createHash('sha256').update(this.normalizeText(text)).digest('hex');
   }
 
   /**
-   * Very basic stopword removal. 
+   * Very basic stopword removal.
    * CAUTION: We don't want to remove technical terms that happen to be stopwords in some contexts (like "Go" or "C").
    */
   removeStopwords(text: string): string {
     const stopwords = new Set([
-      'the', 'is', 'at', 'which', 'on', 'and', 'a', 'an', 'in', 'of', 'for', 'to', 'with', 'as', 'by'
+      'the',
+      'is',
+      'at',
+      'which',
+      'on',
+      'and',
+      'a',
+      'an',
+      'in',
+      'of',
+      'for',
+      'to',
+      'with',
+      'as',
+      'by',
     ]);
-    
+
     return text
       .split(' ')
       .filter((word) => !stopwords.has(word))

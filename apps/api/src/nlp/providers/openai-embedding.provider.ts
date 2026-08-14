@@ -1,7 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { IEmbeddingProvider } from './embedding-provider.interface';
+
 import { AppConfig } from '../../config/configuration';
+
+import { IEmbeddingProvider } from './embedding-provider.interface';
 
 @Injectable()
 export class OpenAiEmbeddingProvider implements IEmbeddingProvider {
@@ -13,7 +15,7 @@ export class OpenAiEmbeddingProvider implements IEmbeddingProvider {
 
   async generateEmbedding(text: string): Promise<number[]> {
     const res = await this.generateEmbeddings([text]);
-    if (!res || !res.length) throw new Error('Failed to generate embedding');
+    if (!res?.length) throw new Error('Failed to generate embedding');
     const embedding = res[0];
     if (!embedding) throw new Error('Embedding is undefined');
     return embedding;
@@ -48,7 +50,7 @@ export class OpenAiEmbeddingProvider implements IEmbeddingProvider {
       }
 
       const data = (await response.json()) as any;
-      
+
       // Ensure the order is maintained by sorting based on the index returned by OpenAI
       data.data.sort((a: any, b: any) => a.index - b.index);
       return data.data.map((item: any) => item.embedding);

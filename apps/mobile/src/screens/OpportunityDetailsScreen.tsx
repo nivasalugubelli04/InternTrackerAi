@@ -48,7 +48,11 @@ export default function OpportunityDetailsScreen(): React.ReactElement {
   const queryClient = useQueryClient();
   const { jobId } = route.params;
 
-  const { data: job, isLoading, error } = useQuery({
+  const {
+    data: job,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ['opportunity', jobId],
     queryFn: () => opportunitiesService.getById(jobId),
     staleTime: 2 * 60 * 1000,
@@ -86,20 +90,20 @@ export default function OpportunityDetailsScreen(): React.ReactElement {
         'Did you apply for this role? Would you like to track it?',
         [
           { text: 'Not yet', style: 'cancel' },
-          { 
-            text: 'Yes, track it', 
+          {
+            text: 'Yes, track it',
             onPress: () => {
               createApplication(
                 { jobId: job.id, status: ApplicationStatus.APPLIED },
                 {
                   onSuccess: () => {
                     Alert.alert('Success', 'Application is now tracked in your Application Board.');
-                  }
-                }
+                  },
+                },
               );
-            }
-          }
-        ]
+            },
+          },
+        ],
       );
     } catch {
       Alert.alert('Error', 'Could not open the application link.');
@@ -109,25 +113,25 @@ export default function OpportunityDetailsScreen(): React.ReactElement {
   const handleAiCopilot = useCallback(async () => {
     if (!job) return;
     await opportunitiesService.trackInteraction('AI_COPILOT_OPEN', job.id);
-    navigation.navigate('AiCopilot', { jobId: job.id, jobTitle: job.title, company: job.company?.name });
+    navigation.navigate('AiCopilot', {
+      jobId: job.id,
+      jobTitle: job.title,
+      company: job.company?.name,
+    });
   }, [job, navigation]);
 
   const handleDismiss = useCallback(() => {
-    Alert.alert(
-      'Not Interested?',
-      'Tell us why — it helps us improve your recommendations.',
-      [
-        ...DISMISS_REASONS.map((r) => ({
-          text: r.label,
-          onPress: async () => {
-            await opportunitiesService.dismiss(jobId, r.value);
-            queryClient.invalidateQueries({ queryKey: ['opportunities', 'feed'] });
-            navigation.goBack();
-          },
-        })),
-        { text: 'Cancel', style: 'cancel' },
-      ],
-    );
+    Alert.alert('Not Interested?', 'Tell us why — it helps us improve your recommendations.', [
+      ...DISMISS_REASONS.map((r) => ({
+        text: r.label,
+        onPress: async () => {
+          await opportunitiesService.dismiss(jobId, r.value);
+          queryClient.invalidateQueries({ queryKey: ['opportunities', 'feed'] });
+          navigation.goBack();
+        },
+      })),
+      { text: 'Cancel', style: 'cancel' },
+    ]);
   }, [jobId, navigation, queryClient]);
 
   if (isLoading) {
@@ -152,25 +156,20 @@ export default function OpportunityDetailsScreen(): React.ReactElement {
         <Text style={styles.errorEmoji}>😕</Text>
         <Text style={styles.errorTitle}>Opportunity Not Found</Text>
         <Text style={styles.errorSubtitle}>This internship may no longer be available.</Text>
-        <TouchableOpacity 
-            style={styles.actionButton}
-            onPress={() => navigation.navigate('MockInterview' as never, { jobId: job?.id } as never)}
-          >
-            <Ionicons name="mic-outline" size={24} color="#007BFF" />
-            <Text style={styles.actionButtonText}>Mock Interview</Text>
-            <Ionicons name="chevron-forward" size={20} color="#666" style={styles.actionButtonArrow} />
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.actionButton}
-            onPress={() => navigation.goBack()}
-          ><Text style={styles.backBtnLgText}>← Go Back</Text>
+        <TouchableOpacity style={styles.backBtnLg} onPress={() => navigation.goBack()}>
+          <Text style={styles.backBtnLgText}>← Go Back</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
-  const postedDate = job.postedDate ? new Date(job.postedDate).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' }) : null;
+  const postedDate = job.postedDate
+    ? new Date(job.postedDate).toLocaleDateString('en-IN', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      })
+    : null;
 
   return (
     <View style={styles.container}>
@@ -179,8 +178,13 @@ export default function OpportunityDetailsScreen(): React.ReactElement {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Text style={styles.backBtnText}>← Back</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={handleSave} style={[styles.saveHeaderBtn, currentlySaved && styles.saveHeaderBtnActive]}>
-          <Text style={[styles.saveHeaderBtnText, currentlySaved && styles.saveHeaderBtnTextActive]}>
+        <TouchableOpacity
+          onPress={handleSave}
+          style={[styles.saveHeaderBtn, currentlySaved && styles.saveHeaderBtnActive]}
+        >
+          <Text
+            style={[styles.saveHeaderBtnText, currentlySaved && styles.saveHeaderBtnTextActive]}
+          >
             {currentlySaved ? '♥ Saved' : '♡ Save'}
           </Text>
         </TouchableOpacity>
@@ -190,7 +194,11 @@ export default function OpportunityDetailsScreen(): React.ReactElement {
         {/* Company hero */}
         <View style={styles.heroSection}>
           {job.company.logoUrl ? (
-            <Image source={{ uri: job.company.logoUrl }} style={styles.companyLogo} resizeMode="contain" />
+            <Image
+              source={{ uri: job.company.logoUrl }}
+              style={styles.companyLogo}
+              resizeMode="contain"
+            />
           ) : (
             <View style={styles.companyLogoPlaceholder}>
               <Text style={styles.companyLogoLetter}>{job.company.name[0]?.toUpperCase()}</Text>
@@ -208,11 +216,36 @@ export default function OpportunityDetailsScreen(): React.ReactElement {
 
         {/* Quick info chips */}
         <View style={styles.chipRow}>
-          {job.location && <View style={styles.chip}><Text style={styles.chipText}>📍 {job.location}</Text></View>}
-          {job.workMode && <View style={styles.chip}><Text style={styles.chipText}>{job.workMode === 'REMOTE' ? '🌐' : job.workMode === 'HYBRID' ? '🏠' : '🏢'} {job.workMode}</Text></View>}
-          {job.stipend && <View style={[styles.chip, styles.chipGreen]}><Text style={[styles.chipText, { color: Colors.success }]}>₹{(job.stipend / 1000).toFixed(0)}K/mo</Text></View>}
-          {job.duration && <View style={styles.chip}><Text style={styles.chipText}>⏱ {job.duration}</Text></View>}
-          {job.employmentType && <View style={styles.chip}><Text style={styles.chipText}>💼 {job.employmentType}</Text></View>}
+          {job.location && (
+            <View style={styles.chip}>
+              <Text style={styles.chipText}>📍 {job.location}</Text>
+            </View>
+          )}
+          {job.workMode && (
+            <View style={styles.chip}>
+              <Text style={styles.chipText}>
+                {job.workMode === 'REMOTE' ? '🌐' : job.workMode === 'HYBRID' ? '🏠' : '🏢'}{' '}
+                {job.workMode}
+              </Text>
+            </View>
+          )}
+          {job.stipend && (
+            <View style={[styles.chip, styles.chipGreen]}>
+              <Text style={[styles.chipText, { color: Colors.success }]}>
+                ₹{(job.stipend / 1000).toFixed(0)}K/mo
+              </Text>
+            </View>
+          )}
+          {job.duration && (
+            <View style={styles.chip}>
+              <Text style={styles.chipText}>⏱ {job.duration}</Text>
+            </View>
+          )}
+          {job.employmentType && (
+            <View style={styles.chip}>
+              <Text style={styles.chipText}>💼 {job.employmentType}</Text>
+            </View>
+          )}
         </View>
 
         {/* Deadline */}
@@ -220,7 +253,14 @@ export default function OpportunityDetailsScreen(): React.ReactElement {
           <DeadlineBadge deadline={job.deadline} urgency={job.deadlineUrgency} />
           <InfoRow label="Posted" value={postedDate} />
           {job.applicationUrl && (
-            <InfoRow label="Apply" value={job.applicationUrl.length > 50 ? job.applicationUrl.slice(0, 47) + '...' : job.applicationUrl} />
+            <InfoRow
+              label="Apply"
+              value={
+                job.applicationUrl.length > 50
+                  ? job.applicationUrl.slice(0, 47) + '...'
+                  : job.applicationUrl
+              }
+            />
           )}
         </View>
 
@@ -296,7 +336,9 @@ export default function OpportunityDetailsScreen(): React.ReactElement {
         {/* About Company */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>🏢 About {job.company.name}</Text>
-          {job.company.description && <Text style={styles.bodyText}>{job.company.description}</Text>}
+          {job.company.description && (
+            <Text style={styles.bodyText}>{job.company.description}</Text>
+          )}
           <View style={{ marginTop: Spacing.sm }}>
             <InfoRow label="HQ" value={job.company.headquarters} />
             <InfoRow label="Size" value={job.company.companySize} />
@@ -337,43 +379,147 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.border.subtle,
   },
   backBtn: { padding: Spacing.xs },
-  backBtnText: { color: Colors.brand.purpleLight, fontSize: Typography.fontSize.sm, fontWeight: Typography.fontWeight.medium },
-  saveHeaderBtn: { paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: Colors.border.default },
+  backBtnText: {
+    color: Colors.brand.purpleLight,
+    fontSize: Typography.fontSize.sm,
+    fontWeight: Typography.fontWeight.medium,
+  },
+  saveHeaderBtn: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.border.default,
+  },
   saveHeaderBtnActive: { backgroundColor: 'rgba(239,68,68,0.15)', borderColor: Colors.error },
-  saveHeaderBtnText: { color: Colors.text.secondary, fontSize: Typography.fontSize.sm, fontWeight: Typography.fontWeight.medium },
+  saveHeaderBtnText: {
+    color: Colors.text.secondary,
+    fontSize: Typography.fontSize.sm,
+    fontWeight: Typography.fontWeight.medium,
+  },
   saveHeaderBtnTextActive: { color: Colors.error },
   scroll: { flex: 1 },
   heroSection: { alignItems: 'center', paddingTop: Spacing.xl, paddingBottom: Spacing.lg },
   companyLogo: { width: 72, height: 72, borderRadius: BorderRadius.md, marginBottom: Spacing.sm },
   companyLogoPlaceholder: {
-    width: 72, height: 72, borderRadius: BorderRadius.md,
-    backgroundColor: Colors.background.tertiary, alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.sm,
-    borderWidth: 1, borderColor: Colors.border.subtle,
+    width: 72,
+    height: 72,
+    borderRadius: BorderRadius.md,
+    backgroundColor: Colors.background.tertiary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.border.subtle,
   },
-  companyLogoLetter: { color: Colors.brand.purpleLight, fontSize: Typography.fontSize['2xl'], fontWeight: Typography.fontWeight.bold },
-  companyName: { color: Colors.text.primary, fontSize: Typography.fontSize.lg, fontWeight: Typography.fontWeight.bold, marginBottom: 4 },
+  companyLogoLetter: {
+    color: Colors.brand.purpleLight,
+    fontSize: Typography.fontSize['2xl'],
+    fontWeight: Typography.fontWeight.bold,
+  },
+  companyName: {
+    color: Colors.text.primary,
+    fontSize: Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.bold,
+    marginBottom: 4,
+  },
   industryTag: { color: Colors.text.muted, fontSize: Typography.fontSize.sm },
-  titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingHorizontal: Spacing.lg, marginBottom: Spacing.md, gap: Spacing.md },
-  jobTitle: { flex: 1, color: Colors.text.primary, fontSize: Typography.fontSize.xl, fontWeight: Typography.fontWeight.extrabold, lineHeight: 28 },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs, paddingHorizontal: Spacing.lg, marginBottom: Spacing.md },
-  chip: { paddingHorizontal: Spacing.sm, paddingVertical: 4, borderRadius: BorderRadius.sm, backgroundColor: Colors.background.tertiary, borderWidth: 1, borderColor: Colors.border.subtle },
+  titleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    paddingHorizontal: Spacing.lg,
+    marginBottom: Spacing.md,
+    gap: Spacing.md,
+  },
+  jobTitle: {
+    flex: 1,
+    color: Colors.text.primary,
+    fontSize: Typography.fontSize.xl,
+    fontWeight: Typography.fontWeight.extrabold,
+    lineHeight: 28,
+  },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.xs,
+    paddingHorizontal: Spacing.lg,
+    marginBottom: Spacing.md,
+  },
+  chip: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.sm,
+    backgroundColor: Colors.background.tertiary,
+    borderWidth: 1,
+    borderColor: Colors.border.subtle,
+  },
   chipGreen: { borderColor: `${Colors.success}55`, backgroundColor: `${Colors.success}11` },
   chipText: { color: Colors.text.secondary, fontSize: Typography.fontSize.xs },
-  card: { marginHorizontal: Spacing.lg, marginBottom: Spacing.md, backgroundColor: Colors.background.secondary, borderRadius: BorderRadius.lg, borderWidth: 1, borderColor: Colors.border.subtle, padding: Spacing.md },
-  cardTitle: { color: Colors.text.primary, fontSize: Typography.fontSize.base, fontWeight: Typography.fontWeight.bold, marginBottom: Spacing.md },
+  card: {
+    marginHorizontal: Spacing.lg,
+    marginBottom: Spacing.md,
+    backgroundColor: Colors.background.secondary,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    borderColor: Colors.border.subtle,
+    padding: Spacing.md,
+  },
+  cardTitle: {
+    color: Colors.text.primary,
+    fontSize: Typography.fontSize.base,
+    fontWeight: Typography.fontWeight.bold,
+    marginBottom: Spacing.md,
+  },
   infoRow: { flexDirection: 'row', marginBottom: Spacing.xs, gap: Spacing.sm },
   infoLabel: { color: Colors.text.muted, fontSize: Typography.fontSize.sm, minWidth: 70 },
   infoValue: { flex: 1, color: Colors.text.secondary, fontSize: Typography.fontSize.sm },
-  reasonRow: { flexDirection: 'row', gap: Spacing.xs, marginBottom: Spacing.xs, alignItems: 'flex-start' },
-  reasonBullet: { color: Colors.success, fontSize: Typography.fontSize.sm, fontWeight: Typography.fontWeight.bold, marginTop: 1 },
-  reasonText: { flex: 1, color: Colors.text.secondary, fontSize: Typography.fontSize.sm, lineHeight: 20 },
+  reasonRow: {
+    flexDirection: 'row',
+    gap: Spacing.xs,
+    marginBottom: Spacing.xs,
+    alignItems: 'flex-start',
+  },
+  reasonBullet: {
+    color: Colors.success,
+    fontSize: Typography.fontSize.sm,
+    fontWeight: Typography.fontWeight.bold,
+    marginTop: 1,
+  },
+  reasonText: {
+    flex: 1,
+    color: Colors.text.secondary,
+    fontSize: Typography.fontSize.sm,
+    lineHeight: 20,
+  },
   bodyText: { color: Colors.text.secondary, fontSize: Typography.fontSize.sm, lineHeight: 22 },
   skillsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs },
-  skillChip: { paddingHorizontal: Spacing.sm, paddingVertical: 4, borderRadius: BorderRadius.full, backgroundColor: Colors.glass.surface, borderWidth: 1, borderColor: Colors.glass.border },
-  skillChipText: { color: Colors.brand.purpleLight, fontSize: Typography.fontSize.xs, fontWeight: Typography.fontWeight.medium },
+  skillChip: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.full,
+    backgroundColor: Colors.glass.surface,
+    borderWidth: 1,
+    borderColor: Colors.glass.border,
+  },
+  skillChipText: {
+    color: Colors.brand.purpleLight,
+    fontSize: Typography.fontSize.xs,
+    fontWeight: Typography.fontWeight.medium,
+  },
   bulletRow: { flexDirection: 'row', gap: Spacing.xs, marginBottom: 6, alignItems: 'flex-start' },
-  bullet: { color: Colors.brand.purpleLight, fontWeight: Typography.fontWeight.bold, fontSize: Typography.fontSize.sm, marginTop: 1 },
-  bulletText: { flex: 1, color: Colors.text.secondary, fontSize: Typography.fontSize.sm, lineHeight: 20 },
+  bullet: {
+    color: Colors.brand.purpleLight,
+    fontWeight: Typography.fontWeight.bold,
+    fontSize: Typography.fontSize.sm,
+    marginTop: 1,
+  },
+  bulletText: {
+    flex: 1,
+    color: Colors.text.secondary,
+    fontSize: Typography.fontSize.sm,
+    lineHeight: 20,
+  },
   ctaBar: {
     flexDirection: 'row',
     paddingHorizontal: Spacing.lg,
@@ -384,15 +530,60 @@ const styles = StyleSheet.create({
     borderTopColor: Colors.border.subtle,
     gap: Spacing.sm,
   },
-  dismissActionBtn: { paddingHorizontal: Spacing.sm, paddingVertical: Spacing.sm, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: Colors.border.default, alignItems: 'center', justifyContent: 'center' },
+  dismissActionBtn: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.border.default,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   dismissActionText: { color: Colors.text.muted, fontSize: Typography.fontSize.xs },
-  aiBtn: { flex: 1, paddingVertical: Spacing.sm, borderRadius: BorderRadius.md, backgroundColor: Colors.background.tertiary, borderWidth: 1, borderColor: Colors.border.subtle, alignItems: 'center' },
-  aiBtnText: { color: Colors.brand.purpleLight, fontSize: Typography.fontSize.sm, fontWeight: Typography.fontWeight.semibold },
-  applyBtn: { flex: 2, paddingVertical: Spacing.sm, borderRadius: BorderRadius.lg, backgroundColor: Colors.brand.purple, alignItems: 'center' },
-  applyBtnText: { color: Colors.white, fontSize: Typography.fontSize.base, fontWeight: Typography.fontWeight.bold },
+  aiBtn: {
+    flex: 1,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.md,
+    backgroundColor: Colors.background.tertiary,
+    borderWidth: 1,
+    borderColor: Colors.border.subtle,
+    alignItems: 'center',
+  },
+  aiBtnText: {
+    color: Colors.brand.purpleLight,
+    fontSize: Typography.fontSize.sm,
+    fontWeight: Typography.fontWeight.semibold,
+  },
+  applyBtn: {
+    flex: 2,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.lg,
+    backgroundColor: Colors.brand.purple,
+    alignItems: 'center',
+  },
+  applyBtnText: {
+    color: Colors.white,
+    fontSize: Typography.fontSize.base,
+    fontWeight: Typography.fontWeight.bold,
+  },
   errorEmoji: { fontSize: 64, marginBottom: Spacing.lg },
-  errorTitle: { color: Colors.text.primary, fontSize: Typography.fontSize.xl, fontWeight: Typography.fontWeight.bold, marginBottom: Spacing.sm },
-  errorSubtitle: { color: Colors.text.secondary, fontSize: Typography.fontSize.base, textAlign: 'center', marginBottom: Spacing.xl },
-  backBtnLg: { paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md, borderRadius: BorderRadius.lg, backgroundColor: Colors.brand.purple },
+  errorTitle: {
+    color: Colors.text.primary,
+    fontSize: Typography.fontSize.xl,
+    fontWeight: Typography.fontWeight.bold,
+    marginBottom: Spacing.sm,
+  },
+  errorSubtitle: {
+    color: Colors.text.secondary,
+    fontSize: Typography.fontSize.base,
+    textAlign: 'center',
+    marginBottom: Spacing.xl,
+  },
+  backBtnLg: {
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.lg,
+    backgroundColor: Colors.brand.purple,
+  },
   backBtnLgText: { color: Colors.white, fontWeight: Typography.fontWeight.semibold },
 });
