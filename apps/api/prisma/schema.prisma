@@ -137,6 +137,14 @@ model User {
   recruiterAuditEvents RecruiterAuditEvent[]
   discoverabilitySettings RecruiterDiscoverabilitySettings?
 
+  // Phase 23
+  candidateAssessmentAssignments AssessmentAssignment[] @relation("CandidateAssessmentAssignments")
+  candidateHiringInterviews      HiringInterview[]      @relation("CandidateHiringInterviews")
+  interviewParticipants          InterviewParticipant[]
+  interviewerAvailabilities      InterviewerAvailability[]
+  interviewFeedbackSubmitted     InterviewFeedback[]
+  candidateOffers                Offer[]                @relation("CandidateOffers")
+
   @@index([email])
   @@map("users")
 }
@@ -556,6 +564,10 @@ model JobPosting {
   recruiterProfile   RecruiterProfile?  @relation(fields: [recruiterProfileId], references: [id], onDelete: SetNull)
   recruiterOrg       RecruiterOrganization? @relation(fields: [recruiterOrgId], references: [id], onDelete: SetNull)
   pipelineEntries    RecruitmentPipelineEntry[]
+  // Phase 23
+  assessmentAssignments AssessmentAssignment[]
+  hiringInterviews      HiringInterview[]
+  offers                Offer[]
 
   @@index([companyId])
   @@index([title])
@@ -2116,8 +2128,10 @@ enum RecruitmentPipelineStage {
   DISCOVERED
   SHORTLISTED
   CONTACTED
-  INTERVIEW
   ASSESSMENT
+  ASSESSMENT_COMPLETED
+  INTERVIEW
+  FINAL_INTERVIEW
   OFFER
   HIRED
   REJECTED
@@ -2161,6 +2175,11 @@ model RecruiterOrganization {
   contactRequests    ContactRequest[]
   messageThreads     MessageThread[]
   auditEvents        RecruiterAuditEvent[]
+  // Phase 23
+  assessments          Assessment[]
+  assessmentAssignments AssessmentAssignment[]
+  hiringInterviews     HiringInterview[]
+  offers               Offer[]
 
   @@index([verificationStatus])
   @@map("recruiter_organizations")
@@ -2185,6 +2204,11 @@ model RecruiterProfile {
   shortlists     CandidateShortlist[]
   pipelines      RecruiterPipeline[]
   contactRequestsSent ContactRequest[] @relation("RecruiterContactRequestSender")
+  // Phase 23
+  createdAssessments      Assessment[]
+  assignedAssessments     AssessmentAssignment[]
+  createdHiringInterviews HiringInterview[]
+  createdOffers           Offer[]
 
   @@index([recruiterOrgId])
   @@index([userId])
@@ -2390,4 +2414,585 @@ model RecruiterAuditEvent {
   @@index([recruiterOrgId])
   @@index([action])
   @@map("recruiter_audit_events")
+}
+
+// =============================================================================
+// Phase 23 — Interview, Assessment, Scheduling & Hiring Workflow
+// =============================================================================
+
+enum AssessmentType {
+  MCQ
+  CODING
+  SHORT_ANSWER
+  TECHNICAL_QUESTIONNAIRE
+  TAKE_HOME_ASSIGNMENT
+  CUSTOM
+}
+
+enum AssessmentStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum AssessmentQuestionType {
+  MCQ
+  CODING
+  SHORT_ANSWER
+  TECHNICAL_QUESTIONNAIRE
+  TAKE_HOME_ASSIGNMENT
+}
+
+enum QuestionDifficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum AssignmentStatus {
+  ASSIGNED
+  STARTED
+  IN_PROGRESS
+  SUBMITTED
+  EVALUATED
+  EXPIRED
+  CANCELLED
+}
+
+enum RecruiterInterviewType {
+  TECHNICAL
+  HR
+  BEHAVIORAL
+  MANAGERIAL
+  PANEL
+  FINAL
+}
+
+enum HiringInterviewStatus {
+  SCHEDULED
+  CONFIRMED
+  DECLINED
+  RESCHEDULE_REQUESTED
+  IN_PROGRESS
+  COMPLETED
+  NO_SHOW_CANDIDATE
+  NO_SHOW_INTERVIEWER
+  CANCELLED
+}
+
+enum HiringInterviewLocationType {
+  ONLINE
+  PHONE
+  IN_PERSON
+}
+
+enum ParticipantRole {
+  PRIMARY
+  PANEL
+  OBSERVER
+}
+
+enum ParticipantStatus {
+  INVITED
+  ACCEPTED
+  DECLINED
+}
+
+enum FeedbackRecommendation {
+  STRONG_YES
+  YES
+  MAYBE
+  NO
+  STRONG_NO
+}
+
+enum OfferStatus {
+  DRAFT
+  PENDING_APPROVAL
+  SENT
+  VIEWED
+  ACCEPTED
+  DECLINED
+  EXPIRED
+  WITHDRAWN
+}
+
+model Assessment {
+  id             String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  recruiterOrgId String           @db.Uuid
+  createdBy      String           @db.Uuid // RecruiterProfile.id
+  title          String           @db.VarChar(255)
+  description    String?          @db.Text
+  instructions   String?          @db.Text
+  type           AssessmentType   @default(CUSTOM)
+  duration       Int              @default(60) // minutes
+  deadline       DateTime?
+  totalScore     Float            @default(100)
+  passingScore   Float            @default(70)
+  attemptLimit   Int              @default(1)
+  status         AssessmentStatus @default(DRAFT)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  recruiterOrg RecruiterOrganization @relation(fields: [recruiterOrgId], references: [id], onDelete: Cascade)
+  creator      RecruiterProfile      @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  questions    AssessmentQuestion[]
+  assignments  AssessmentAssignment[]
+
+  @@index([recruiterOrgId])
+  @@index([createdBy])
+  @@index([status])
+  @@map("assessments")
+}
+
+model AssessmentQuestion {
+  id                  String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  assessmentId        String                 @db.Uuid
+  question            String                 @db.Text
+  type                AssessmentQuestionType @default(SHORT_ANSWER)
+  difficulty          QuestionDifficulty     @default(MEDIUM)
+  points              Float                  @default(10)
+  timeLimit           Int?                   // optional minutes limit
+  options             Json?                  // for MCQ: ["Option A", "Option B"]
+  correctAnswer       String?                @db.Text // hidden before submission
+  evaluationCriteria  String?                @db.Text
+  testCases           Json?                  // for Coding: [{ input, expectedOutput }]
+  orderIndex          Int                    @default(0)
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+
+  assessment Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+
+  @@index([assessmentId])
+  @@map("assessment_questions")
+}
+
+model AssessmentAssignment {
+  id             String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  assessmentId   String           @db.Uuid
+  candidateId    String           @db.Uuid // User.id
+  jobId          String?          @db.Uuid // JobPosting.id
+  recruiterOrgId String           @db.Uuid
+  assignedBy     String           @db.Uuid // RecruiterProfile.id
+  status         AssignmentStatus @default(ASSIGNED)
+  score          Float?
+  percentage     Float?
+  passed         Boolean?
+  feedback       String?          @db.Text
+  startedAt      DateTime?
+  submittedAt    DateTime?
+  evaluatedAt    DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  assessment Assessment            @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  candidate  User                  @relation("CandidateAssessmentAssignments", fields: [candidateId], references: [id], onDelete: Cascade)
+  job        JobPosting?           @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  recruiterOrg RecruiterOrganization @relation(fields: [recruiterOrgId], references: [id], onDelete: Cascade)
+  assignedByProfile RecruiterProfile @relation(fields: [assignedBy], references: [id], onDelete: Cascade)
+  attempts   AssessmentAttempt[]
+
+  @@unique([assessmentId, candidateId, jobId])
+  @@index([candidateId])
+  @@index([recruiterOrgId])
+  @@index([status])
+  @@map("assessment_assignments")
+}
+
+model AssessmentAttempt {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  assignmentId    String   @db.Uuid
+  candidateId     String   @db.Uuid // User.id
+  answers         Json     // candidate answers
+  score           Float?
+  percentage      Float?
+  passed          Boolean?
+  questionResults Json?    // question-by-question scoring details
+  executionLogs   Json?    // output from sandbox execution if coding
+  startedAt       DateTime @default(now())
+  completedAt     DateTime @default(now())
+
+  assignment AssessmentAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+
+  @@index([assignmentId])
+  @@index([candidateId])
+  @@map("assessment_attempts")
+}
+
+model HiringInterview {
+  id                   String                      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  candidateId          String                      @db.Uuid // User.id
+  jobId                String?                     @db.Uuid // JobPosting.id
+  recruiterOrgId       String                      @db.Uuid
+  createdBy            String                      @db.Uuid // RecruiterProfile.id
+  type                 RecruiterInterviewType      @default(TECHNICAL)
+  title                String                      @db.VarChar(255)
+  description          String?                     @db.Text
+  scheduledStart       DateTime
+  scheduledEnd         DateTime
+  timezone             String                      @default("UTC") @db.VarChar(100)
+  locationType         HiringInterviewLocationType @default(ONLINE)
+  meetingUrl           String?                     @db.VarChar(1000)
+  providerName         String?                     @db.VarChar(100)
+  physicalLocation     String?                     @db.VarChar(500)
+  instructions         String?                     @db.Text
+  status               HiringInterviewStatus       @default(SCHEDULED)
+  rescheduleReason     String?                     @db.Text
+  rescheduleRequestedBy String?                    @db.VarChar(50) // "CANDIDATE" | "RECRUITER"
+  createdAt            DateTime                    @default(now())
+  updatedAt            DateTime                    @updatedAt
+
+  candidate    User                  @relation("CandidateHiringInterviews", fields: [candidateId], references: [id], onDelete: Cascade)
+  job          JobPosting?           @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  recruiterOrg RecruiterOrganization @relation(fields: [recruiterOrgId], references: [id], onDelete: Cascade)
+  creator      RecruiterProfile      @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  participants InterviewParticipant[]
+  feedbackList InterviewFeedback[]
+  events       InterviewEvent[]
+  calendarEvents CalendarEvent[]
+
+  @@index([candidateId])
+  @@index([recruiterOrgId])
+  @@index([scheduledStart])
+  @@index([status])
+  @@map("hiring_interviews")
+}
+
+model InterviewParticipant {
+  id          String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  interviewId String            @db.Uuid
+  userId      String            @db.Uuid // User.id of interviewer
+  role        ParticipantRole   @default(PANEL)
+  status      ParticipantStatus @default(INVITED)
+  createdAt   DateTime          @default(now())
+
+  interview HiringInterview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([interviewId, userId])
+  @@index([interviewId])
+  @@index([userId])
+  @@map("interview_participants")
+}
+
+model InterviewerAvailability {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId         String   @db.Uuid // User.id
+  recruiterOrgId String   @db.Uuid
+  availableDays  Int[]    @default([1, 2, 3, 4, 5]) // 0=Sun, 1=Mon, ..., 6=Sat
+  startTime      String   @default("09:00") @db.VarChar(10) // HH:mm
+  endTime        String   @default("17:00") @db.VarChar(10) // HH:mm
+  timezone       String   @default("UTC") @db.VarChar(100)
+  bufferMinutes  Int      @default(15)
+  workingHoursOnly Boolean @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, recruiterOrgId])
+  @@index([userId])
+  @@index([recruiterOrgId])
+  @@map("interviewer_availabilities")
+}
+
+model InterviewFeedback {
+  id                      String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  interviewId             String                 @db.Uuid
+  interviewerId           String                 @db.Uuid // User.id of interviewer
+  rating                  Float                  @default(5.0) // 1-5 scale
+  strengths               String?                @db.Text
+  concerns                String?                @db.Text
+  technicalAssessment     String?                @db.Text
+  communicationAssessment String?                @db.Text
+  recommendation          FeedbackRecommendation @default(MAYBE)
+  privateNotes            String?                @db.Text
+  submittedAt             DateTime               @default(now())
+  createdAt               DateTime               @default(now())
+  updatedAt               DateTime               @updatedAt
+
+  interview HiringInterview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  interviewer User          @relation(fields: [interviewerId], references: [id], onDelete: Cascade)
+
+  @@unique([interviewId, interviewerId])
+  @@index([interviewId])
+  @@index([interviewerId])
+  @@map("interview_feedbacks")
+}
+
+model InterviewEvent {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  interviewId String   @db.Uuid
+  eventType   String   @db.VarChar(100)
+  actorId     String   @db.Uuid
+  details     Json?
+  createdAt   DateTime @default(now())
+
+  interview HiringInterview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+
+  @@index([interviewId])
+  @@map("interview_events")
+}
+
+model Offer {
+  id             String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  jobId          String      @db.Uuid // JobPosting.id
+  candidateId    String      @db.Uuid // User.id
+  recruiterOrgId String      @db.Uuid
+  createdBy      String      @db.Uuid // RecruiterProfile.id
+  title          String      @db.VarChar(255)
+  startDate      DateTime
+  endDate        DateTime?
+  stipend        Float
+  currency       String      @default("USD") @db.VarChar(10)
+  location       String?     @db.VarChar(255)
+  workMode       String      @default("HYBRID") @db.VarChar(50) // REMOTE, HYBRID, ON_SITE
+  termsSummary   String      @db.Text
+  expirationDate DateTime
+  status         OfferStatus @default(DRAFT)
+  candidateNote  String?     @db.Text
+  declineReason  String?     @db.Text
+  acceptedAt     DateTime?
+  declinedAt     DateTime?
+  withdrawnAt    DateTime?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  job          JobPosting            @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  candidate    User                  @relation("CandidateOffers", fields: [candidateId], references: [id], onDelete: Cascade)
+  recruiterOrg RecruiterOrganization @relation(fields: [recruiterOrgId], references: [id], onDelete: Cascade)
+  creator      RecruiterProfile      @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  events       OfferEvent[]
+
+  @@index([candidateId])
+  @@index([recruiterOrgId])
+  @@index([status])
+  @@map("offers")
+}
+
+model OfferEvent {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  offerId   String   @db.Uuid
+  eventType String   @db.VarChar(100)
+  actorId   String   @db.Uuid
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  offer Offer @relation(fields: [offerId], references: [id], onDelete: Cascade)
+
+  @@index([offerId])
+  @@map("offer_events")
+}
+
+model CalendarEvent {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  interviewId     String?  @db.Uuid
+  recruiterOrgId  String   @db.Uuid
+  userId          String   @db.Uuid
+  provider        String   @default("INTERNAL") @db.VarChar(50) // INTERNAL, GOOGLE, OUTLOOK
+  externalEventId String?  @db.VarChar(255)
+  title           String   @db.VarChar(255)
+  start           DateTime
+  end             DateTime
+  meetingUrl      String?  @db.VarChar(1000)
+  status          String   @default("CONFIRMED") @db.VarChar(50)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  interview HiringInterview? @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([recruiterOrgId])
+  @@index([interviewId])
+  @@map("calendar_events")
+}
+
+// =============================================================================
+// Phase 24 — Career Outcomes, Placement Intelligence & Workforce Analytics
+//
+// Architectural Decisions:
+//  - All Phase 24 tables are ADDITIVE — no existing tables modified.
+//  - OutcomeSnapshot stores pre-aggregated metrics computed by background jobs.
+//    API endpoints read from snapshots rather than scanning raw event tables.
+//  - OutcomeBenchmark stores platform-wide privacy-safe benchmark values.
+//    Minimum cohort enforcement prevents individual re-identification.
+//  - OutcomeInsight stores AI-generated explanations of verified metrics.
+//    The LLM never receives raw PII — only structured metric summaries.
+//  - OutcomeDataQualityLog records each validation run result.
+// =============================================================================
+
+enum OutcomeSnapshotPeriod {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum OutcomeEntityType {
+  PLATFORM
+  USER
+  ORGANIZATION
+  RECRUITER_ORG
+  COMPANY
+  SKILL
+  ROLE
+  LOCATION
+  DEPARTMENT
+}
+
+enum OutcomeTrendDirection {
+  IMPROVING
+  STABLE
+  DECLINING
+  INSUFFICIENT_DATA
+}
+
+enum OutcomeConfidenceLevel {
+  HIGH
+  MEDIUM
+  LOW
+  INSUFFICIENT_DATA
+}
+
+/// Pre-aggregated outcome metrics computed by background jobs.
+/// API endpoints always read from this table — never scan raw event tables live.
+model OutcomeSnapshot {
+  id          String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Type of entity this snapshot describes
+  entityType  OutcomeEntityType
+  /// UUID of entity (userId, orgId, recruiterOrgId, etc.) or null for PLATFORM
+  entityId    String?               @db.Uuid
+  /// Human-readable entity label (e.g. role name, skill name, location)
+  entityLabel String?               @db.VarChar(255)
+  /// Granularity of this snapshot
+  periodType  OutcomeSnapshotPeriod
+  periodStart DateTime
+  periodEnd   DateTime
+
+  // Funnel counts
+  registeredCount         Int     @default(0)
+  profileCompletedCount   Int     @default(0)
+  opportunityViewedCount  Int     @default(0)
+  savedCount              Int     @default(0)
+  appliedCount            Int     @default(0)
+  assessmentCount         Int     @default(0)
+  interviewCount          Int     @default(0)
+  offerCount              Int     @default(0)
+  hiredCount              Int     @default(0)
+  rejectedCount           Int     @default(0)
+  withdrawnCount          Int     @default(0)
+
+  // Conversion rates (0.0 – 1.0)
+  applicationConversionRate Float? // applied / viewedOpportunity
+  interviewConversionRate   Float? // interviewed / applied
+  offerConversionRate       Float? // offers / interviewed
+  hireRate                  Float? // accepted / offers_sent
+
+  // Time-to-stage (median, in hours)
+  medianTimeToApplyHours     Float?
+  medianTimeToAssessmentHours Float?
+  medianTimeToInterviewHours Float?
+  medianTimeToOfferHours     Float?
+  medianTimeToHireHours      Float?
+
+  // Percentile time-to-stage (hours)
+  p75TimeToHireHours Float?
+  p90TimeToHireHours Float?
+
+  // Privacy
+  sampleSize Int @default(0)
+  /// true if sampleSize < minCohortSize — values are nulled in this case
+  belowCohortThreshold Boolean @default(false)
+
+  // Trend
+  trendDirection OutcomeTrendDirection @default(INSUFFICIENT_DATA)
+  confidence     OutcomeConfidenceLevel @default(INSUFFICIENT_DATA)
+
+  /// Raw JSON for extra dimension-specific metrics (e.g. topSkills, topRoles)
+  metadataJson Json?
+
+  generatedAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  @@unique([entityType, entityId, entityLabel, periodType, periodStart])
+  @@index([entityType, entityId])
+  @@index([entityType, periodType, periodStart])
+  @@index([periodStart])
+  @@map("outcome_snapshots")
+}
+
+/// Platform-wide benchmark values — privacy-safe aggregate statistics.
+/// Used to compare individual user metrics without exposing peer-level data.
+model OutcomeBenchmark {
+  id          String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// e.g. "interviewConversionRate", "medianTimeToHireHours"
+  metricKey   String                @db.VarChar(100)
+  /// Optional dimension (e.g. role category, skill name)
+  dimension   String?               @db.VarChar(255)
+  /// The benchmark value (median across population)
+  value       Float
+  /// p25, p75 for context
+  p25         Float?
+  p75         Float?
+  sampleSize  Int
+  periodStart DateTime
+  periodEnd   DateTime
+  confidence  OutcomeConfidenceLevel @default(INSUFFICIENT_DATA)
+  generatedAt DateTime               @default(now())
+
+  @@unique([metricKey, dimension, periodStart])
+  @@index([metricKey])
+  @@index([periodStart])
+  @@map("outcome_benchmarks")
+}
+
+/// AI-generated insight records — always backed by pre-verified metrics.
+/// The LLM explains the metric; it never calculates it.
+model OutcomeInsight {
+  id         String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Who this insight is for: USER, ORGANIZATION, RECRUITER_ORG, PLATFORM
+  entityType OutcomeEntityType
+  entityId   String?               @db.Uuid
+  /// Category of insight: FUNNEL, TIME_TO_STAGE, SKILL_ASSOCIATION, PREPARATION, AI_USAGE, BENCHMARK
+  category   String                @db.VarChar(100)
+  /// Plain English headline
+  title      String                @db.VarChar(500)
+  /// Full LLM-generated explanation (association language only)
+  body       String                @db.Text
+  /// Structured metric context that was fed to the LLM (non-PII)
+  metricsJson Json
+  sampleSize Int
+  periodStart DateTime?
+  periodEnd   DateTime?
+  confidence  OutcomeConfidenceLevel @default(INSUFFICIENT_DATA)
+  /// Automatically expired after 7 days — regenerated on next request
+  expiresAt  DateTime
+  createdAt  DateTime              @default(now())
+
+  @@index([entityType, entityId])
+  @@index([expiresAt])
+  @@map("outcome_insights")
+}
+
+/// Records of each data quality validation run for auditing.
+model OutcomeDataQualityLog {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  runAt           DateTime @default(now())
+  /// How many raw records were checked
+  totalChecked    Int      @default(0)
+  /// How many had missing appliedAt
+  missingTimestamp Int     @default(0)
+  /// How many had duplicate applicationId
+  duplicateCount  Int      @default(0)
+  /// How many had invalid status transitions
+  invalidTransitions Int   @default(0)
+  /// How many conflicted between recruiter and student status
+  conflictingStatus Int    @default(0)
+  /// How many were excluded from metric calculation
+  excludedCount   Int      @default(0)
+  /// Final data quality score 0-100
+  qualityScore    Float    @default(100)
+  detailsJson     Json?
+
+  @@index([runAt])
+  @@map("outcome_data_quality_logs")
 }

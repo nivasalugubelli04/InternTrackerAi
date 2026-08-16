@@ -46,6 +46,8 @@ import { PortfolioModule } from './portfolio/portfolio.module';
 import { ExtensionModule } from './extension/extension.module';
 import { RecruiterModule } from './recruiter/recruiter.module';
 import { PrivacyModule } from './privacy/privacy.module';
+// Phase 24 — Career Outcomes, Placement Intelligence & Workforce Analytics
+import { OutcomesModule } from './outcomes/outcomes.module';
 /**
  * AppModule — root module of the InternTracker API.
  *
@@ -186,6 +188,8 @@ import { PrivacyModule } from './privacy/privacy.module';
     // Phase 22 — Recruiter Portal
     RecruiterModule,
     PrivacyModule,
+    // Phase 24 — Career Outcomes, Placement Intelligence & Workforce Analytics
+    OutcomesModule,
   ],
 
   providers: [

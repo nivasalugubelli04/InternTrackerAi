@@ -14,3 +14,6 @@ export const SMS_QUEUE = 'sms-queue';
 export const DIGEST_QUEUE = 'digest-queue';
 export const DEAD_LETTER_QUEUE = 'dead-letter-queue';
 export const MARKET_QUEUE = 'market-queue';
+
+// Phase 24 — Career Outcomes & Workforce Analytics
+export const OUTCOME_AGGREGATION_QUEUE = 'outcome-aggregation-queue';

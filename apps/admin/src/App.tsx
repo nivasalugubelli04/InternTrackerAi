@@ -7,6 +7,11 @@ import Dashboard from './pages/Dashboard';
 import Users from './pages/Users';
 import Companies from './pages/Companies';
 import FeatureFlags from './pages/FeatureFlags';
+// Phase 24 — Career Outcomes, Placement Intelligence & Workforce Analytics
+import OutcomesOverview from './pages/OutcomesOverview';
+import OutcomesRoles from './pages/OutcomesRoles';
+import OutcomesSkills from './pages/OutcomesSkills';
+import OutcomesDataQuality from './pages/OutcomesDataQuality';
 
 // Setup React Query client
 const queryClient = new QueryClient({
@@ -73,6 +78,11 @@ export default function App() {
             <Route path="users" element={<Users />} />
             <Route path="companies" element={<Companies />} />
             <Route path="flags" element={<FeatureFlags />} />
+            {/* Phase 24 — Career Outcomes */}
+            <Route path="outcomes" element={<OutcomesOverview />} />
+            <Route path="outcomes/roles" element={<OutcomesRoles />} />
+            <Route path="outcomes/skills" element={<OutcomesSkills />} />
+            <Route path="outcomes/data-quality" element={<OutcomesDataQuality />} />
             {/* Other routes can be stubbed out similarly */}
             <Route path="*" element={<div style={{ color: 'var(--text-muted)' }}>Under Construction</div>} />
           </Route>

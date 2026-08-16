@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { NotFoundException } from '@nestjs/common';
 import { CandidateDiscoveryService } from '../services/candidate-discovery.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RecruiterOrgService } from '../services/recruiter-org.service';
@@ -115,7 +115,6 @@ describe('CandidateDiscoveryService', () => {
         'CANDIDATE_VIEWED',
         'User',
         'candidate-uuid',
-        'recruiter-org-uuid',
       );
     });
 
