@@ -1,7 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { Card } from '../components/ui/Card';
+import { Badge } from '../components/ui/Badge';
+import { Button } from '../components/ui/Button';
+import { Table, TableHeader, TableBody, TableRow, TableCell, TableHeaderCell } from '../components/ui/Table';
+import { FormGroup, FormLabel, FormControl } from '../components/ui/Form';
+import { SearchInput } from '../components/ui/SearchInput';
 
 const API_BASE = '/api/v1/admin/skills';
-const PUBLIC_API_BASE = '/api/v1/skills';
 
 function getHeaders() {
   return {
@@ -22,7 +27,6 @@ interface Skill {
 export default function SkillsExplorer() {
   const [skills, setSkills] = useState<Skill[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -45,7 +49,7 @@ export default function SkillsExplorer() {
       setSkills(data.items);
       setTotal(data.total);
     } catch (e: any) {
-      setError(e.message);
+      console.error(e.message);
     } finally {
       setLoading(false);
     }
@@ -118,149 +122,161 @@ export default function SkillsExplorer() {
   };
 
   return (
-    <div className="skills-explorer-page">
-      <style>{`
-        .skills-explorer-page { padding: 32px; max-width: 1400px; margin: 0 auto; }
-        .explorer-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; }
-        .explorer-title { font-size: 28px; font-weight: 700; background: linear-gradient(135deg, #10b981, #3b82f6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .subtitle { color: var(--text-secondary); font-size: 14px; margin-top: 4px; }
-        
-        .main-grid { display: grid; grid-template-columns: 1fr 350px; gap: 24px; }
-        .card { background: var(--bg-secondary); border: 1px solid var(--border-subtle); border-radius: 16px; padding: 24px; }
-        .card-title { font-size: 18px; font-weight: 600; color: white; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
-        
-        .search-input { width: 100%; padding: 12px 16px; background: var(--bg-primary); border: 1px solid var(--border-subtle); border-radius: 8px; color: white; margin-bottom: 20px; font-size: 14px; }
-        .search-input:focus { border-color: #10b981; outline: none; }
-        
-        .skills-table { width: 100%; border-collapse: collapse; text-align: left; }
-        .skills-table th { padding: 12px 16px; border-bottom: 2px solid var(--border-subtle); color: var(--text-muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
-        .skills-table td { padding: 16px; border-bottom: 1px solid var(--border-subtle); font-size: 14px; color: white; vertical-align: top; }
-        .alias-badge { display: inline-block; background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 6px; padding: 2px 8px; font-size: 12px; margin-right: 4px; margin-bottom: 4px; }
-        .status-badge { display: inline-block; padding: 2px 8px; font-size: 11px; font-weight: 700; border-radius: 12px; text-transform: uppercase; }
-        .status-active { background: rgba(16, 185, 129, 0.15); color: #34d399; }
-        .action-btn { background: none; border: none; cursor: pointer; font-weight: 600; padding: 4px 8px; border-radius: 4px; font-size: 13px; transition: background 0.2s; }
-        .btn-edit { color: #60a5fa; }
-        .btn-edit:hover { background: rgba(59, 130, 246, 0.1); }
-        .btn-delete { color: #f87171; margin-left: 8px; }
-        .btn-delete:hover { background: rgba(248, 113, 113, 0.1); }
-
-        .form-group { margin-bottom: 16px; }
-        .form-label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 6px; }
-        .form-control { width: 100%; padding: 10px 12px; background: var(--bg-primary); border: 1px solid var(--border-subtle); border-radius: 8px; color: white; font-size: 14px; }
-        .form-control:focus { border-color: #10b981; outline: none; }
-        .btn-submit { width: 100%; padding: 12px; background: linear-gradient(135deg, #10b981, #3b82f6); border: none; border-radius: 8px; color: white; font-weight: 700; cursor: pointer; font-size: 14px; margin-top: 10px; }
-        .btn-submit:hover { opacity: 0.9; }
-
-        .pagination { display: flex; align-items: center; justify-content: space-between; margin-top: 20px; }
-        .btn-page { background: var(--bg-primary); border: 1px solid var(--border-subtle); color: white; border-radius: 6px; padding: 6px 12px; cursor: pointer; font-size: 13px; }
-        .btn-page:disabled { opacity: 0.4; cursor: not-allowed; }
-      `}</style>
-
-      <div className="explorer-header">
-        <div>
-          <h1 className="explorer-title">Skill Graph Taxonomy</h1>
-          <p className="subtitle">Admin control interface to manage skills, categories, and alias mappings</p>
-        </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }} className="anim-fade-in">
+      <div>
+        <h1 
+          style={{ 
+            fontSize: '28px', 
+            fontWeight: 800, 
+            fontFamily: 'var(--font-display)', 
+            background: 'linear-gradient(135deg, white, var(--text-secondary))',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            letterSpacing: '-0.02em' 
+          }}
+        >
+          Skill Graph Taxonomy
+        </h1>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '13px', marginTop: '4px', fontWeight: 500 }}>
+          Manage catalog skill descriptors, category mappings, and matching aliases.
+        </p>
       </div>
 
-      <div className="main-grid">
-        <div className="card">
-          <div className="card-title">Skills Catalog</div>
-          <input
-            type="text"
-            className="search-input"
-            placeholder="Search skills or aliases..."
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-          />
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: '24px', alignItems: 'start' }} className="skills-main-grid">
+        <Card style={{ padding: 0, overflow: 'hidden' }}>
+          <div style={{ padding: '24px 28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-glass)', flexWrap: 'wrap', gap: '16px' }}>
+            <span style={{ fontSize: '15px', fontWeight: 700, color: 'white', fontFamily: 'var(--font-display)' }}>Skills Catalog</span>
+            <SearchInput 
+              placeholder="Search skills or aliases..." 
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            />
+          </div>
 
           {loading ? (
-            <div style={{ color: 'var(--text-muted)' }}>Loading taxonomy...</div>
+            <p style={{ color: 'var(--text-muted)', padding: '40px', textAlign: 'center' }}>Loading skill taxonomies...</p>
           ) : (
             <>
-              <table className="skills-table">
-                <thead>
-                  <tr>
-                    <th>Skill Name</th>
-                    <th>Category</th>
-                    <th>Aliases</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHeaderCell>Skill</TableHeaderCell>
+                    <TableHeaderCell>Category</TableHeaderCell>
+                    <TableHeaderCell>Aliases</TableHeaderCell>
+                    <TableHeaderCell>Status</TableHeaderCell>
+                    <TableHeaderCell style={{ textAlign: 'right' }}>Actions</TableHeaderCell>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {skills.map((skill) => (
-                    <tr key={skill.id}>
-                      <td>
-                        <strong>{skill.name}</strong>
+                    <TableRow key={skill.id}>
+                      <TableCell>
+                        <div style={{ fontWeight: 600, color: 'white' }}>{skill.name}</div>
                         {skill.description && (
-                          <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                          <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px', lineHeight: '1.4' }}>
                             {skill.description}
                           </div>
                         )}
-                      </td>
-                      <td>
-                        <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{skill.category}</span>
-                      </td>
-                      <td>
-                        {skill.aliases.map((alias) => (
-                          <span key={alias} className="alias-badge">{alias}</span>
-                        ))}
-                      </td>
-                      <td>
-                        <span className="status-badge status-active">{skill.status}</span>
-                      </td>
-                      <td>
-                        <button className="action-btn btn-edit" onClick={() => handleEdit(skill)}>Edit</button>
-                        <button className="action-btn btn-delete" onClick={() => handleDelete(skill.id)}>Delete</button>
-                      </td>
-                    </tr>
+                      </TableCell>
+                      <TableCell style={{ color: 'var(--text-secondary)' }}>{skill.category}</TableCell>
+                      <TableCell>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                          {skill.aliases.map((alias) => (
+                            <Badge key={alias} variant="primary">
+                              {alias}
+                            </Badge>
+                          ))}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="success">{skill.status}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                          <Button 
+                            variant="secondary"
+                            style={{ padding: '4px 10px', fontSize: '12px' }}
+                            onClick={() => handleEdit(skill)}
+                          >
+                            Edit
+                          </Button>
+                          <Button 
+                            variant="danger"
+                            style={{ padding: '4px 10px', fontSize: '12px' }}
+                            onClick={() => handleDelete(skill.id)}
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
 
-              <div className="pagination">
-                <button
-                  className="btn-page"
-                  disabled={page === 1}
-                  onClick={() => setPage(page - 1)}
-                >
-                  Previous
-                </button>
-                <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
+              <div 
+                style={{ 
+                  padding: '20px 24px', 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center', 
+                  borderTop: '1px solid var(--border-glass)' 
+                }}
+              >
+                <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 500 }}>
                   Page {page} of {Math.max(1, Math.ceil(total / 10))} ({total} total skills)
                 </span>
-                <button
-                  className="btn-page"
-                  disabled={page * 10 >= total}
-                  onClick={() => setPage(page + 1)}
-                >
-                  Next
-                </button>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <Button 
+                    variant="secondary" 
+                    disabled={page === 1}
+                    onClick={() => setPage(page - 1)}
+                  >
+                    Previous
+                  </Button>
+                  <Button 
+                    variant="secondary" 
+                    disabled={page * 10 >= total}
+                    onClick={() => setPage(page + 1)}
+                  >
+                    Next
+                  </Button>
+                </div>
               </div>
             </>
           )}
-        </div>
+        </Card>
 
-        <div className="card" style={{ height: 'fit-content' }}>
-          <div className="card-title">{editingId ? 'Modify Skill' : 'Add New Skill'}</div>
+        <Card style={{ height: 'fit-content' }}>
+          <h3 
+            style={{ 
+              marginBottom: '20px', 
+              fontSize: '16px', 
+              fontWeight: 700, 
+              color: 'white',
+              fontFamily: 'var(--font-display)',
+              borderBottom: '1px solid var(--border-glass)',
+              paddingBottom: '12px'
+            }}
+          >
+            {editingId ? 'Modify Skill' : 'Add New Skill'}
+          </h3>
           <form onSubmit={handleSubmit}>
-            <div className="form-group">
-              <label className="form-label">Skill Name</label>
-              <input
+            <FormGroup>
+              <FormLabel>Skill Name</FormLabel>
+              <FormControl
                 type="text"
-                className="form-control"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. Kotlin"
               />
-            </div>
+            </FormGroup>
 
-            <div className="form-group">
-              <label className="form-label">Category</label>
-              <select
-                className="form-control"
+            <FormGroup>
+              <FormLabel>Category</FormLabel>
+              <FormControl
+                as="select"
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
               >
@@ -275,39 +291,38 @@ export default function SkillsExplorer() {
                 <option value="TESTING">Testing / Automation</option>
                 <option value="SOFT_SKILLS">Soft Skills</option>
                 <option value="OTHER">Other Categories</option>
-              </select>
-            </div>
+              </FormControl>
+            </FormGroup>
 
-            <div className="form-group">
-              <label className="form-label">Aliases (Comma separated)</label>
-              <input
+            <FormGroup>
+              <FormLabel>Aliases (Comma separated)</FormLabel>
+              <FormControl
                 type="text"
-                className="form-control"
                 value={aliases}
                 onChange={(e) => setAliases(e.target.value)}
                 placeholder="JS, ReactJS, Node"
               />
-            </div>
+            </FormGroup>
 
-            <div className="form-group">
-              <label className="form-label">Description</label>
-              <textarea
-                className="form-control"
+            <FormGroup>
+              <FormLabel>Description</FormLabel>
+              <FormControl
+                as="textarea"
                 style={{ height: '80px', resize: 'vertical' }}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Enter details about this skill..."
               />
-            </div>
+            </FormGroup>
 
-            <button type="submit" className="btn-submit">
+            <Button type="submit" style={{ width: '100%', marginTop: '10px' }}>
               {editingId ? 'Save Updates' : 'Register Skill'}
-            </button>
+            </Button>
             {editingId && (
-              <button
+              <Button
                 type="button"
-                className="btn-submit"
-                style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-subtle)', marginTop: '8px' }}
+                variant="secondary"
+                style={{ width: '100%', marginTop: '8px' }}
                 onClick={() => {
                   setEditingId(null);
                   setName('');
@@ -316,11 +331,19 @@ export default function SkillsExplorer() {
                 }}
               >
                 Cancel
-              </button>
+              </Button>
             )}
           </form>
-        </div>
+        </Card>
       </div>
+
+      <style>{`
+        @media (max-width: 1024px) {
+          .skills-main-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }

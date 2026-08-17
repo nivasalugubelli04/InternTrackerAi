@@ -1,7 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { Card } from '../components/ui/Card';
+import { Badge } from '../components/ui/Badge';
+import { Button } from '../components/ui/Button';
+import { Modal } from '../components/ui/Modal';
+import { FormGroup, FormLabel, FormControl } from '../components/ui/Form';
 
 const API_BASE = '/api/v1/admin/career-paths';
-const PUBLIC_API_BASE = '/api/v1/career-paths';
 
 function getHeaders() {
   return {
@@ -33,7 +37,6 @@ interface CareerPath {
 export default function CareerPaths() {
   const [paths, setPaths] = useState<CareerPath[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   // New path form states
   const [title, setTitle] = useState('');
@@ -50,7 +53,7 @@ export default function CareerPaths() {
       if (!res.ok) throw new Error('Failed to fetch career paths');
       setPaths(await res.json());
     } catch (e: any) {
-      setError(e.message);
+      console.error(e.message);
     } finally {
       setLoading(false);
     }
@@ -86,75 +89,70 @@ export default function CareerPaths() {
   };
 
   return (
-    <div className="career-paths-page">
-      <style>{`
-        .career-paths-page { padding: 32px; max-width: 1400px; margin: 0 auto; }
-        .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; }
-        .page-title { font-size: 28px; font-weight: 700; background: linear-gradient(135deg, #8b5cf6, #3b82f6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .subtitle { color: var(--text-secondary); font-size: 14px; margin-top: 4px; }
-        
-        .btn-add { padding: 10px 20px; background: linear-gradient(135deg, #8b5cf6, #3b82f6); color: white; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 14px; }
-        .btn-add:hover { opacity: 0.9; }
-
-        .paths-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 24px; margin-top: 24px; }
-        .path-card { background: var(--bg-secondary); border: 1px solid var(--border-subtle); border-radius: 16px; padding: 24px; position: relative; display: flex; flex-direction: column; justify-content: space-between; }
-        .path-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, #8b5cf6, #3b82f6); border-top-left-radius: 16px; border-top-right-radius: 16px; }
-        
-        .path-title { font-size: 20px; font-weight: 700; color: white; margin-bottom: 8px; }
-        .path-desc { color: var(--text-secondary); font-size: 14px; margin-bottom: 20px; line-height: 1.5; }
-        
-        .step-timeline { position: relative; padding-left: 28px; margin-top: 10px; }
-        .step-timeline::before { content: ''; position: absolute; left: 6px; top: 8px; bottom: 8px; width: 2px; background: rgba(139, 92, 246, 0.3); }
-        
-        .step-node { position: relative; margin-bottom: 20px; }
-        .step-node:last-child { margin-bottom: 0; }
-        .step-dot { position: absolute; left: -28px; top: 4px; width: 14px; height: 14px; border-radius: 50%; background: #8b5cf6; border: 3px solid var(--bg-secondary); }
-        .step-num { font-size: 11px; font-weight: 800; color: #a78bfa; text-transform: uppercase; letter-spacing: 0.05em; }
-        .step-role { font-size: 15px; font-weight: 600; color: white; margin-top: 2px; }
-        
-        .step-skills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-        .step-skill-badge { background: rgba(139, 92, 246, 0.15); color: #c4b5fd; border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 6px; padding: 2px 8px; font-size: 11px; }
-
-        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.7); display: flex; align-items: center; justify-content: center; z-index: 100; }
-        .modal { background: var(--bg-secondary); border: 1px solid var(--border-subtle); border-radius: 16px; padding: 28px; width: 450px; }
-        .modal-header { font-size: 20px; font-weight: 700; color: white; margin-bottom: 20px; }
-        
-        .form-group { margin-bottom: 16px; }
-        .form-label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 6px; }
-        .form-control { width: 100%; padding: 10px 12px; background: var(--bg-primary); border: 1px solid var(--border-subtle); border-radius: 8px; color: white; font-size: 14px; }
-        .form-control:focus { border-color: #8b5cf6; outline: none; }
-        
-        .btn-modal-submit { width: 100%; padding: 12px; background: linear-gradient(135deg, #8b5cf6, #3b82f6); border: none; border-radius: 8px; color: white; font-weight: 700; cursor: pointer; font-size: 14px; margin-top: 10px; }
-        .btn-cancel { width: 100%; padding: 12px; background: var(--bg-primary); border: 1px solid var(--border-subtle); border-radius: 8px; color: white; font-weight: 700; cursor: pointer; font-size: 14px; margin-top: 8px; }
-      `}</style>
-
-      <div className="page-header">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }} className="anim-fade-in">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
         <div>
-          <h1 className="page-title">Career Paths</h1>
-          <p className="subtitle">Structured career transitions, progression pathways, and step requirements</p>
+          <h1 
+            style={{ 
+              fontSize: '28px', 
+              fontWeight: 800, 
+              fontFamily: 'var(--font-display)', 
+              background: 'linear-gradient(135deg, white, var(--text-secondary))',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              letterSpacing: '-0.02em' 
+            }}
+          >
+            Career Pathways
+          </h1>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '13px', marginTop: '4px', fontWeight: 500 }}>
+            Configure industry-standard progression steps, milestones, and required prerequisite skills.
+          </p>
         </div>
-        <button className="btn-add" onClick={() => setShowAddForm(true)}>Add Career Path</button>
+        <Button onClick={() => setShowAddForm(true)}>Add Career Path</Button>
       </div>
 
       {loading ? (
-        <div style={{ color: 'var(--text-muted)' }}>Loading pathways...</div>
+        <p style={{ color: 'var(--text-muted)', padding: '40px', textAlign: 'center' }}>Loading career pathways...</p>
       ) : (
-        <div className="paths-list">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '24px' }}>
           {paths.map((path) => (
-            <div key={path.id} className="path-card">
+            <Card key={path.id} style={{ display: 'flex', flexDirection: 'column', gap: '16px', position: 'relative', overflow: 'hidden' }}>
+              <div 
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: '4px',
+                  background: 'linear-gradient(90deg, var(--brand-primary), var(--accent-purple))'
+                }}
+              />
               <div>
-                <div className="path-title">{path.title}</div>
-                {path.description && <p className="path-desc">{path.description}</p>}
+                <h3 style={{ fontSize: '18px', fontWeight: 700, color: 'white', fontFamily: 'var(--font-display)' }}>
+                  {path.title}
+                </h3>
+                {path.description && (
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '13px', marginTop: '8px', lineHeight: '1.5' }}>
+                    {path.description}
+                  </p>
+                )}
                 
-                <div className="step-timeline">
+                <div style={{ position: 'relative', paddingLeft: '24px', marginTop: '24px' }} className="step-timeline">
                   {path.steps.map((step) => (
-                    <div key={step.id} className="step-node">
+                    <div key={step.id} style={{ position: 'relative', marginBottom: '24px' }} className="step-node">
                       <div className="step-dot"></div>
-                      <div className="step-num">Step {step.stepNumber}</div>
-                      <div className="step-role">{step.role.name}</div>
-                      <div className="step-skills">
+                      <div style={{ fontSize: '10px', fontWeight: 800, color: 'var(--accent-purple)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        Step {step.stepNumber}
+                      </div>
+                      <div style={{ fontSize: '15px', fontWeight: 600, color: 'white', marginTop: '2px' }}>
+                        {step.role.name}
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '8px' }}>
                         {step.skills.map((cps) => (
-                          <span key={cps.skill.name} className="step-skill-badge">{cps.skill.name}</span>
+                          <Badge key={cps.skill.name} variant="primary">
+                            {cps.skill.name}
+                          </Badge>
                         ))}
                       </div>
                     </div>
@@ -166,45 +164,66 @@ export default function CareerPaths() {
                   )}
                 </div>
               </div>
-            </div>
+            </Card>
           ))}
         </div>
       )}
 
-      {showAddForm && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <div className="modal-header">Create Career Path</div>
-            <form onSubmit={handleSubmit}>
-              <div className="form-group">
-                <label className="form-label">Path Title</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  required
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g. Frontend Specialist"
-                />
-              </div>
+      <Modal isOpen={showAddForm} onClose={() => setShowAddForm(false)} title="Create Career Path">
+        <form onSubmit={handleSubmit}>
+          <FormGroup>
+            <FormLabel>Path Title</FormLabel>
+            <FormControl
+              type="text"
+              required
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. Frontend Specialist"
+            />
+          </FormGroup>
 
-              <div className="form-group">
-                <label className="form-label">Description</label>
-                <textarea
-                  className="form-control"
-                  style={{ height: '80px', resize: 'none' }}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="e.g. Standard career transitions from intern to tech lead."
-                />
-              </div>
+          <FormGroup>
+            <FormLabel>Description</FormLabel>
+            <FormControl
+              as="textarea"
+              style={{ height: '80px', resize: 'none' }}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="e.g. Standard career transitions from intern to tech lead."
+            />
+          </FormGroup>
 
-              <button type="submit" className="btn-modal-submit">Create Path</button>
-              <button type="button" className="btn-cancel" onClick={() => setShowAddForm(false)}>Cancel</button>
-            </form>
-          </div>
-        </div>
-      )}
+          <Button type="submit" style={{ width: '100%', marginTop: '10px' }}>Create Path</Button>
+          <Button type="button" variant="secondary" style={{ width: '100%', marginTop: '8px' }} onClick={() => setShowAddForm(false)}>
+            Cancel
+          </Button>
+        </form>
+      </Modal>
+
+      <style>{`
+        .step-timeline::before { 
+          content: ''; 
+          position: absolute; 
+          left: 5px; 
+          top: 6px; 
+          bottom: 6px; 
+          width: 2px; 
+          background: rgba(139, 92, 246, 0.2); 
+        }
+        .step-node:last-child {
+          margin-bottom: 0 !important;
+        }
+        .step-dot { 
+          position: absolute; 
+          left: -24px; 
+          top: 4px; 
+          width: 12px; 
+          height: 12px; 
+          border-radius: 50%; 
+          background: var(--accent-purple); 
+          border: 3px solid #141B2D; 
+        }
+      `}</style>
     </div>
   );
 }

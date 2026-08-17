@@ -1,10 +1,14 @@
-import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
+import { useQuery, useMutation, keepPreviousData } from '@tanstack/react-query';
 import { adminClient } from '../api/admin-client';
-import { Search, Play, Activity } from 'lucide-react';
+import { Play } from 'lucide-react';
+import { Card } from '../components/ui/Card';
+import { Badge } from '../components/ui/Badge';
+import { Button } from '../components/ui/Button';
+import { Table, TableHeader, TableBody, TableRow, TableCell, TableHeaderCell } from '../components/ui/Table';
+import { SearchInput } from '../components/ui/SearchInput';
 
 export default function Companies() {
-  const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
 
@@ -14,7 +18,7 @@ export default function Companies() {
       const res = await adminClient.get('/admin/companies', { params: { page, search } });
       return res.data;
     },
-    keepPreviousData: true,
+    placeholderData: keepPreviousData,
   });
 
   const triggerScrape = useMutation({
@@ -29,108 +33,133 @@ export default function Companies() {
     }
   });
 
+  const companiesData = data?.data || [];
+  const totalPages = data?.totalPages || 0;
+  const currentPage = data?.page || 1;
+
   return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }} className="anim-fade-in">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
         <div>
-          <h1 style={{ fontSize: '24px', fontWeight: 'bold' }}>Companies & Scrapers</h1>
-          <p style={{ color: 'var(--text-secondary)' }}>Monitor parsers and collection health.</p>
-        </div>
-        <div style={{ position: 'relative', width: '300px' }}>
-          <Search size={18} style={{ position: 'absolute', left: '12px', top: '10px', color: 'var(--text-muted)' }} />
-          <input 
-            type="text" 
-            placeholder="Search company..." 
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+          <h1 
             style={{ 
-              width: '100%', 
-              padding: '10px 10px 10px 36px', 
-              borderRadius: '8px', 
-              border: '1px solid var(--border-subtle)', 
-              background: 'var(--bg-card)',
-              color: 'var(--text-primary)'
-            }} 
-          />
+              fontSize: '28px', 
+              fontWeight: 800, 
+              fontFamily: 'var(--font-display)', 
+              background: 'linear-gradient(135deg, white, var(--text-secondary))',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              letterSpacing: '-0.02em' 
+            }}
+          >
+            Companies & Scrapers
+          </h1>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '13px', marginTop: '4px', fontWeight: 500 }}>
+            Monitor tracked internship websites, scraper configs, and execution queues.
+          </p>
         </div>
+        <SearchInput 
+          placeholder="Search company..." 
+          value={search}
+          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+        />
       </div>
 
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Company</th>
-              <th>Parser</th>
-              <th>Jobs Collected</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
+      <Card style={{ padding: 0, overflow: 'hidden' }}>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHeaderCell>Company</TableHeaderCell>
+              <TableHeaderCell>Parser</TableHeaderCell>
+              <TableHeaderCell>Jobs Collected</TableHeaderCell>
+              <TableHeaderCell>Status</TableHeaderCell>
+              <TableHeaderCell style={{ textAlign: 'right' }}>Actions</TableHeaderCell>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {isLoading ? (
-              <tr><td colSpan={5} style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>Loading...</td></tr>
-            ) : data?.data.length === 0 ? (
-              <tr><td colSpan={5} style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>No companies found.</td></tr>
+              <TableRow>
+                <TableCell colSpan={5} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                  Loading companies & scrapers...
+                </TableCell>
+              </TableRow>
+            ) : companiesData.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={5} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                  No companies found matching query.
+                </TableCell>
+              </TableRow>
             ) : (
-              data?.data.map((comp: any) => (
-                <tr key={comp.id}>
-                  <td>
-                    <div style={{ fontWeight: 500 }}>{comp.name}</div>
-                    <div style={{ fontSize: '12px', color: 'var(--brand-primary)' }}>
-                      <a href={comp.careerUrl} target="_blank" rel="noreferrer">Careers Page</a>
+              companiesData.map((comp: any) => (
+                <TableRow key={comp.id}>
+                  <TableCell>
+                    <div style={{ fontWeight: 600, color: 'white' }}>{comp.name}</div>
+                    <div style={{ fontSize: '12px', marginTop: '2px' }}>
+                      <a href={comp.careerUrl} target="_blank" rel="noreferrer" style={{ color: 'var(--brand-primary)', textDecoration: 'none' }}>
+                        Careers Page ↗
+                      </a>
                     </div>
-                  </td>
-                  <td>
-                    <span className="badge badge-neutral">{comp.parserType}</span>
-                  </td>
-                  <td>{comp._count.jobPostings}</td>
-                  <td>
-                    {comp.isActive ? (
-                      <span className="badge badge-success">Active</span>
-                    ) : (
-                      <span className="badge badge-error">Disabled</span>
-                    )}
-                  </td>
-                  <td>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button 
-                        className="btn btn-primary"
-                        style={{ padding: '6px 10px', fontSize: '12px' }}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="neutral">{comp.parserType}</Badge>
+                  </TableCell>
+                  <TableCell style={{ color: 'white', fontWeight: 600 }}>{comp._count?.jobPostings ?? 0}</TableCell>
+                  <TableCell>
+                    <Badge variant={comp.isActive ? 'success' : 'error'}>
+                      {comp.isActive ? 'Active' : 'Disabled'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                      <Button 
+                        variant="primary"
+                        style={{ padding: '6px 12px', fontSize: '12px' }}
                         onClick={() => triggerScrape.mutate(comp.id)}
                         disabled={triggerScrape.isPending}
+                        icon={<Play size={12} />}
                       >
-                        <Play size={14} /> Run Scraper
-                      </button>
+                        Run Scraper
+                      </Button>
                     </div>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))
             )}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
         
-        {data && data.totalPages > 1 && (
-          <div style={{ padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border-subtle)' }}>
-            <span style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>Page {data.page} of {data.totalPages}</span>
+        {totalPages > 1 && (
+          <div 
+            style={{ 
+              padding: '20px 24px', 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center', 
+              borderTop: '1px solid var(--border-glass)' 
+            }}
+          >
+            <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 500 }}>
+              Page {currentPage} of {totalPages}
+            </span>
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button 
-                className="btn btn-secondary" 
+              <Button 
+                variant="secondary" 
                 disabled={page === 1}
                 onClick={() => setPage(p => Math.max(1, p - 1))}
               >
                 Previous
-              </button>
-              <button 
-                className="btn btn-secondary" 
-                disabled={page === data.totalPages}
+              </Button>
+              <Button 
+                variant="secondary" 
+                disabled={page === totalPages}
                 onClick={() => setPage(p => p + 1)}
               >
                 Next
-              </button>
+              </Button>
             </div>
           </div>
         )}
-      </div>
+      </Card>
     </div>
   );
 }

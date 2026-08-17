@@ -1,10 +1,9 @@
-/**
- * OutcomesDataQuality — Phase 24
- * Data quality validation dashboard for admin.
- */
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { Card } from '../components/ui/Card';
+import { Button } from '../components/ui/Button';
 
 const API_BASE = '/api/v1/admin/outcomes';
+
 function getHeaders() {
   return { Authorization: `Bearer ${localStorage.getItem('admin_token')}` };
 }
@@ -19,40 +18,42 @@ interface DQReport {
   qualityScore: number;
 }
 
-interface DQLog {
-  id: string;
-  runAt: string;
-  qualityScore: number;
-  totalChecked: number;
-  excludedCount: number;
-}
-
 function ScoreRing({ score }: { score: number }) {
-  const color = score >= 90 ? '#10b981' : score >= 70 ? '#f59e0b' : '#ef4444';
+  const color = score >= 90 ? 'var(--status-success)' : score >= 70 ? 'var(--status-warning)' : 'var(--status-error)';
   const r = 54;
   const circ = 2 * Math.PI * r;
   const dash = (score / 100) * circ;
   return (
     <svg width={140} height={140} viewBox="0 0 140 140" style={{ display: 'block', margin: '0 auto' }}>
-      <circle cx={70} cy={70} r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={12} />
+      <circle cx={70} cy={70} r={r} fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth={10} />
       <circle
-        cx={70} cy={70} r={r} fill="none" stroke={color} strokeWidth={12}
+        cx={70} 
+        cy={70} 
+        r={r} 
+        fill="none" 
+        stroke={color} 
+        strokeWidth={10}
         strokeDasharray={`${dash} ${circ - dash}`}
         strokeLinecap="round"
         transform="rotate(-90 70 70)"
+        style={{ transition: 'stroke-dasharray 0.8s ease' }}
       />
-      <text x={70} y={74} textAnchor="middle" fill="white" fontSize={28} fontWeight={800}>{score.toFixed(1)}</text>
-      <text x={70} y={95} textAnchor="middle" fill="rgba(255,255,255,0.5)" fontSize={12}>DQ Score</text>
+      <text x={70} y={72} textAnchor="middle" fill="white" fontSize={26} fontWeight={800} fontFamily="var(--font-display)">
+        {score.toFixed(1)}%
+      </text>
+      <text x={70} y={92} textAnchor="middle" fill="var(--text-secondary)" fontSize={11} fontWeight={600} letterSpacing="0.04em" style={{ textTransform: 'uppercase' }}>
+        Score
+      </text>
     </svg>
   );
 }
 
 const ISSUE_TYPES = [
-  { key: 'missingTimestamp', label: 'Missing Timestamp', desc: 'Applications with APPLIED status but no appliedAt', color: '#ef4444' },
-  { key: 'duplicateCount', label: 'Duplicate Records', desc: 'Same userId + jobId with multiple applications', color: '#f59e0b' },
-  { key: 'invalidTransitions', label: 'Invalid Transitions', desc: 'Status changes outside valid transition matrix', color: '#8b5cf6' },
-  { key: 'conflictingStatus', label: 'Time Conflicts', desc: 'acceptedAt before sentAt or submittedAt before startedAt', color: '#6366f1' },
-  { key: 'excludedCount', label: 'Total Excluded', desc: 'Records excluded from metric calculations', color: '#94a3b8' },
+  { key: 'missingTimestamp', label: 'Missing Timestamps', desc: 'Application records lacking timestamp audits', color: '#ef4444', emoji: '🕐' },
+  { key: 'duplicateCount', label: 'Duplicate Applications', desc: 'Multiple applications for the same job and user', color: '#f59e0b', emoji: '🔁' },
+  { key: 'invalidTransitions', label: 'Invalid State Transitions', desc: 'Recruitment status flow sequence errors', color: '#8b5cf6', emoji: '⛔' },
+  { key: 'conflictingStatus', label: 'Timeline Inconsistencies', desc: 'Timestamps with negative duration changes', color: '#6366f1', emoji: '⚡' },
+  { key: 'excludedCount', label: 'Excluded Records', desc: 'Irrelevant/spam postings removed from calculation', color: '#94a3b8', emoji: '🔕' },
 ];
 
 export default function OutcomesDataQuality() {
@@ -70,73 +71,108 @@ export default function OutcomesDataQuality() {
       .catch(() => setLoading(false));
   };
 
-  useEffect(() => { fetchReport(); }, []);
+  useEffect(() => { 
+    fetchReport(); 
+  }, []);
 
   return (
-    <div style={{ padding: 32, maxWidth: 1100, margin: '0 auto' }}>
-      <style>{`
-        .dq-grid { display: grid; grid-template-columns: 220px 1fr; gap: 24px; align-items: start; }
-        .dq-score-card { background: var(--bg-secondary); border: 1px solid var(--border-subtle); border-radius: 16px; padding: 28px 24px; text-align: center; }
-        .issues-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-        .issue-card { background: var(--bg-secondary); border: 1px solid var(--border-subtle); border-radius: 14px; padding: 20px; display: flex; gap: 16px; align-items: flex-start; }
-        .issue-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
-        .issue-count { font-size: 28px; font-weight: 800; color: white; }
-        .issue-label { font-size: 14px; font-weight: 600; color: white; margin-top: 2px; }
-        .issue-desc { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
-        .run-btn { padding: 10px 20px; background: linear-gradient(135deg,#6366f1,#8b5cf6); border: none; border-radius: 10px; color: white; font-size: 14px; font-weight: 600; cursor: pointer; }
-        .run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-      `}</style>
-
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }} className="anim-fade-in">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
         <div>
-          <h1 style={{ fontSize: 24, fontWeight: 700, color: 'white' }}>Data Quality</h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: 13, marginTop: 4 }}>
-            Validation results for the last 30 days of career data
+          <h1 
+            style={{ 
+              fontSize: '28px', 
+              fontWeight: 800, 
+              fontFamily: 'var(--font-display)', 
+              background: 'linear-gradient(135deg, white, var(--text-secondary))',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              letterSpacing: '-0.02em' 
+            }}
+          >
+            Database Quality validation
+          </h1>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '13px', marginTop: '4px', fontWeight: 500 }}>
+            Audit platform placement metrics for duplicate records, timeline anomalies, and broken sequence transitions.
           </p>
         </div>
-        <button
-          className="run-btn"
+        <Button
+          onClick={() => { setRunning(true); fetchReport(); setTimeout(() => setRunning(false), 2000); }}
           disabled={running}
-          onClick={() => { setRunning(true); fetchReport(); setTimeout(() => setRunning(false), 3000); }}
         >
           {running ? 'Running...' : '↻ Run Validation'}
-        </button>
+        </Button>
       </div>
 
       {loading ? (
-        <p style={{ color: 'var(--text-muted)' }}>Running validation...</p>
+        <p style={{ color: 'var(--text-muted)', padding: '40px', textAlign: 'center' }}>Validating outcome integrity metrics...</p>
       ) : report ? (
-        <div className="dq-grid">
-          <div className="dq-score-card">
+        <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: '24px', alignItems: 'start' }} className="dq-layout-grid">
+          <Card style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '32px 20px', gap: '20px' }}>
             <ScoreRing score={report.qualityScore} />
-            <div style={{ marginTop: 16, fontSize: 13, color: 'var(--text-muted)' }}>
-              {report.totalChecked.toLocaleString()} records checked
-            </div>
-            <div style={{ marginTop: 8, fontSize: 13, color: 'var(--text-muted)' }}>
-              {report.excludedCount} excluded from metrics
-            </div>
-          </div>
-          <div className="issues-grid">
-            {ISSUE_TYPES.map((type) => (
-              <div className="issue-card" key={type.key}>
-                <div className="issue-icon" style={{ background: `${type.color}22`, color: type.color }}>
-                  {type.key === 'missingTimestamp' ? '🕐' :
-                   type.key === 'duplicateCount' ? '🔁' :
-                   type.key === 'invalidTransitions' ? '⛔' :
-                   type.key === 'conflictingStatus' ? '⚡' : '🔕'}
-                </div>
-                <div>
-                  <div className="issue-count" style={{ color: (report as any)[type.key] > 0 ? type.color : '#10b981' }}>
-                    {((report as any)[type.key] as number).toLocaleString()}
-                  </div>
-                  <div className="issue-label">{type.label}</div>
-                  <div className="issue-desc">{type.desc}</div>
-                </div>
+            <div>
+              <div style={{ fontSize: '13px', color: 'white', fontWeight: 700 }}>
+                {report.totalChecked.toLocaleString()} Checked
               </div>
-            ))}
+              <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                Total system validation log records
+              </div>
+            </div>
+            <div style={{ borderTop: '1px solid var(--border-glass)', width: '100%', paddingTop: '16px' }}>
+              <div style={{ fontSize: '13px', color: 'white', fontWeight: 700 }}>
+                {report.excludedCount.toLocaleString()} Excluded
+              </div>
+              <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                Spam or demo test applications
+              </div>
+            </div>
+          </Card>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }} className="issues-grid">
+            {ISSUE_TYPES.map((type) => {
+              const count = (report as any)[type.key] as number;
+              return (
+                <Card key={type.key} style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+                  <div 
+                    style={{ 
+                      width: '48px', 
+                      height: '48px', 
+                      borderRadius: '12px', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center', 
+                      fontSize: '22px', 
+                      flexShrink: 0,
+                      background: `rgba(255,255,255,0.03)`,
+                      border: '1px solid var(--border-glass)'
+                    }}
+                  >
+                    {type.emoji}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '24px', fontWeight: 800, color: count > 0 ? type.color : 'var(--status-success)', fontFamily: 'var(--font-display)' }}>
+                      {count.toLocaleString()}
+                    </div>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: 'white', marginTop: '2px' }}>{type.label}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px', lineHeight: '1.4' }}>{type.desc}</div>
+                  </div>
+                </Card>
+              );
+            })}
           </div>
         </div>
       ) : null}
+
+      <style>{`
+        @media (max-width: 768px) {
+          .dq-layout-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .issues-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }

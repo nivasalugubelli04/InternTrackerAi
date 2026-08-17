@@ -1,4 +1,4 @@
-import React from 'react';
+import { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard';
 import Users from './pages/Users';
 import Companies from './pages/Companies';
 import FeatureFlags from './pages/FeatureFlags';
+
 // Phase 24 — Career Outcomes, Placement Intelligence & Workforce Analytics
 import OutcomesOverview from './pages/OutcomesOverview';
 import OutcomesRoles from './pages/OutcomesRoles';
@@ -21,6 +22,10 @@ import SkillsMarketDemand from './pages/SkillsMarketDemand';
 // Phase 26 — Personalized Learning & Roadmaps
 import LearningOverview from './pages/LearningOverview';
 
+// UI components
+import { Card } from './components/ui/Card';
+import { Button } from './components/ui/Button';
+import { FormControl, FormGroup, FormLabel } from './components/ui/Form';
 
 // Setup React Query client
 const queryClient = new QueryClient({
@@ -43,7 +48,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
 // Very basic dummy login for dev purposes (in real world, this would hit /api/v1/auth/login and verify role)
 const Login = () => {
-  const [token, setToken] = React.useState('');
+  const [token, setToken] = useState('');
   
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,22 +60,28 @@ const Login = () => {
 
   return (
     <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--bg-primary)' }}>
-      <div className="card" style={{ width: '400px' }}>
-        <h2 style={{ marginBottom: '8px', color: 'var(--brand-primary)' }}>Admin Login</h2>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '24px' }}>
+      <Card style={{ width: '400px' }}>
+        <h2 style={{ marginBottom: '8px', color: 'var(--brand-primary)', fontFamily: 'var(--font-display)', fontWeight: 800 }}>
+          Admin Login
+        </h2>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '24px', fontWeight: 500 }}>
           Paste your SUPER_ADMIN or ADMIN JWT token here to authenticate.
         </p>
         <form onSubmit={handleLogin}>
-          <input 
-            type="text" 
-            placeholder="JWT Token..." 
-            value={token}
-            onChange={(e) => setToken(e.target.value)}
-            style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', background: 'var(--bg-tertiary)', color: 'white', marginBottom: '16px' }}
-          />
-          <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>Login</button>
+          <FormGroup>
+            <FormLabel>JWT Token</FormLabel>
+            <FormControl 
+              type="text" 
+              placeholder="eyJhbGciOi..." 
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+            />
+          </FormGroup>
+          <Button type="submit" style={{ width: '100%', marginTop: '8px' }}>
+            Login to Center
+          </Button>
         </form>
-      </div>
+      </Card>
     </div>
   );
 };

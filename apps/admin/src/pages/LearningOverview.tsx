@@ -1,4 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { Card, StatCard } from '../components/ui/Card';
+import { Badge } from '../components/ui/Badge';
+import { Button } from '../components/ui/Button';
+import { Modal } from '../components/ui/Modal';
+import { FormGroup, FormLabel, FormControl } from '../components/ui/Form';
 
 const API_BASE = '/api/v1/admin/learning';
 
@@ -40,7 +45,6 @@ export default function LearningOverview() {
   const [modules, setModules] = useState<Module[]>([]);
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   // Form states for adding resource
   const [resTitle, setResTitle] = useState('');
@@ -64,7 +68,7 @@ export default function LearningOverview() {
       setModules(modData);
       setAnalytics(anaData);
     } catch (e: any) {
-      setError(e.message);
+      console.error(e.message);
     } finally {
       setLoading(false);
     }
@@ -105,200 +109,246 @@ export default function LearningOverview() {
   };
 
   return (
-    <div className="learning-overview-page">
-      <style>{`
-        .learning-overview-page { padding: 32px; max-width: 1400px; margin: 0 auto; }
-        .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; }
-        .page-title { font-size: 28px; font-weight: 700; background: linear-gradient(135deg, #10b981, #3b82f6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .subtitle { color: var(--text-secondary); font-size: 14px; margin-top: 4px; }
-        
-        .btn-add { padding: 10px 20px; background: linear-gradient(135deg, #10b981, #3b82f6); color: white; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 14px; }
-        .btn-add:hover { opacity: 0.9; }
-
-        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin-bottom: 32px; }
-        .stat-card { background: var(--bg-secondary); border: 1px solid var(--border-subtle); border-radius: 16px; padding: 24px; text-align: center; }
-        .stat-num { font-size: 32px; font-weight: 800; color: white; margin-top: 8px; }
-        .stat-label { font-size: 12px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; }
-
-        .sections-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
-        .section-card { background: var(--bg-secondary); border: 1px solid var(--border-subtle); border-radius: 16px; padding: 24px; }
-        .section-title { font-size: 18px; font-weight: 600; color: white; margin-bottom: 20px; }
-
-        .list-items { display: flex; flex-direction: column; gap: 12px; }
-        .list-item { background: var(--bg-primary); border: 1px solid var(--border-subtle); border-radius: 10px; padding: 16px; display: flex; justify-content: space-between; align-items: center; }
-        .item-info { display: flex; flex-direction: column; gap: 4px; }
-        .item-name { font-size: 15px; font-weight: 600; color: white; }
-        .item-meta { font-size: 12px; color: var(--text-muted); }
-        .badge { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 6px; text-transform: uppercase; }
-        .badge-type { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
-        .badge-level { background: rgba(16, 185, 129, 0.15); color: #34d399; }
-
-        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.7); display: flex; align-items: center; justify-content: center; z-index: 100; }
-        .modal { background: var(--bg-secondary); border: 1px solid var(--border-subtle); border-radius: 16px; padding: 28px; width: 450px; }
-        .modal-header { font-size: 20px; font-weight: 700; color: white; margin-bottom: 20px; }
-        
-        .form-group { margin-bottom: 16px; }
-        .form-label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 6px; }
-        .form-control { width: 100%; padding: 10px 12px; background: var(--bg-primary); border: 1px solid var(--border-subtle); border-radius: 8px; color: white; font-size: 14px; }
-        .form-control:focus { border-color: #10b981; outline: none; }
-        
-        .btn-modal-submit { width: 100%; padding: 12px; background: linear-gradient(135deg, #10b981, #3b82f6); border: none; border-radius: 8px; color: white; font-weight: 700; cursor: pointer; font-size: 14px; margin-top: 10px; }
-        .btn-cancel { width: 100%; padding: 12px; background: var(--bg-primary); border: 1px solid var(--border-subtle); border-radius: 8px; color: white; font-weight: 700; cursor: pointer; font-size: 14px; margin-top: 8px; }
-      `}</style>
-
-      <div className="page-header">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }} className="anim-fade-in">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
         <div>
-          <h1 className="page-title">Learning Management</h1>
-          <p className="subtitle">Configure modules templates, learning catalog resources, and monitor completions</p>
+          <h1 
+            style={{ 
+              fontSize: '28px', 
+              fontWeight: 800, 
+              fontFamily: 'var(--font-display)', 
+              background: 'linear-gradient(135deg, #10b981, #3b82f6)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              letterSpacing: '-0.02em' 
+            }}
+          >
+            Learning Management
+          </h1>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '13px', marginTop: '4px', fontWeight: 500 }}>
+            Configure template learning modules, catalog resources, and monitor student completions.
+          </p>
         </div>
-        <button className="btn-add" onClick={() => setShowAddRes(true)}>Add Reference Resource</button>
+        <Button onClick={() => setShowAddRes(true)}>Add Reference Resource</Button>
       </div>
 
       {!loading && analytics && (
-        <div className="stats-grid">
-          <div className="stat-card">
-            <div className="stat-label">Total Enrollments</div>
-            <div className="stat-num">{analytics.totalEnrollments}</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-label">Completed Modules</div>
-            <div className="stat-num">{analytics.completedEnrollments}</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-label">Completion Rate</div>
-            <div className="stat-num">{analytics.completionRate.toFixed(1)}%</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-label">Active Learning Goals</div>
-            <div className="stat-num">{analytics.totalGoalsCreated}</div>
-          </div>
+        <div className="grid-cols-4">
+          <StatCard 
+            title="Total Enrollments" 
+            value={analytics.totalEnrollments} 
+            icon={<BookIcon />} 
+          />
+          <StatCard 
+            title="Completed Modules" 
+            value={analytics.completedEnrollments} 
+            icon={<BookIcon />} 
+          />
+          <StatCard 
+            title="Completion Rate" 
+            value={`${analytics.completionRate.toFixed(1)}%`} 
+            icon={<BookIcon />} 
+            trend={analytics.completionRate >= 50.0 ? 'High' : 'Stable'}
+            trendType={analytics.completionRate >= 50.0 ? 'success' : 'neutral'}
+          />
+          <StatCard 
+            title="Active Roadmaps" 
+            value={analytics.totalGoalsCreated} 
+            icon={<BookIcon />} 
+          />
         </div>
       )}
 
       {loading ? (
-        <div style={{ color: 'var(--text-muted)' }}>Loading catalog...</div>
+        <p style={{ color: 'var(--text-muted)', padding: '40px', textAlign: 'center' }}>Loading learning catalogs...</p>
       ) : (
-        <div className="sections-grid">
-          <div className="section-card">
-            <div className="section-title">Template Learning Modules</div>
-            <div className="list-items">
+        <div className="grid-cols-2">
+          <Card>
+            <h3 
+              style={{ 
+                marginBottom: '20px', 
+                fontSize: '16px', 
+                fontWeight: 700, 
+                color: 'white',
+                fontFamily: 'var(--font-display)',
+                borderBottom: '1px solid var(--border-glass)',
+                paddingBottom: '12px'
+              }}
+            >
+              Template Learning Modules
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {modules.map((m) => (
-                <div key={m.id} className="list-item">
-                  <div className="item-info">
-                    <div className="item-name">{m.title}</div>
-                    <div className="item-meta">
-                      Duration: {m.estimatedDuration}m | Content: {m.contentType}
+                <div 
+                  key={m.id} 
+                  style={{ 
+                    background: 'rgba(255,255,255,0.02)', 
+                    border: '1px solid var(--border-glass)', 
+                    borderRadius: '12px', 
+                    padding: '16px 20px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    gap: '16px'
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: '14px', fontWeight: 600, color: 'white' }}>{m.title}</div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                      Estimated: {m.estimatedDuration} mins | Format: {m.contentType}
                     </div>
                   </div>
-                  <span className="badge badge-level">{m.level}</span>
+                  <Badge variant="success">{m.level}</Badge>
                 </div>
               ))}
               {modules.length === 0 && (
-                <div style={{ color: 'var(--text-muted)', fontSize: '13px' }}>No modules configured.</div>
+                <div style={{ color: 'var(--text-muted)', fontSize: '13px', fontStyle: 'italic' }}>
+                  No template modules configured.
+                </div>
               )}
             </div>
-          </div>
+          </Card>
 
-          <div className="section-card">
-            <div className="section-title">External Reference Resources</div>
-            <div className="list-items">
+          <Card>
+            <h3 
+              style={{ 
+                marginBottom: '20px', 
+                fontSize: '16px', 
+                fontWeight: 700, 
+                color: 'white',
+                fontFamily: 'var(--font-display)',
+                borderBottom: '1px solid var(--border-glass)',
+                paddingBottom: '12px'
+              }}
+            >
+              External Reference Resources
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {resources.map((r) => (
-                <div key={r.id} className="list-item">
-                  <div className="item-info">
-                    <div className="item-name">{r.title}</div>
-                    <div className="item-meta">
-                      Provider: {r.provider} | Difficulty: {r.difficulty}
+                <div 
+                  key={r.id} 
+                  style={{ 
+                    background: 'rgba(255,255,255,0.02)', 
+                    border: '1px solid var(--border-glass)', 
+                    borderRadius: '12px', 
+                    padding: '16px 20px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    gap: '16px'
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: '14px', fontWeight: 600, color: 'white' }}>
+                      <a href={r.url} target="_blank" rel="noreferrer" style={{ color: 'white', textDecoration: 'none' }}>
+                        {r.title} ↗
+                      </a>
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                      Provider: {r.provider} | Level: {r.difficulty}
                     </div>
                   </div>
-                  <span className="badge badge-type">{r.contentType}</span>
+                  <Badge variant="primary">{r.contentType}</Badge>
                 </div>
               ))}
               {resources.length === 0 && (
-                <div style={{ color: 'var(--text-muted)', fontSize: '13px' }}>No reference resources linked yet.</div>
+                <div style={{ color: 'var(--text-muted)', fontSize: '13px', fontStyle: 'italic' }}>
+                  No reference resources linked yet.
+                </div>
               )}
             </div>
-          </div>
+          </Card>
         </div>
       )}
 
-      {showAddRes && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <div className="modal-header">Add Reference Resource</div>
-            <form onSubmit={handleAddResource}>
-              <div className="form-group">
-                <label className="form-label">Resource Title</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  required
-                  value={resTitle}
-                  onChange={(e) => setResTitle(e.target.value)}
-                  placeholder="e.g. Intro to Docker Containers"
-                />
-              </div>
+      <Modal isOpen={showAddRes} onClose={() => setShowAddRes(false)} title="Add Reference Resource">
+        <form onSubmit={handleAddResource}>
+          <FormGroup>
+            <FormLabel>Resource Title</FormLabel>
+            <FormControl
+              type="text"
+              required
+              value={resTitle}
+              onChange={(e) => setResTitle(e.target.value)}
+              placeholder="e.g. Intro to Docker Containers"
+            />
+          </FormGroup>
 
-              <div className="form-group">
-                <label className="form-label">Provider Name</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  required
-                  value={resProvider}
-                  onChange={(e) => setResProvider(e.target.value)}
-                  placeholder="e.g. YouTube, Coursera"
-                />
-              </div>
+          <FormGroup>
+            <FormLabel>Provider Name</FormLabel>
+            <FormControl
+              type="text"
+              required
+              value={resProvider}
+              onChange={(e) => setResProvider(e.target.value)}
+              placeholder="e.g. YouTube, Coursera"
+            />
+          </FormGroup>
 
-              <div className="form-group">
-                <label className="form-label">Resource URL</label>
-                <input
-                  type="url"
-                  className="form-control"
-                  required
-                  value={resUrl}
-                  onChange={(e) => setResUrl(e.target.value)}
-                  placeholder="e.g. https://youtube.com/..."
-                />
-              </div>
+          <FormGroup>
+            <FormLabel>Resource URL</FormLabel>
+            <FormControl
+              type="url"
+              required
+              value={resUrl}
+              onChange={(e) => setResUrl(e.target.value)}
+              placeholder="e.g. https://youtube.com/..."
+            />
+          </FormGroup>
 
-              <div className="form-group">
-                <label className="form-label">Content Type</label>
-                <select className="form-control" value={resType} onChange={(e) => setResType(e.target.value)}>
-                  <option value="VIDEO">Video</option>
-                  <option value="COURSE">Course</option>
-                  <option value="DOCUMENTATION">Documentation</option>
-                  <option value="TUTORIAL">Tutorial</option>
-                  <option value="QUIZ">Quiz</option>
-                </select>
-              </div>
+          <FormGroup>
+            <FormLabel>Content Type</FormLabel>
+            <FormControl
+              as="select"
+              value={resType}
+              onChange={(e) => setResType(e.target.value)}
+            >
+              <option value="VIDEO">Video</option>
+              <option value="COURSE">Course</option>
+              <option value="DOCUMENTATION">Documentation</option>
+              <option value="TUTORIAL">Tutorial</option>
+              <option value="QUIZ">Quiz</option>
+            </FormControl>
+          </FormGroup>
 
-              <div className="form-group">
-                <label className="form-label">Difficulty</label>
-                <select className="form-control" value={resDifficulty} onChange={(e) => setResDifficulty(e.target.value)}>
-                  <option value="BEGINNER">Beginner</option>
-                  <option value="INTERMEDIATE">Intermediate</option>
-                  <option value="ADVANCED">Advanced</option>
-                </select>
-              </div>
+          <FormGroup>
+            <FormLabel>Difficulty</FormLabel>
+            <FormControl
+              as="select"
+              value={resDifficulty}
+              onChange={(e) => setResDifficulty(e.target.value)}
+            >
+              <option value="BEGINNER">Beginner</option>
+              <option value="INTERMEDIATE">Intermediate</option>
+              <option value="ADVANCED">Advanced</option>
+            </FormControl>
+          </FormGroup>
 
-              <div className="form-group">
-                <label className="form-label">Estimated Duration (mins)</label>
-                <input
-                  type="number"
-                  className="form-control"
-                  required
-                  value={resDuration}
-                  onChange={(e) => setResDuration(Number(e.target.value))}
-                />
-              </div>
+          <FormGroup>
+            <FormLabel>Estimated Duration (mins)</FormLabel>
+            <FormControl
+              type="number"
+              required
+              value={resDuration}
+              onChange={(e) => setResDuration(Number(e.target.value))}
+            />
+          </FormGroup>
 
-              <button type="submit" className="btn-modal-submit">Create Reference</button>
-              <button type="button" className="btn-cancel" onClick={() => setShowAddRes(false)}>Cancel</button>
-            </form>
-          </div>
-        </div>
-      )}
+          <Button type="submit" style={{ width: '100%', marginTop: '10px' }}>Create Reference</Button>
+          <Button type="button" variant="secondary" style={{ width: '100%', marginTop: '8px' }} onClick={() => setShowAddRes(false)}>
+            Cancel
+          </Button>
+        </form>
+      </Modal>
     </div>
+  );
+}
+
+function BookIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+    </svg>
   );
 }

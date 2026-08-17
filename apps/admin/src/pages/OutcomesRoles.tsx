@@ -1,10 +1,11 @@
-/**
- * OutcomesRoles — Phase 24
- * Role-bucketed outcome analytics with skill associations.
- */
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { Card } from '../components/ui/Card';
+import { Badge } from '../components/ui/Badge';
+import { Button } from '../components/ui/Button';
+import { Table, TableHeader, TableBody, TableRow, TableCell, TableHeaderCell } from '../components/ui/Table';
 
 const API_BASE = '/api/v1/admin/outcomes';
+
 function getHeaders() {
   return { Authorization: `Bearer ${localStorage.getItem('admin_token')}` };
 }
@@ -22,16 +23,14 @@ interface RoleRow {
   confidence: string;
 }
 
-function pct(v: number) { return `${(v * 100).toFixed(1)}%`; }
-
-const CONFIDENCE_COLOR: Record<string, string> = {
-  HIGH: '#10b981', MEDIUM: '#f59e0b', LOW: '#ef4444',
-};
+function pct(v: number) { 
+  return `${(v * 100).toFixed(1)}%`; 
+}
 
 export default function OutcomesRoles() {
   const [data, setData] = useState<RoleRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sort, setSort] = useState<keyof RoleRow>('applications');
+  const [sort] = useState<keyof RoleRow>('applications');
 
   useEffect(() => {
     const end = new Date().toISOString();
@@ -46,80 +45,81 @@ export default function OutcomesRoles() {
   const maxApps = sorted.reduce((m, r) => Math.max(m, r.applications), 1);
 
   return (
-    <div style={{ padding: 32, maxWidth: 1300, margin: '0 auto' }}>
-      <style>{`
-        .roles-table { width: 100%; border-collapse: separate; border-spacing: 0 8px; }
-        .roles-table th { background: var(--bg-tertiary); padding: 12px 16px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); text-align: left; cursor: pointer; user-select: none; }
-        .roles-table th:hover { color: #a78bfa; }
-        .roles-table td { background: var(--bg-secondary); padding: 14px 16px; font-size: 14px; color: white; border-top: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle); }
-        .roles-table td:first-child { border-left: 1px solid var(--border-subtle); border-radius: 8px 0 0 8px; }
-        .roles-table td:last-child { border-right: 1px solid var(--border-subtle); border-radius: 0 8px 8px 0; }
-        .bar-cell { position: relative; }
-        .mini-bar { height: 8px; border-radius: 4px; background: linear-gradient(90deg, #6366f1, #a78bfa); opacity: 0.8; }
-        .conf-badge { display: inline-block; padding: 2px 8px; border-radius: 100px; font-size: 11px; font-weight: 600; }
-      `}</style>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }} className="anim-fade-in">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
         <div>
-          <h1 style={{ fontSize: 24, fontWeight: 700, color: 'white' }}>Role Outcomes</h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: 13, marginTop: 4 }}>
-            Application and conversion rates by role category · last 30 days
+          <h1 
+            style={{ 
+              fontSize: '28px', 
+              fontWeight: 800, 
+              fontFamily: 'var(--font-display)', 
+              background: 'linear-gradient(135deg, white, var(--text-secondary))',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              letterSpacing: '-0.02em' 
+            }}
+          >
+            Role Placement Analytics
+          </h1>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '13px', marginTop: '4px', fontWeight: 500 }}>
+            Funnel conversions, application volume, and recruitment confidence bucketed by target roles.
           </p>
         </div>
         <a
           href={`${API_BASE}/export?type=roles`}
-          style={{ padding: '8px 16px', borderRadius: 8, background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: 'white', textDecoration: 'none', fontSize: 13, fontWeight: 600 }}
-        >↓ Export CSV</a>
+          style={{ textDecoration: 'none' }}
+        >
+          <Button variant="secondary">↓ Export CSV</Button>
+        </a>
       </div>
 
-      {loading ? (
-        <p style={{ color: 'var(--text-muted)', padding: 32 }}>Loading role data...</p>
-      ) : (
-        <table className="roles-table">
-          <thead>
-            <tr>
-              {[
-                ['role', 'Role'],
-                ['applications', 'Applications'],
-                ['interviewConversionRate', 'Interview Conv.'],
-                ['offerConversionRate', 'Offer Conv.'],
-                ['hireRate', 'Hire Rate'],
-                ['sampleSize', 'n'],
-                ['confidence', 'Confidence'],
-              ].map(([key, label]) => (
-                <th key={key} onClick={() => key !== 'role' && key !== 'confidence' && setSort(key as keyof RoleRow)}>
-                  {label} {sort === key ? '↓' : ''}
-                </th>
+      <Card style={{ padding: 0, overflow: 'hidden' }}>
+        {loading ? (
+          <p style={{ color: 'var(--text-muted)', padding: '40px', textAlign: 'center' }}>Loading role analytics...</p>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHeaderCell>Role Profile</TableHeaderCell>
+                <TableHeaderCell style={{ width: '220px' }}>Applications Volume</TableHeaderCell>
+                <TableHeaderCell>Interview rate</TableHeaderCell>
+                <TableHeaderCell>Offer rate</TableHeaderCell>
+                <TableHeaderCell>Hire rate</TableHeaderCell>
+                <TableHeaderCell>Sample Size</TableHeaderCell>
+                <TableHeaderCell style={{ textAlign: 'right' }}>Confidence</TableHeaderCell>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {sorted.map((row) => (
+                <TableRow key={row.role}>
+                  <TableCell style={{ fontWeight: 700, color: 'white' }}>{row.role}</TableCell>
+                  <TableCell>
+                    <div style={{ marginBottom: '6px', fontWeight: 600, color: 'white' }}>{row.applications.toLocaleString()}</div>
+                    <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '4px', height: '6px', overflow: 'hidden', border: '1px solid var(--border-glass)' }}>
+                      <div 
+                        style={{ 
+                          height: '100%', 
+                          width: `${(row.applications / maxApps) * 100}%`,
+                          background: 'linear-gradient(90deg, var(--brand-primary), var(--accent-purple))'
+                        }} 
+                      />
+                    </div>
+                  </TableCell>
+                  <TableCell style={{ color: 'var(--accent-purple)', fontWeight: 700 }}>{pct(row.interviewConversionRate)}</TableCell>
+                  <TableCell style={{ color: 'var(--brand-primary)', fontWeight: 700 }}>{pct(row.offerConversionRate)}</TableCell>
+                  <TableCell style={{ color: 'var(--status-success)', fontWeight: 700 }}>{pct(row.hireRate)}</TableCell>
+                  <TableCell style={{ color: 'var(--text-secondary)' }}>{row.sampleSize.toLocaleString()}</TableCell>
+                  <TableCell style={{ textAlign: 'right' }}>
+                    <Badge variant={row.confidence === 'HIGH' ? 'success' : row.confidence === 'MEDIUM' ? 'warning' : 'error'}>
+                      {row.confidence}
+                    </Badge>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tr>
-          </thead>
-          <tbody>
-            {sorted.map((row) => (
-              <tr key={row.role}>
-                <td style={{ fontWeight: 600 }}>{row.role}</td>
-                <td className="bar-cell">
-                  <div style={{ marginBottom: 4 }}>{row.applications.toLocaleString()}</div>
-                  <div className="mini-bar" style={{ width: `${(row.applications / maxApps) * 100}%` }} />
-                </td>
-                <td style={{ color: '#a78bfa', fontWeight: 600 }}>{pct(row.interviewConversionRate)}</td>
-                <td style={{ color: '#8b5cf6', fontWeight: 600 }}>{pct(row.offerConversionRate)}</td>
-                <td style={{ color: '#10b981', fontWeight: 600 }}>{pct(row.hireRate)}</td>
-                <td style={{ color: 'var(--text-muted)' }}>{row.sampleSize.toLocaleString()}</td>
-                <td>
-                  <span
-                    className="conf-badge"
-                    style={{
-                      background: `${CONFIDENCE_COLOR[row.confidence]}22`,
-                      color: CONFIDENCE_COLOR[row.confidence],
-                    }}
-                  >
-                    {row.confidence}
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+            </TableBody>
+          </Table>
+        )}
+      </Card>
     </div>
   );
 }
