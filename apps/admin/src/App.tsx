@@ -13,6 +13,15 @@ import OutcomesRoles from './pages/OutcomesRoles';
 import OutcomesSkills from './pages/OutcomesSkills';
 import OutcomesDataQuality from './pages/OutcomesDataQuality';
 
+// Phase 25 — Skills Graph & Career Path Intelligence
+import SkillsExplorer from './pages/SkillsExplorer';
+import CareerPaths from './pages/CareerPaths';
+import SkillsMarketDemand from './pages/SkillsMarketDemand';
+
+// Phase 26 — Personalized Learning & Roadmaps
+import LearningOverview from './pages/LearningOverview';
+
+
 // Setup React Query client
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -83,6 +92,12 @@ export default function App() {
             <Route path="outcomes/roles" element={<OutcomesRoles />} />
             <Route path="outcomes/skills" element={<OutcomesSkills />} />
             <Route path="outcomes/data-quality" element={<OutcomesDataQuality />} />
+            {/* Phase 25 — Skills Graph & Careers */}
+            <Route path="skills" element={<SkillsExplorer />} />
+            <Route path="career-paths" element={<CareerPaths />} />
+            <Route path="skills/market-demand" element={<SkillsMarketDemand />} />
+            {/* Phase 26 — Personalized Learning & Roadmaps */}
+            <Route path="learning" element={<LearningOverview />} />
             {/* Other routes can be stubbed out similarly */}
             <Route path="*" element={<div style={{ color: 'var(--text-muted)' }}>Under Construction</div>} />
           </Route>

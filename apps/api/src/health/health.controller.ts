@@ -53,4 +53,18 @@ export class HealthController {
   async ready(): Promise<HealthReport> {
     return this.healthService.getHealth();
   }
+
+  @Get('startup')
+  @Public()
+  @HttpCode(HttpStatus.OK)
+  async startup(): Promise<HealthReport> {
+    return this.healthService.getHealth();
+  }
+
+  @Get('version')
+  @Public()
+  @HttpCode(HttpStatus.OK)
+  version(): { version: string; status: string } {
+    return { version: '1.0.0', status: 'HEALTHY' };
+  }
 }

@@ -145,6 +145,20 @@ model User {
   interviewFeedbackSubmitted     InterviewFeedback[]
   candidateOffers                Offer[]                @relation("CandidateOffers")
 
+  // Phase 25
+  careerRecommendations          CareerRecommendation[]
+
+  // Phase 26
+  learningGoals                  LearningGoal[]
+  learningEnrollments            LearningEnrollment[]
+  practiceAttempts               PracticeAttempt[]
+  skillEvidences                 SkillEvidence[]
+  certifications                 Certification[]
+  learningPreference             LearningPreference?
+  // Phase 28
+  careerCenterPreference         CareerCenterPreference?
+  careerActions                  CareerAction[]
+
   @@index([email])
   @@map("users")
 }
@@ -240,12 +254,29 @@ model Profile {
 }
 
 model Skill {
-  id       String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name     String        @unique @db.VarChar(100)
-  category SkillCategory
-  isActive Boolean       @default(true)
+  id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String        @unique @db.VarChar(100)
+  category    SkillCategory
+  isActive    Boolean       @default(true)
+  description String?       @db.Text
+  aliases     String[]      @default([])
+  status      String        @default("ACTIVE") // ACTIVE, PENDING, DISABLED
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
 
-  userSkills UserSkill[]
+  userSkills        UserSkill[]
+  fromRelationships SkillRelationship[] @relation("SkillFromRelation")
+  toRelationships   SkillRelationship[] @relation("SkillToRelation")
+  roleSkills        RoleSkill[]
+  careerPathSkills  CareerPathSkill[]
+  demandSignal      SkillDemandSignal?
+
+  // Phase 26
+  learningGoals      LearningGoal[]
+  learningModules    LearningModule[]
+  learningResources  LearningResource[]
+  practiceActivities PracticeActivity[]
+  skillEvidences     SkillEvidence[]
 
   @@index([category])
   @@index([name])
@@ -901,15 +932,20 @@ model GeneratedDocument {
 model LearningRoadmap {
   id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId        String   @db.Uuid
+  goalId        String?  @db.Uuid
   targetRole    String   @db.VarChar(255)
   targetCompany String?  @db.VarChar(255)
   roadmapJson   Json
+  version       Int      @default(1)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user     User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  goal     LearningGoal?           @relation(fields: [goalId], references: [id], onDelete: SetNull)
+  versions LearningRoadmapVersion[]
 
   @@index([userId])
+  @@index([goalId])
   @@map("learning_roadmaps")
 }
 
@@ -2996,3 +3032,510 @@ model OutcomeDataQualityLog {
   @@index([runAt])
   @@map("outcome_data_quality_logs")
 }
+
+enum SkillRelationType {
+  RELATED_TO
+  REQUIRES
+  COMPLEMENTARY_TO
+  PRECEDES
+  SUBSET_OF
+  SUPERSET_OF
+  ALTERNATIVE_TO
+  COMMONLY_PAIRED_WITH
+}
+
+model SkillRelationship {
+  id           String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  fromSkillId  String            @db.Uuid
+  toSkillId    String            @db.Uuid
+  relationType SkillRelationType
+  weight       Float             @default(1.0)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  fromSkill    Skill             @relation("SkillFromRelation", fields: [fromSkillId], references: [id], onDelete: Cascade)
+  toSkill      Skill             @relation("SkillToRelation", fields: [toSkillId], references: [id], onDelete: Cascade)
+
+  @@unique([fromSkillId, toSkillId, relationType])
+  @@index([fromSkillId])
+  @@index([toSkillId])
+  @@map("skill_relationships")
+}
+
+model Role {
+  id          String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String      @unique @db.VarChar(100)
+  category    String?     @db.VarChar(100)
+  description String?     @db.Text
+  parentId    String?     @db.Uuid
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  parent      Role?       @relation("RoleHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children    Role[]      @relation("RoleHierarchy")
+  roleSkills  RoleSkill[]
+
+  careerPathSteps        CareerPathStep[]
+  careerRecommendations  CareerRecommendation[]
+
+  @@index([parentId])
+  @@map("roles")
+}
+
+enum RoleSkillRequirement {
+  REQUIRED
+  PREFERRED
+}
+
+model RoleSkill {
+  roleId      String               @db.Uuid
+  skillId     String               @db.Uuid
+  importance  String               @default("MEDIUM") // HIGH | MEDIUM | LOW
+  requirement RoleSkillRequirement @default(REQUIRED)
+  weight      Float                @default(1.0)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  role        Role                 @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  skill       Skill                @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, skillId])
+  @@index([roleId])
+  @@index([skillId])
+  @@map("role_skills")
+}
+
+model CareerPath {
+  id          String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title       String           @unique @db.VarChar(150)
+  description String?          @db.Text
+  isActive    Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  steps       CareerPathStep[]
+
+  @@map("career_paths")
+}
+
+model CareerPathStep {
+  id           String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  careerPathId String            @db.Uuid
+  roleId       String            @db.Uuid
+  stepNumber   Int
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  careerPath   CareerPath        @relation(fields: [careerPathId], references: [id], onDelete: Cascade)
+  role         Role              @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  skills       CareerPathSkill[]
+
+  @@unique([careerPathId, stepNumber])
+  @@index([careerPathId])
+  @@index([roleId])
+  @@map("career_path_steps")
+}
+
+model CareerPathSkill {
+  stepId    String         @db.Uuid
+  skillId   String         @db.Uuid
+  isPrimary Boolean        @default(true)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  step      CareerPathStep @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  skill     Skill          @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@id([stepId, skillId])
+  @@index([stepId])
+  @@index([skillId])
+  @@map("career_path_skills")
+}
+
+model SkillDemandSignal {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  skillId           String   @unique @db.Uuid
+  demandScore       Float    @default(0.0)
+  growthRate        Float    @default(0.0)
+  opportunityVolume Int      @default(0)
+  metadataJson      Json?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  skill             Skill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@map("skill_demand_signals")
+}
+
+model CareerRecommendation {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String   @db.Uuid
+  targetRoleId    String   @db.Uuid
+  targetRoleName  String   @db.VarChar(100)
+  confidence      String   @db.VarChar(20)  // HIGH | MEDIUM | LOW | INSUFFICIENT_DATA
+  score           Float    @default(0.0)
+  explanationJson Json
+  expiresAt       DateTime
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  targetRole      Role     @relation(fields: [targetRoleId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([targetRoleId])
+  @@map("career_recommendations")
+}
+
+model LearningGoal {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId        String    @db.Uuid
+  targetSkillId String?   @db.Uuid
+  title         String    @db.VarChar(255)
+  targetRole    String?   @db.VarChar(255)
+  description   String?   @db.Text
+  priority      String    @db.VarChar(20)  // HIGH, MEDIUM, LOW
+  status        String    @db.VarChar(20)  // NOT_STARTED, ACTIVE, PAUSED, COMPLETED, CANCELLED
+  targetDate    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  targetSkill Skill?            @relation(fields: [targetSkillId], references: [id], onDelete: SetNull)
+  roadmaps    LearningRoadmap[]
+
+  @@index([userId])
+  @@index([targetSkillId])
+  @@map("learning_goals")
+}
+
+model LearningRoadmapVersion {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  roadmapId   String   @db.Uuid
+  version     Int
+  reason      String?  @db.Text
+  roadmapJson Json
+  createdAt   DateTime @default(now())
+
+  roadmap     LearningRoadmap @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+
+  @@index([roadmapId])
+  @@map("learning_roadmap_versions")
+}
+
+model LearningModule {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title              String   @db.VarChar(255)
+  description        String?  @db.Text
+  skillId            String?  @db.Uuid
+  level              String   @db.VarChar(20)  // AWARENESS, BEGINNER, DEVELOPING, INTERMEDIATE, ADVANCED
+  estimatedDuration  Int      @default(0)      // minutes
+  prerequisites      String[] @default([])     // skill names or IDs
+  learningObjectives String[] @default([])
+  contentType        String   @db.VarChar(30)  // ARTICLE, VIDEO, COURSE, DOCUMENTATION, TUTORIAL, EXERCISE, QUIZ, PROJECT, MOCK_INTERVIEW, CODING_PRACTICE
+  status             String   @default("ACTIVE")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  skill             Skill?   @relation(fields: [skillId], references: [id], onDelete: SetNull)
+  enrollments       LearningEnrollment[]
+
+  @@index([skillId])
+  @@map("learning_modules")
+}
+
+model LearningResource {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title             String    @db.VarChar(255)
+  provider          String    @db.VarChar(100)
+  url               String    @db.VarChar(512)
+  contentType       String    @db.VarChar(30)
+  skillId           String?   @db.Uuid
+  difficulty        String    @db.VarChar(20)  // BEGINNER, INTERMEDIATE, ADVANCED
+  estimatedDuration Int       @default(0)      // minutes
+  qualityScore      Float?
+  source            String?   @db.VarChar(100)
+  lastVerifiedAt    DateTime?
+  status            String    @default("ACTIVE")
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  skill             Skill?    @relation(fields: [skillId], references: [id], onDelete: SetNull)
+
+  @@index([skillId])
+  @@map("learning_resources")
+}
+
+model LearningEnrollment {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String    @db.Uuid
+  moduleId    String    @db.Uuid
+  status      String    @db.VarChar(20)  // ENROLLED, IN_PROGRESS, COMPLETED
+  progress    Float     @default(0.0)
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  module      LearningModule  @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([moduleId])
+  @@map("learning_enrollments")
+}
+
+model PracticeActivity {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title         String   @db.VarChar(255)
+  skillId       String?  @db.Uuid
+  activityType  String   @db.VarChar(30)  // MCQ, CODING, DEBUGGING, SYSTEM_DESIGN
+  question      String   @db.Text
+  optionsJson   Json?                     // For MCQs: options list
+  correctAnswer String   @db.Text
+  explanation   String?  @db.Text
+  difficulty    String   @db.VarChar(20)  // BEGINNER, INTERMEDIATE, ADVANCED
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  skill         Skill?   @relation(fields: [skillId], references: [id], onDelete: SetNull)
+  attempts      PracticeAttempt[]
+
+  @@index([skillId])
+  @@map("practice_activities")
+}
+
+model PracticeAttempt {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId           String   @db.Uuid
+  activityId       String   @db.Uuid
+  answer           String   @db.Text
+  isCorrect        Boolean
+  score            Float    @default(0.0)
+  timeSpentSeconds Int      @default(0)
+  createdAt        DateTime @default(now())
+
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activity         PracticeActivity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([activityId])
+  @@map("practice_attempts")
+}
+
+model SkillEvidence {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId       String   @db.Uuid
+  skillId      String   @db.Uuid
+  evidenceType String   @db.VarChar(30)  // QUIZ, CODING_EXERCISE, PROJECT, ASSESSMENT, CERTIFICATE, EXPERIENCE
+  referenceId  String?  @db.VarChar(255) // Reference to Quiz attempt ID, Project ID, etc.
+  score        Float    @default(0.0)
+  description  String?  @db.Text
+  createdAt    DateTime @default(now())
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skill        Skill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([skillId])
+  @@map("skill_evidences")
+}
+
+model Certification {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId             String    @db.Uuid
+  title              String    @db.VarChar(255)
+  provider           String    @db.VarChar(100)
+  issueDate          DateTime
+  expiryDate         DateTime?
+  credentialUrl      String    @db.VarChar(512)
+  credentialId       String?   @db.VarChar(100)
+  verificationStatus String    @default("PENDING") // PENDING, VERIFIED, UNVERIFIED
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("certifications")
+}
+
+model LearningPreference {
+  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId               String   @unique @db.Uuid
+  preferredContentType String   @db.VarChar(30)  // ARTICLE, VIDEO, COURSE, etc.
+  dailyTimeMinutes     Int      @default(30)
+  preferredDifficulty  String   @db.VarChar(20)  // BEGINNER, INTERMEDIATE, ADVANCED
+  learningDays         String[] @default(["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"])
+  projectBased         Boolean  @default(true)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("learning_preferences")
+}
+
+// =============================================================================
+// Phase 28 — Personal Career Command Center
+// =============================================================================
+
+model CareerCenterPreference {
+  userId                     String   @id @db.Uuid
+  careerMode                 String   @default("GENERAL_CAREER") // INTERNSHIP_SEARCH, INTERVIEW_PREPARATION, SKILL_BUILDING, APPLICATION_FOCUS, GENERAL_CAREER
+  dailyTimeBudget            Int      @default(30) // in minutes
+  dashboardSections          String[] @default(["OVERVIEW", "PRIORITIES", "OPPORTUNITIES", "APPLICATIONS", "INTERVIEWS", "ASSESSMENTS", "LEARNING", "SKILLS", "SIMULATION", "GOALS"])
+  aiBriefEnabled             Boolean  @default(true)
+  recommendedActionsEnabled  Boolean  @default(true)
+  learningReminders          Boolean  @default(true)
+  interviewReminders         Boolean  @default(true)
+  opportunityPriorities      Json?
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("career_center_preferences")
+}
+
+model CareerAction {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId       String    @db.Uuid
+  actionType   String    @db.VarChar(100)
+  entityType   String    @db.VarChar(100)
+  entityId     String?   @db.Uuid
+  priority     String    @db.VarChar(20)
+  status       String    @default("PENDING") @db.VarChar(20)
+  snoozedUntil DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  expiresAt    DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("career_actions")
+}
+
+// =============================================================================
+// Phase 29 — SRE & Monitoring
+// =============================================================================
+
+model SystemComponent {
+  id                  String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                String           @unique @db.VarChar(100)
+  status              String           @default("HEALTHY") @db.VarChar(20) // HEALTHY, DEGRADED, WARNING, CRITICAL, UNKNOWN
+  lastSuccessfulCheck DateTime         @default(now())
+  errorRate           Float            @default(0.0)
+  latency             Float            @default(0.0)
+  failureCount        Int              @default(0)
+  isPaused            Boolean          @default(false)
+  metadata            Json?
+  updatedAt           DateTime         @updatedAt
+
+  @@map("system_components")
+}
+
+model HealthSnapshot {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  componentName String   @db.VarChar(100)
+  status        String   @db.VarChar(20)
+  latency       Float    @default(0.0)
+  errorRate     Float    @default(0.0)
+  failureCount  Int      @default(0)
+  metadata      Json?
+  timestamp     DateTime @default(now())
+
+  @@index([componentName])
+  @@index([timestamp])
+  @@map("health_snapshots")
+}
+
+model Incident {
+  id                    String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title                 String          @db.VarChar(255)
+  severity              String          @db.VarChar(20) // P0, P1, P2, P3
+  status                String          @default("DETECTED") @db.VarChar(30) // DETECTED, INVESTIGATING, MITIGATING, RESOLVED, CLOSED, FALSE_POSITIVE
+  component             String          @db.VarChar(100)
+  description           String          @db.Text
+  firstDetectedAt       DateTime        @default(now())
+  lastUpdatedAt         DateTime        @updatedAt
+  resolvedAt            DateTime?
+  rootCause             String?         @db.Text
+  resolution            String?         @db.Text
+  affectedUsers         Int             @default(0)
+  affectedOrganizations Int             @default(0)
+  affectedCompanies     Int             @default(0)
+
+  @@index([status])
+  @@index([severity])
+  @@map("incidents")
+}
+
+model IncidentEvent {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  incidentId String   @db.Uuid
+  status     String   @db.VarChar(30)
+  message    String   @db.Text
+  timestamp  DateTime @default(now())
+
+  @@index([incidentId])
+  @@map("incident_events")
+}
+
+model SreAlert {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  incidentId String?  @db.Uuid
+  title      String   @db.VarChar(255)
+  message    String   @db.Text
+  severity   String   @db.VarChar(20)
+  channel    String   @db.VarChar(50) // EMAIL, SMS, PUSH
+  status     String   @default("PENDING") @db.VarChar(20) // PENDING, SENT, COOLDOWN, FAILED
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("sre_alerts")
+}
+
+model RecoveryAction {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  action       String   @db.VarChar(255)
+  component    String   @db.VarChar(100)
+  trigger      String   @db.Text
+  result       String   @db.Text
+  beforeStatus String   @db.VarChar(20)
+  afterStatus  String   @db.VarChar(20)
+  operator     String   @default("SYSTEM") @db.VarChar(50)
+  isApproved   Boolean  @default(true)
+  approvedBy   String?  @db.VarChar(100)
+  timestamp    DateTime @default(now())
+
+  @@map("recovery_actions")
+}
+
+model DeadLetterJob {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  queueName  String   @db.VarChar(100)
+  jobId      String   @db.VarChar(255)
+  jobType    String   @db.VarChar(255)
+  attempts   Int
+  error      String   @db.Text
+  payload    Json
+  component  String   @db.VarChar(100)
+  timestamp  DateTime @default(now())
+
+  @@map("dead_letter_jobs")
+}
+
+model SystemThreshold {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  key         String   @unique @db.VarChar(100)
+  value       String   @db.VarChar(255)
+  description String?  @db.VarChar(255)
+  updatedAt   DateTime @updatedAt
+
+  @@map("system_thresholds")
+}
+

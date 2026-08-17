@@ -12,17 +12,20 @@ import { ApplicationsModule } from './applications/applications.module';
 import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { BillingModule } from './billing/billing.module';
+import { CareerCenterModule } from './career-center/career-center.module';
 import { RateLimitGuard } from './common/guards/rate-limit.guard';
 import { CompaniesModule } from './companies/companies.module';
 import { CompanyTrackModule } from './company-track/company-track.module';
 import configuration from './config/configuration';
 import type { AppConfig } from './config/configuration';
 import { EngagementModule } from './engagement/engagement.module';
+import { ExtensionModule } from './extension/extension.module';
 import { FeedbackModule } from './feedback/feedback.module';
 import { GrowthModule } from './growth/growth.module';
 import { HealthModule } from './health/health.module';
 import { InterviewsModule } from './interviews/interviews.module';
 import { JobsModule } from './jobs/jobs.module';
+import { LearningModule } from './learning/learning.module';
 import { MarketModule } from './market/market.module';
 import { MatchingModule } from './matching/matching.module';
 import { ApiMetricsInterceptor } from './metrics/interceptors/api-metrics.interceptor';
@@ -31,23 +34,26 @@ import { NlpModule } from './nlp/nlp.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { OpportunitiesModule } from './opportunities/opportunities.module';
 import { OrganizationsModule } from './organizations/organizations.module';
+import { OutcomesModule } from './outcomes/outcomes.module';
+import { PortfolioModule } from './portfolio/portfolio.module';
 import { PreferencesModule } from './preferences/preferences.module';
 import { PreparationModule } from './preparation/preparation.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { PrivacyModule } from './privacy/privacy.module';
 import { ProfileModule } from './profile/profile.module';
 import { QueuesModule } from './queues/queues.module';
+import { RecruiterModule } from './recruiter/recruiter.module';
 import { RedisModule } from './redis/redis.module';
 import { ResumeModule } from './resume/resume.module';
 import { ResumeBuilderModule } from './resume-builder/resume-builder.module';
+import { ResumeStudioModule } from './resume-studio/resume-studio.module';
 import { ScrapersModule } from './scrapers/scrapers.module';
 import { SkillsModule } from './skills/skills.module';
-import { ResumeStudioModule } from './resume-studio/resume-studio.module';
-import { PortfolioModule } from './portfolio/portfolio.module';
-import { ExtensionModule } from './extension/extension.module';
-import { RecruiterModule } from './recruiter/recruiter.module';
-import { PrivacyModule } from './privacy/privacy.module';
 // Phase 24 — Career Outcomes, Placement Intelligence & Workforce Analytics
-import { OutcomesModule } from './outcomes/outcomes.module';
+// Phase 26 — Personalized Learning & Roadmaps
+// Phase 28 — Career Command Center
+// Phase 29 — SRE Operations & Monitoring
+import { SystemModule } from './system/system.module';
 /**
  * AppModule — root module of the InternTracker API.
  *
@@ -190,6 +196,12 @@ import { OutcomesModule } from './outcomes/outcomes.module';
     PrivacyModule,
     // Phase 24 — Career Outcomes, Placement Intelligence & Workforce Analytics
     OutcomesModule,
+    // Phase 26 — Adaptive Learning & Roadmaps
+    LearningModule,
+    // Phase 28 — Career Command Center
+    CareerCenterModule,
+    // Phase 29 — SRE Operations & Monitoring
+    SystemModule,
   ],
 
   providers: [

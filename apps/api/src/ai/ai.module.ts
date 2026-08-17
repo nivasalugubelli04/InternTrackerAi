@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { AiController } from './controllers/ai.controller';
 import { PromptManager } from './prompts/prompt-manager';
 import { AIProviderFactory } from './providers/ai-provider.factory';
+import { FailoverAiProvider } from './providers/failover-ai.provider';
 import { GeminiProvider } from './providers/gemini.provider';
 import { OpenAIProvider } from './providers/openai.provider';
 import { AiCacheService } from './services/ai-cache.service';
@@ -20,8 +21,9 @@ import { CostTrackerService } from './services/cost-tracker.service';
     PromptManager,
     OpenAIProvider,
     GeminiProvider,
+    FailoverAiProvider,
     AIProviderFactory,
   ],
-  exports: [AiService, CostTrackerService],
+  exports: [AiService, CostTrackerService, FailoverAiProvider],
 })
 export class AiModule {}

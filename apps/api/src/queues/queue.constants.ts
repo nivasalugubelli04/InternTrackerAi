@@ -17,3 +17,12 @@ export const MARKET_QUEUE = 'market-queue';
 
 // Phase 24 — Career Outcomes & Workforce Analytics
 export const OUTCOME_AGGREGATION_QUEUE = 'outcome-aggregation-queue';
+
+// Phase 25 — Skill Graph & Career Path Intelligence
+export const SKILL_GRAPH_QUEUE = 'skill-graph-queue';
+
+// Phase 26 — Adaptive Learning & Roadmaps
+export const LEARNING_QUEUE = 'learning-queue';
+
+// Phase 28 — Personal Career Command Center
+export const CAREER_CENTER_QUEUE = 'career-center-queue';
