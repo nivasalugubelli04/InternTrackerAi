@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useQueryClient } from '@tanstack/react-query';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 
@@ -20,13 +21,15 @@ function formatSize(bytes: number): string {
 }
 
 export default function ManageResumeScreen(): React.ReactElement {
+  const queryClient = useQueryClient();
   const [resume, setResume] = useState<Resume | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
 
   useEffect(() => {
-    resumeApi.get()
+    resumeApi
+      .get()
       .then(setResume)
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -75,6 +78,8 @@ export default function ManageResumeScreen(): React.ReactElement {
         clearInterval(interval);
         setUploadProgress(100);
         setResume(uploaded);
+        queryClient.invalidateQueries({ queryKey: ['career-center'] });
+        queryClient.invalidateQueries({ queryKey: ['opportunities'] });
       } catch (err: unknown) {
         clearInterval(interval);
         setUploadProgress(0);
@@ -98,6 +103,8 @@ export default function ManageResumeScreen(): React.ReactElement {
             await resumeApi.delete();
             setResume(null);
             setUploadProgress(0);
+            queryClient.invalidateQueries({ queryKey: ['career-center'] });
+            queryClient.invalidateQueries({ queryKey: ['opportunities'] });
           } catch (err: unknown) {
             Alert.alert('Error', err instanceof Error ? err.message : 'Could not delete resume.');
           }
@@ -120,26 +127,41 @@ export default function ManageResumeScreen(): React.ReactElement {
         {resume ? (
           <View style={styles.fileCard}>
             <View style={styles.fileIcon}>
-              <Text style={styles.fileIconText}>{resume.mimeType.includes('pdf') ? '📄' : '📝'}</Text>
+              <Text style={styles.fileIconText}>
+                {resume.mimeType.includes('pdf') ? '📄' : '📝'}
+              </Text>
             </View>
             <View style={styles.fileInfo}>
-              <Text style={styles.fileName} numberOfLines={1}>{resume.fileName}</Text>
+              <Text style={styles.fileName} numberOfLines={1}>
+                {resume.fileName}
+              </Text>
               <Text style={styles.fileSize}>{formatSize(resume.fileSize)}</Text>
-              <Text style={styles.fileDate}>Uploaded {new Date(resume.uploadedAt).toLocaleDateString()}</Text>
+              <Text style={styles.fileDate}>
+                Uploaded {new Date(resume.uploadedAt).toLocaleDateString()}
+              </Text>
             </View>
-            <TouchableOpacity onPress={() => { void deleteResume(); }} style={styles.deleteBtn}>
+            <TouchableOpacity
+              onPress={() => {
+                void deleteResume();
+              }}
+              style={styles.deleteBtn}
+            >
               <Text style={styles.deleteText}>✕</Text>
             </TouchableOpacity>
           </View>
         ) : (
           <TouchableOpacity
             style={[styles.dropZone, uploading && styles.dropZoneUploading]}
-            onPress={() => { void pickResume(); }}
+            onPress={() => {
+              void pickResume();
+            }}
             activeOpacity={0.7}
             disabled={uploading}
           >
             <Text style={styles.dropZoneEmoji}>📁</Text>
-            <Text style={styles.dropZoneTitle}>{uploading ? 'Uploading...' : 'Tap to select file'}</Text>
+            <Text style={styles.dropZoneTitle}>
+              {uploading ? 'Uploading...' : 'Tap to select file'}
+            </Text>
             <Text style={styles.dropZoneSubtitle}>PDF or DOCX • Max 5 MB</Text>
             {uploading ? (
               <View style={styles.progressTrack}>
@@ -150,15 +172,28 @@ export default function ManageResumeScreen(): React.ReactElement {
         )}
 
         {resume ? (
-          <TouchableOpacity style={styles.replaceBtn} onPress={() => { void pickResume(); }} disabled={uploading}>
+          <TouchableOpacity
+            style={styles.replaceBtn}
+            onPress={() => {
+              void pickResume();
+            }}
+            disabled={uploading}
+          >
             <Text style={styles.replaceText}>↩ Replace resume</Text>
           </TouchableOpacity>
         ) : null}
 
         <View style={styles.tips}>
           <Text style={styles.tipsTitle}>Tips for a great resume:</Text>
-          {['Keep it to 1–2 pages', 'Use a professional format', 'Highlight projects & achievements', 'Include your GitHub / portfolio link'].map((tip) => (
-            <Text key={tip} style={styles.tip}>• {tip}</Text>
+          {[
+            'Keep it to 1–2 pages',
+            'Use a professional format',
+            'Highlight projects & achievements',
+            'Include your GitHub / portfolio link',
+          ].map((tip) => (
+            <Text key={tip} style={styles.tip}>
+              • {tip}
+            </Text>
           ))}
         </View>
       </View>
@@ -169,25 +204,86 @@ export default function ManageResumeScreen(): React.ReactElement {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background.primary },
   content: { flex: 1, padding: Spacing.xl },
-  fileCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.background.secondary, borderRadius: BorderRadius.lg, borderWidth: 1, borderColor: Colors.border.subtle, padding: Spacing.md, marginBottom: Spacing.md },
-  fileIcon: { width: 48, height: 48, backgroundColor: 'rgba(124,58,237,0.1)', borderRadius: BorderRadius.md, alignItems: 'center', justifyContent: 'center', marginRight: Spacing.md },
+  fileCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.background.secondary,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    borderColor: Colors.border.subtle,
+    padding: Spacing.md,
+    marginBottom: Spacing.md,
+  },
+  fileIcon: {
+    width: 48,
+    height: 48,
+    backgroundColor: 'rgba(124,58,237,0.1)',
+    borderRadius: BorderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: Spacing.md,
+  },
   fileIconText: { fontSize: 24 },
   fileInfo: { flex: 1 },
-  fileName: { color: Colors.text.primary, fontSize: Typography.fontSize.base, fontWeight: Typography.fontWeight.medium },
+  fileName: {
+    color: Colors.text.primary,
+    fontSize: Typography.fontSize.base,
+    fontWeight: Typography.fontWeight.medium,
+  },
   fileSize: { color: Colors.text.muted, fontSize: Typography.fontSize.xs },
   fileDate: { color: Colors.text.muted, fontSize: Typography.fontSize.xs },
   deleteBtn: { padding: Spacing.sm },
-  deleteText: { color: Colors.error, fontSize: Typography.fontSize.lg, fontWeight: Typography.fontWeight.bold },
-  dropZone: { borderWidth: 2, borderColor: Colors.border.default, borderStyle: 'dashed', borderRadius: BorderRadius.lg, padding: Spacing['2xl'], alignItems: 'center', marginBottom: Spacing.md, backgroundColor: Colors.background.secondary },
+  deleteText: {
+    color: Colors.error,
+    fontSize: Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.bold,
+  },
+  dropZone: {
+    borderWidth: 2,
+    borderColor: Colors.border.default,
+    borderStyle: 'dashed',
+    borderRadius: BorderRadius.lg,
+    padding: Spacing['2xl'],
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+    backgroundColor: Colors.background.secondary,
+  },
   dropZoneUploading: { borderColor: Colors.brand.purple },
   dropZoneEmoji: { fontSize: 48, marginBottom: Spacing.sm },
-  dropZoneTitle: { color: Colors.text.primary, fontSize: Typography.fontSize.lg, fontWeight: Typography.fontWeight.semibold, marginBottom: 4 },
+  dropZoneTitle: {
+    color: Colors.text.primary,
+    fontSize: Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.semibold,
+    marginBottom: 4,
+  },
   dropZoneSubtitle: { color: Colors.text.muted, fontSize: Typography.fontSize.sm },
-  progressTrack: { width: '100%', height: 4, backgroundColor: Colors.background.tertiary, borderRadius: BorderRadius.full, overflow: 'hidden', marginTop: Spacing.md },
-  progressFill: { height: '100%', backgroundColor: Colors.brand.purple, borderRadius: BorderRadius.full },
+  progressTrack: {
+    width: '100%',
+    height: 4,
+    backgroundColor: Colors.background.tertiary,
+    borderRadius: BorderRadius.full,
+    overflow: 'hidden',
+    marginTop: Spacing.md,
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: Colors.brand.purple,
+    borderRadius: BorderRadius.full,
+  },
   replaceBtn: { alignItems: 'center', marginBottom: Spacing.xl },
   replaceText: { color: Colors.brand.purpleLight, fontSize: Typography.fontSize.sm },
-  tips: { backgroundColor: Colors.background.secondary, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: Colors.border.subtle, padding: Spacing.md },
-  tipsTitle: { color: Colors.text.primary, fontSize: Typography.fontSize.sm, fontWeight: Typography.fontWeight.semibold, marginBottom: Spacing.sm },
+  tips: {
+    backgroundColor: Colors.background.secondary,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.border.subtle,
+    padding: Spacing.md,
+  },
+  tipsTitle: {
+    color: Colors.text.primary,
+    fontSize: Typography.fontSize.sm,
+    fontWeight: Typography.fontWeight.semibold,
+    marginBottom: Spacing.sm,
+  },
   tip: { color: Colors.text.muted, fontSize: Typography.fontSize.sm, marginBottom: 4 },
 });

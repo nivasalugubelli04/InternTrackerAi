@@ -1,5 +1,13 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+} from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
@@ -32,17 +40,21 @@ export default function CompanyDetailsScreen() {
     mutationFn: () => trackApi.trackCompany(companyId, 'MEDIUM'),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['trackedCompanies'] });
+      queryClient.invalidateQueries({ queryKey: ['opportunities'] });
+      queryClient.invalidateQueries({ queryKey: ['career-center'] });
     },
     onError: (error: any) => {
       Alert.alert('Error', error.response?.data?.message || 'Failed to track company');
-    }
+    },
   });
 
   const untrackMutation = useMutation({
     mutationFn: () => trackApi.untrackCompany(companyId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['trackedCompanies'] });
-    }
+      queryClient.invalidateQueries({ queryKey: ['opportunities'] });
+      queryClient.invalidateQueries({ queryKey: ['career-center'] });
+    },
   });
 
   const handleTrackToggle = () => {
@@ -59,7 +71,9 @@ export default function CompanyDetailsScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Text style={styles.backText}>← Back</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle} numberOfLines={1}>{companyName}</Text>
+        <Text style={styles.headerTitle} numberOfLines={1}>
+          {companyName}
+        </Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -73,14 +87,18 @@ export default function CompanyDetailsScreen() {
             </View>
             <Text style={styles.title}>{company.name}</Text>
             <Text style={styles.industry}>{company.industry || 'Technology'}</Text>
-            
-            <TouchableOpacity 
-              style={[styles.trackButton, isTracked && styles.trackedButton]} 
+
+            <TouchableOpacity
+              style={[styles.trackButton, isTracked && styles.trackedButton]}
               onPress={handleTrackToggle}
               disabled={trackMutation.isPending || untrackMutation.isPending}
             >
               <Text style={[styles.trackButtonText, isTracked && styles.trackedButtonText]}>
-                {trackMutation.isPending || untrackMutation.isPending ? 'Updating...' : isTracked ? 'Unfollow Company' : '⭐ Follow Company'}
+                {trackMutation.isPending || untrackMutation.isPending
+                  ? 'Updating...'
+                  : isTracked
+                    ? 'Unfollow Company'
+                    : '⭐ Follow Company'}
               </Text>
             </TouchableOpacity>
 
@@ -93,13 +111,17 @@ export default function CompanyDetailsScreen() {
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>About</Text>
-            <Text style={styles.description}>{company.description || 'No description available.'}</Text>
+            <Text style={styles.description}>
+              {company.description || 'No description available.'}
+            </Text>
           </View>
 
           <View style={styles.infoGrid}>
             <View style={styles.infoCard}>
               <Text style={styles.infoLabel}>Website</Text>
-              <Text style={styles.infoValue} numberOfLines={1}>{company.website || 'N/A'}</Text>
+              <Text style={styles.infoValue} numberOfLines={1}>
+                {company.website || 'N/A'}
+              </Text>
             </View>
             <View style={styles.infoCard}>
               <Text style={styles.infoLabel}>Headquarters</Text>
@@ -133,38 +155,78 @@ const styles = StyleSheet.create({
   },
   backButton: { width: 60 },
   backText: { color: Colors.brand.purple, fontWeight: Typography.fontWeight.medium },
-  headerTitle: { flex: 1, textAlign: 'center', fontWeight: 'bold', fontSize: Typography.fontSize.lg, color: Colors.text.primary },
+  headerTitle: {
+    flex: 1,
+    textAlign: 'center',
+    fontWeight: 'bold',
+    fontSize: Typography.fontSize.lg,
+    color: Colors.text.primary,
+  },
   loader: { marginTop: Spacing.xl },
   content: { padding: Spacing.xl },
   heroSection: { alignItems: 'center', marginBottom: Spacing['2xl'] },
   logoPlaceholder: {
-    width: 80, height: 80, borderRadius: BorderRadius.lg,
+    width: 80,
+    height: 80,
+    borderRadius: BorderRadius.lg,
     backgroundColor: Colors.background.tertiary,
-    alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.md,
   },
   logoText: { fontSize: 32, fontWeight: 'bold', color: Colors.text.secondary },
-  title: { fontSize: Typography.fontSize['2xl'], fontWeight: 'bold', color: Colors.text.primary, marginBottom: 4 },
-  industry: { fontSize: Typography.fontSize.md, color: Colors.text.secondary, marginBottom: Spacing.lg },
+  title: {
+    fontSize: Typography.fontSize['2xl'],
+    fontWeight: 'bold',
+    color: Colors.text.primary,
+    marginBottom: 4,
+  },
+  industry: {
+    fontSize: Typography.fontSize.md,
+    color: Colors.text.secondary,
+    marginBottom: Spacing.lg,
+  },
   trackButton: {
     backgroundColor: Colors.brand.purple,
-    paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.full, width: '100%', alignItems: 'center',
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.full,
+    width: '100%',
+    alignItems: 'center',
   },
   trackButtonText: { color: Colors.text.inverse, fontWeight: 'bold' },
-  trackedButton: { backgroundColor: Colors.background.secondary, borderWidth: 1, borderColor: Colors.border.default },
+  trackedButton: {
+    backgroundColor: Colors.background.secondary,
+    borderWidth: 1,
+    borderColor: Colors.border.default,
+  },
   trackedButtonText: { color: Colors.text.primary },
   priorityBadge: {
-    marginTop: Spacing.md, backgroundColor: Colors.brand.purpleLight,
-    paddingHorizontal: Spacing.sm, paddingVertical: 4, borderRadius: BorderRadius.sm,
+    marginTop: Spacing.md,
+    backgroundColor: Colors.brand.purpleLight,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.sm,
   },
-  priorityText: { color: Colors.brand.purple, fontSize: Typography.fontSize.xs, fontWeight: 'bold' },
+  priorityText: {
+    color: Colors.brand.purple,
+    fontSize: Typography.fontSize.xs,
+    fontWeight: 'bold',
+  },
   section: { marginBottom: Spacing.xl },
-  sectionTitle: { fontSize: Typography.fontSize.lg, fontWeight: 'bold', color: Colors.text.primary, marginBottom: Spacing.sm },
+  sectionTitle: {
+    fontSize: Typography.fontSize.lg,
+    fontWeight: 'bold',
+    color: Colors.text.primary,
+    marginBottom: Spacing.sm,
+  },
   description: { fontSize: Typography.fontSize.md, color: Colors.text.secondary, lineHeight: 24 },
   infoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.md },
   infoCard: {
-    width: '47%', backgroundColor: Colors.background.secondary,
-    padding: Spacing.md, borderRadius: BorderRadius.md,
+    width: '47%',
+    backgroundColor: Colors.background.secondary,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
   },
   infoLabel: { fontSize: Typography.fontSize.xs, color: Colors.text.muted, marginBottom: 4 },
   infoValue: { fontSize: Typography.fontSize.sm, fontWeight: 'medium', color: Colors.text.primary },

@@ -17,7 +17,10 @@ import { Colors, Spacing, Typography, BorderRadius } from '../theme';
 import { opportunitiesService, Opportunity } from '../services/opportunities.service';
 import type { FeedFilters } from '../components/opportunities/FilterBottomSheet';
 import { FilterBottomSheet } from '../components/opportunities/FilterBottomSheet';
-import { OpportunityCard, OpportunityCardSkeleton } from '../components/opportunities/OpportunityCard';
+import {
+  OpportunityCard,
+  OpportunityCardSkeleton,
+} from '../components/opportunities/OpportunityCard';
 import { useNavigation } from '@react-navigation/native';
 
 const LIMIT = 20;
@@ -76,7 +79,8 @@ export default function ExploreScreen(): React.ReactElement {
       };
       return opportunitiesService.getFeed(params);
     },
-    getNextPageParam: (last) => last.meta.hasMore ? last.meta.nextCursor ?? undefined : undefined,
+    getNextPageParam: (last) =>
+      last.meta.hasMore ? (last.meta.nextCursor ?? undefined) : undefined,
     initialPageParam: undefined as string | undefined,
     enabled: !isSearchMode,
     staleTime: 3 * 60 * 1000,
@@ -94,19 +98,27 @@ export default function ExploreScreen(): React.ReactElement {
     [navigation],
   );
 
-  const handleSave = useCallback(async (id: string, currentlySaved: boolean) => {
-    if (currentlySaved) {
-      await opportunitiesService.unsave(id);
-    } else {
-      await opportunitiesService.save(id);
-    }
-    queryClient.invalidateQueries({ queryKey: ['opportunities'] });
-  }, [queryClient]);
+  const handleSave = useCallback(
+    async (id: string, currentlySaved: boolean) => {
+      if (currentlySaved) {
+        await opportunitiesService.unsave(id);
+      } else {
+        await opportunitiesService.save(id);
+      }
+      queryClient.invalidateQueries({ queryKey: ['opportunities'] });
+      queryClient.invalidateQueries({ queryKey: ['career-center'] });
+    },
+    [queryClient],
+  );
 
-  const handleDismiss = useCallback(async (id: string) => {
-    await opportunitiesService.dismiss(id);
-    queryClient.invalidateQueries({ queryKey: ['opportunities', 'feed'] });
-  }, [queryClient]);
+  const handleDismiss = useCallback(
+    async (id: string) => {
+      await opportunitiesService.dismiss(id);
+      queryClient.invalidateQueries({ queryKey: ['opportunities', 'feed'] });
+      queryClient.invalidateQueries({ queryKey: ['career-center'] });
+    },
+    [queryClient],
+  );
 
   const handleApplyFilters = useCallback((newFilters: FeedFilters) => {
     setFilters(newFilters);
@@ -117,26 +129,24 @@ export default function ExploreScreen(): React.ReactElement {
     (v) => v !== undefined && v !== '',
   ).length;
 
-  const renderItem = useCallback(({ item }: { item: Opportunity }) => (
-    <View style={styles.cardWrapper}>
-      <OpportunityCard
-        opportunity={item}
-        onPress={handleCardPress}
-        onSave={handleSave}
-      />
-      {/* Swipe-to-dismiss hint */}
-      <TouchableOpacity
-        style={styles.dismissBtn}
-        onPress={() => handleDismiss(item.id)}
-      >
-        <Text style={styles.dismissText}>✕ Not interested</Text>
-      </TouchableOpacity>
-    </View>
-  ), [handleCardPress, handleSave, handleDismiss]);
+  const renderItem = useCallback(
+    ({ item }: { item: Opportunity }) => (
+      <View style={styles.cardWrapper}>
+        <OpportunityCard opportunity={item} onPress={handleCardPress} onSave={handleSave} />
+        {/* Swipe-to-dismiss hint */}
+        <TouchableOpacity style={styles.dismissBtn} onPress={() => handleDismiss(item.id)}>
+          <Text style={styles.dismissText}>✕ Not interested</Text>
+        </TouchableOpacity>
+      </View>
+    ),
+    [handleCardPress, handleSave, handleDismiss],
+  );
 
   const renderSkeleton = () => (
     <View style={{ paddingHorizontal: Spacing.lg }}>
-      {[0, 1, 2, 3].map((i) => <OpportunityCardSkeleton key={i} />)}
+      {[0, 1, 2, 3].map((i) => (
+        <OpportunityCardSkeleton key={i} />
+      ))}
     </View>
   );
 
@@ -152,10 +162,7 @@ export default function ExploreScreen(): React.ReactElement {
             : 'No internships match your current filters. Try adjusting them.'}
         </Text>
         {activeFilterCount > 0 && (
-          <TouchableOpacity
-            style={styles.clearFiltersBtn}
-            onPress={() => setFilters({})}
-          >
+          <TouchableOpacity style={styles.clearFiltersBtn} onPress={() => setFilters({})}>
             <Text style={styles.clearFiltersBtnText}>Clear Filters</Text>
           </TouchableOpacity>
         )}
@@ -179,7 +186,12 @@ export default function ExploreScreen(): React.ReactElement {
             onSubmitEditing={Keyboard.dismiss}
           />
           {searchText.length > 0 && (
-            <TouchableOpacity onPress={() => { setSearchText(''); setDebouncedSearch(''); }}>
+            <TouchableOpacity
+              onPress={() => {
+                setSearchText('');
+                setDebouncedSearch('');
+              }}
+            >
               <Text style={styles.clearBtn}>✕</Text>
             </TouchableOpacity>
           )}
@@ -201,7 +213,9 @@ export default function ExploreScreen(): React.ReactElement {
       {!isLoading && feedItems.length > 0 && (
         <View style={styles.resultMeta}>
           <Text style={styles.resultCount}>
-            {isSearchMode ? `${totalCount} results for "${debouncedSearch}"` : `${feedItems.length}+ internships`}
+            {isSearchMode
+              ? `${totalCount} results for "${debouncedSearch}"`
+              : `${feedItems.length}+ internships`}
           </Text>
           {activeFilterCount > 0 && (
             <TouchableOpacity onPress={() => setFilters({})}>
@@ -249,8 +263,8 @@ export default function ExploreScreen(): React.ReactElement {
         onClose={() => setFilterVisible(false)}
         onApply={handleApplyFilters}
         initialFilters={filters}
-        availableLocations={filterOptions?.locations as string[] ?? []}
-        availableIndustries={filterOptions?.industries as string[] ?? []}
+        availableLocations={(filterOptions?.locations as string[]) ?? []}
+        availableIndustries={(filterOptions?.industries as string[]) ?? []}
       />
     </View>
   );
@@ -320,7 +334,11 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.xs,
   },
   resultCount: { color: Colors.text.muted, fontSize: Typography.fontSize.xs },
-  clearFiltersLink: { color: Colors.brand.purple, fontSize: Typography.fontSize.xs, fontWeight: Typography.fontWeight.medium },
+  clearFiltersLink: {
+    color: Colors.brand.purple,
+    fontSize: Typography.fontSize.xs,
+    fontWeight: Typography.fontWeight.medium,
+  },
   list: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.sm, paddingBottom: Spacing.xl },
   cardWrapper: { marginBottom: 4 },
   dismissBtn: {
@@ -330,10 +348,24 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   dismissText: { color: Colors.text.muted, fontSize: Typography.fontSize.xs },
-  emptyContainer: { alignItems: 'center', paddingTop: Spacing['3xl'], paddingHorizontal: Spacing.xl },
+  emptyContainer: {
+    alignItems: 'center',
+    paddingTop: Spacing['3xl'],
+    paddingHorizontal: Spacing.xl,
+  },
   emptyEmoji: { fontSize: 56, marginBottom: Spacing.lg },
-  emptyTitle: { color: Colors.text.primary, fontSize: Typography.fontSize.xl, fontWeight: Typography.fontWeight.bold, marginBottom: Spacing.sm },
-  emptySubtitle: { color: Colors.text.secondary, fontSize: Typography.fontSize.base, textAlign: 'center', lineHeight: 22 },
+  emptyTitle: {
+    color: Colors.text.primary,
+    fontSize: Typography.fontSize.xl,
+    fontWeight: Typography.fontWeight.bold,
+    marginBottom: Spacing.sm,
+  },
+  emptySubtitle: {
+    color: Colors.text.secondary,
+    fontSize: Typography.fontSize.base,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
   clearFiltersBtn: {
     marginTop: Spacing.lg,
     paddingHorizontal: Spacing.xl,
@@ -342,6 +374,12 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.brand.purple,
   },
   clearFiltersBtnText: { color: Colors.white, fontWeight: Typography.fontWeight.semibold },
-  loadingMore: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm, padding: Spacing.lg },
+  loadingMore: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    padding: Spacing.lg,
+  },
   loadingMoreText: { color: Colors.text.muted, fontSize: Typography.fontSize.sm },
 });

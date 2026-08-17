@@ -14,7 +14,10 @@ import { useNavigation } from '@react-navigation/native';
 import { Colors, Spacing, Typography, BorderRadius } from '../theme';
 import { opportunitiesService } from '../services/opportunities.service';
 import type { Opportunity } from '../services/opportunities.service';
-import { OpportunityCard, OpportunityCardSkeleton } from '../components/opportunities/OpportunityCard';
+import {
+  OpportunityCard,
+  OpportunityCardSkeleton,
+} from '../components/opportunities/OpportunityCard';
 
 export default function SavedOpportunitiesScreen(): React.ReactElement {
   const navigation = useNavigation<any>();
@@ -32,12 +35,15 @@ export default function SavedOpportunitiesScreen(): React.ReactElement {
 
   const handleUnsave = async (id: string) => {
     await opportunitiesService.unsave(id);
-    queryClient.invalidateQueries({ queryKey: ['opportunities', 'saved'] });
+    queryClient.invalidateQueries({ queryKey: ['opportunities'] });
+    queryClient.invalidateQueries({ queryKey: ['career-center'] });
   };
 
   const renderSkeleton = () => (
     <View style={{ paddingHorizontal: Spacing.lg }}>
-      {[0, 1, 2].map((i) => <OpportunityCardSkeleton key={i} />)}
+      {[0, 1, 2].map((i) => (
+        <OpportunityCardSkeleton key={i} />
+      ))}
     </View>
   );
 
@@ -48,10 +54,7 @@ export default function SavedOpportunitiesScreen(): React.ReactElement {
       <Text style={styles.emptySubtitle}>
         Save internships you're interested in to revisit them here.
       </Text>
-      <TouchableOpacity
-        style={styles.exploreBtn}
-        onPress={() => navigation.navigate('ExploreTab')}
-      >
+      <TouchableOpacity style={styles.exploreBtn} onPress={() => navigation.navigate('ExploreTab')}>
         <Text style={styles.exploreBtnText}>Explore Internships</Text>
       </TouchableOpacity>
     </View>
@@ -61,12 +64,12 @@ export default function SavedOpportunitiesScreen(): React.ReactElement {
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: Platform.OS === 'ios' ? 60 : Spacing.lg }]}>
         <Text style={styles.title}>Saved Internships</Text>
-        {data && data.length > 0 && (
-          <Text style={styles.count}>{data.length} saved</Text>
-        )}
+        {data && data.length > 0 && <Text style={styles.count}>{data.length} saved</Text>}
       </View>
 
-      {isLoading ? renderSkeleton() : (
+      {isLoading ? (
+        renderSkeleton()
+      ) : (
         <FlatList
           data={data ?? []}
           keyExtractor={(item) => item.id}
@@ -106,18 +109,41 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.border.subtle,
   },
-  title: { color: Colors.text.primary, fontSize: Typography.fontSize.xl, fontWeight: Typography.fontWeight.bold },
+  title: {
+    color: Colors.text.primary,
+    fontSize: Typography.fontSize.xl,
+    fontWeight: Typography.fontWeight.bold,
+  },
   count: { color: Colors.text.muted, fontSize: Typography.fontSize.sm },
   list: { paddingTop: Spacing.sm, paddingBottom: Spacing.xl },
-  emptyContainer: { alignItems: 'center', paddingTop: Spacing['3xl'], paddingHorizontal: Spacing.xl },
+  emptyContainer: {
+    alignItems: 'center',
+    paddingTop: Spacing['3xl'],
+    paddingHorizontal: Spacing.xl,
+  },
   emptyEmoji: { fontSize: 64, color: Colors.brand.purpleLight, marginBottom: Spacing.lg },
-  emptyTitle: { color: Colors.text.primary, fontSize: Typography.fontSize.xl, fontWeight: Typography.fontWeight.bold, marginBottom: Spacing.sm },
-  emptySubtitle: { color: Colors.text.secondary, fontSize: Typography.fontSize.base, textAlign: 'center', lineHeight: 22, marginBottom: Spacing.xl },
+  emptyTitle: {
+    color: Colors.text.primary,
+    fontSize: Typography.fontSize.xl,
+    fontWeight: Typography.fontWeight.bold,
+    marginBottom: Spacing.sm,
+  },
+  emptySubtitle: {
+    color: Colors.text.secondary,
+    fontSize: Typography.fontSize.base,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: Spacing.xl,
+  },
   exploreBtn: {
     paddingHorizontal: Spacing.xl,
     paddingVertical: Spacing.md,
     borderRadius: BorderRadius.lg,
     backgroundColor: Colors.brand.purple,
   },
-  exploreBtnText: { color: 'white', fontWeight: Typography.fontWeight.semibold, fontSize: Typography.fontSize.base },
+  exploreBtnText: {
+    color: 'white',
+    fontWeight: Typography.fontWeight.semibold,
+    fontSize: Typography.fontSize.base,
+  },
 });

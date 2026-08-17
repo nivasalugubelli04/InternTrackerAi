@@ -74,6 +74,7 @@ export default function OpportunityDetailsScreen(): React.ReactElement {
         await opportunitiesService.save(job.id);
       }
       queryClient.invalidateQueries({ queryKey: ['opportunities'] });
+      queryClient.invalidateQueries({ queryKey: ['career-center'] });
     } catch {
       setIsSaved(!next); // revert
       Alert.alert('Error', 'Could not save this opportunity. Please try again.');

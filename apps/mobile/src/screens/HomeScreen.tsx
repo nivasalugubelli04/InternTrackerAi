@@ -111,6 +111,7 @@ export default function HomeScreen(): React.ReactElement {
     try {
       await careerCenterService.updateDailyPlan(editBudget, editMode);
       queryClient.invalidateQueries({ queryKey: ['career-center'] });
+      queryClient.invalidateQueries({ queryKey: ['opportunities'] });
       setShowPrefsModal(false);
     } catch (e) {
       console.error(e);

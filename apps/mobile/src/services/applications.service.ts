@@ -64,9 +64,11 @@ export const applicationsApi = {
     const response = await api.post<Application>('/applications', data);
     return response.data;
   },
-  
+
   findAll: async (params: { status?: ApplicationStatus; cursor?: string; limit?: number }) => {
-    const response = await api.get<{ data: Application[]; nextCursor?: string }>('/applications', { params });
+    const response = await api.get<{ data: Application[]; nextCursor?: string }>('/applications', {
+      params,
+    });
     return response.data;
   },
 
@@ -139,6 +141,7 @@ export const useCreateApplication = () => {
     mutationFn: applicationsApi.create,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
+      queryClient.invalidateQueries({ queryKey: ['career-center'] });
     },
   });
 };
@@ -146,9 +149,11 @@ export const useCreateApplication = () => {
 export const useUpdateApplication = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<Application> }) => applicationsApi.update(id, data),
+    mutationFn: ({ id, data }: { id: string; data: Partial<Application> }) =>
+      applicationsApi.update(id, data),
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
+      queryClient.invalidateQueries({ queryKey: ['career-center'] });
       queryClient.setQueryData([QUERY_KEY, 'detail', variables.id], data);
     },
   });
@@ -157,10 +162,11 @@ export const useUpdateApplication = () => {
 export const useChangeApplicationStatus = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, status, note }: { id: string; status: ApplicationStatus; note?: string }) => 
+    mutationFn: ({ id, status, note }: { id: string; status: ApplicationStatus; note?: string }) =>
       applicationsApi.changeStatus(id, status, note),
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
+      queryClient.invalidateQueries({ queryKey: ['career-center'] });
       queryClient.setQueryData([QUERY_KEY, 'detail', variables.id], data);
     },
   });
@@ -172,6 +178,7 @@ export const useDeleteApplication = () => {
     mutationFn: applicationsApi.remove,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
+      queryClient.invalidateQueries({ queryKey: ['career-center'] });
     },
   });
 };

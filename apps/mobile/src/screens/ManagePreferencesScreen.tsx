@@ -1,6 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Switch, Alert, TouchableOpacity, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Switch,
+  Alert,
+  TouchableOpacity,
+  ActivityIndicator,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { PrimaryButton } from '../components/auth/PrimaryButton';
 import { SelectChip } from '../components/common/SelectChip';
@@ -8,9 +18,37 @@ import { FormInput } from '../components/auth/FormInput';
 import { Colors, Spacing, Typography, BorderRadius } from '../theme';
 import { preferencesApi } from '../services/profile.service';
 
-const ROLES = ['Software Engineer', 'Frontend Developer', 'Backend Developer', 'Full Stack Developer', 'Data Scientist', 'ML Engineer', 'DevOps Engineer', 'Product Manager', 'UI/UX Designer'];
-const INDUSTRIES = ['FinTech', 'EdTech', 'HealthTech', 'SaaS', 'E-Commerce', 'Gaming', 'AI/ML', 'Consulting'];
-const LOCATIONS = ['Bengaluru', 'Mumbai', 'Delhi NCR', 'Hyderabad', 'Pune', 'Chennai', 'Remote', 'Anywhere in India'];
+const ROLES = [
+  'Software Engineer',
+  'Frontend Developer',
+  'Backend Developer',
+  'Full Stack Developer',
+  'Data Scientist',
+  'ML Engineer',
+  'DevOps Engineer',
+  'Product Manager',
+  'UI/UX Designer',
+];
+const INDUSTRIES = [
+  'FinTech',
+  'EdTech',
+  'HealthTech',
+  'SaaS',
+  'E-Commerce',
+  'Gaming',
+  'AI/ML',
+  'Consulting',
+];
+const LOCATIONS = [
+  'Bengaluru',
+  'Mumbai',
+  'Delhi NCR',
+  'Hyderabad',
+  'Pune',
+  'Chennai',
+  'Remote',
+  'Anywhere in India',
+];
 const DURATIONS = ['1 month', '2 months', '3 months', '4-6 months', '6+ months'];
 const WORK_MODES = [
   { value: 'REMOTE' as const, label: '🏠 Remote' },
@@ -19,6 +57,7 @@ const WORK_MODES = [
 ];
 
 export default function ManagePreferencesScreen(): React.ReactElement {
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -26,7 +65,9 @@ export default function ManagePreferencesScreen(): React.ReactElement {
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
   const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
-  const [selectedWorkModes, setSelectedWorkModes] = useState<('REMOTE' | 'HYBRID' | 'ONSITE')[]>([]);
+  const [selectedWorkModes, setSelectedWorkModes] = useState<('REMOTE' | 'HYBRID' | 'ONSITE')[]>(
+    [],
+  );
   const [selectedDuration, setSelectedDuration] = useState<string>('');
   const [stipend, setStipend] = useState('');
 
@@ -67,8 +108,11 @@ export default function ManagePreferencesScreen(): React.ReactElement {
     void fetchPrefs();
   }, []);
 
-  const toggle = <T extends string>(setList: React.Dispatch<React.SetStateAction<T[]>>, item: T): void => {
-    setList((prev) => prev.includes(item) ? prev.filter((i) => i !== item) : [...prev, item]);
+  const toggle = <T extends string>(
+    setList: React.Dispatch<React.SetStateAction<T[]>>,
+    item: T,
+  ): void => {
+    setList((prev) => (prev.includes(item) ? prev.filter((i) => i !== item) : [...prev, item]));
   };
 
   const onSubmit = async (): Promise<void> => {
@@ -84,9 +128,16 @@ export default function ManagePreferencesScreen(): React.ReactElement {
           minimumStipend: stipend ? parseInt(stipend, 10) : undefined,
         }),
         preferencesApi.updateNotifications({
-          emailEnabled, pushEnabled, dailyDigest, weeklyDigest, quietHoursStart: quietStart, quietHoursEnd: quietEnd,
+          emailEnabled,
+          pushEnabled,
+          dailyDigest,
+          weeklyDigest,
+          quietHoursStart: quietStart,
+          quietHoursEnd: quietEnd,
         }),
       ]);
+      queryClient.invalidateQueries({ queryKey: ['career-center'] });
+      queryClient.invalidateQueries({ queryKey: ['opportunities'] });
       Alert.alert('Success', 'Preferences saved successfully');
     } catch (err: unknown) {
       Alert.alert('Error', err instanceof Error ? err.message : 'Failed to save preferences');
@@ -96,8 +147,18 @@ export default function ManagePreferencesScreen(): React.ReactElement {
   };
 
   const ToggleRow = ({
-    emoji, title, subtitle, value, onChange,
-  }: { emoji: string; title: string; subtitle: string; value: boolean; onChange: (v: boolean) => void }) => (
+    emoji,
+    title,
+    subtitle,
+    value,
+    onChange,
+  }: {
+    emoji: string;
+    title: string;
+    subtitle: string;
+    value: boolean;
+    onChange: (v: boolean) => void;
+  }) => (
     <View style={styles.toggleRow}>
       <Text style={styles.toggleEmoji}>{emoji}</Text>
       <View style={styles.toggleInfo}>
@@ -124,7 +185,6 @@ export default function ManagePreferencesScreen(): React.ReactElement {
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
-        
         {/* Career Preferences */}
         <Text style={styles.header}>Career</Text>
 
@@ -132,7 +192,12 @@ export default function ManagePreferencesScreen(): React.ReactElement {
           <Text style={styles.sectionLabel}>Preferred Roles</Text>
           <View style={styles.chips}>
             {ROLES.map((role) => (
-              <SelectChip key={role} label={role} selected={selectedRoles.includes(role)} onPress={() => toggle(setSelectedRoles, role)} />
+              <SelectChip
+                key={role}
+                label={role}
+                selected={selectedRoles.includes(role)}
+                onPress={() => toggle(setSelectedRoles, role)}
+              />
             ))}
           </View>
         </View>
@@ -141,7 +206,12 @@ export default function ManagePreferencesScreen(): React.ReactElement {
           <Text style={styles.sectionLabel}>Preferred Industries</Text>
           <View style={styles.chips}>
             {INDUSTRIES.map((ind) => (
-              <SelectChip key={ind} label={ind} selected={selectedIndustries.includes(ind)} onPress={() => toggle(setSelectedIndustries, ind)} />
+              <SelectChip
+                key={ind}
+                label={ind}
+                selected={selectedIndustries.includes(ind)}
+                onPress={() => toggle(setSelectedIndustries, ind)}
+              />
             ))}
           </View>
         </View>
@@ -150,7 +220,12 @@ export default function ManagePreferencesScreen(): React.ReactElement {
           <Text style={styles.sectionLabel}>Work Mode</Text>
           <View style={styles.chips}>
             {WORK_MODES.map(({ value, label }) => (
-              <SelectChip key={value} label={label} selected={selectedWorkModes.includes(value)} onPress={() => toggle(setSelectedWorkModes, value)} />
+              <SelectChip
+                key={value}
+                label={label}
+                selected={selectedWorkModes.includes(value)}
+                onPress={() => toggle(setSelectedWorkModes, value)}
+              />
             ))}
           </View>
         </View>
@@ -159,7 +234,12 @@ export default function ManagePreferencesScreen(): React.ReactElement {
           <Text style={styles.sectionLabel}>Preferred Locations</Text>
           <View style={styles.chips}>
             {LOCATIONS.map((loc) => (
-              <SelectChip key={loc} label={loc} selected={selectedLocations.includes(loc)} onPress={() => toggle(setSelectedLocations, loc)} />
+              <SelectChip
+                key={loc}
+                label={loc}
+                selected={selectedLocations.includes(loc)}
+                onPress={() => toggle(setSelectedLocations, loc)}
+              />
             ))}
           </View>
         </View>
@@ -168,13 +248,24 @@ export default function ManagePreferencesScreen(): React.ReactElement {
           <Text style={styles.sectionLabel}>Duration</Text>
           <View style={styles.chips}>
             {DURATIONS.map((d) => (
-              <SelectChip key={d} label={d} selected={selectedDuration === d} onPress={() => setSelectedDuration(selectedDuration === d ? '' : d)} />
+              <SelectChip
+                key={d}
+                label={d}
+                selected={selectedDuration === d}
+                onPress={() => setSelectedDuration(selectedDuration === d ? '' : d)}
+              />
             ))}
           </View>
         </View>
 
         <View style={styles.section}>
-          <FormInput label="Minimum Stipend (₹/month)" placeholder="e.g. 15000" value={stipend} onChangeText={setStipend} keyboardType="number-pad" />
+          <FormInput
+            label="Minimum Stipend (₹/month)"
+            placeholder="e.g. 15000"
+            value={stipend}
+            onChangeText={setStipend}
+            keyboardType="number-pad"
+          />
         </View>
 
         {/* Notifications */}
@@ -182,13 +273,37 @@ export default function ManagePreferencesScreen(): React.ReactElement {
 
         <View style={styles.section}>
           <View style={styles.card}>
-            <ToggleRow emoji="📧" title="Email" subtitle="Important updates" value={emailEnabled} onChange={setEmailEnabled} />
+            <ToggleRow
+              emoji="📧"
+              title="Email"
+              subtitle="Important updates"
+              value={emailEnabled}
+              onChange={setEmailEnabled}
+            />
             <View style={styles.divider} />
-            <ToggleRow emoji="📱" title="Push" subtitle="Real-time alerts" value={pushEnabled} onChange={setPushEnabled} />
+            <ToggleRow
+              emoji="📱"
+              title="Push"
+              subtitle="Real-time alerts"
+              value={pushEnabled}
+              onChange={setPushEnabled}
+            />
             <View style={styles.divider} />
-            <ToggleRow emoji="📰" title="Daily Digest" subtitle="Summary at 9 AM" value={dailyDigest} onChange={setDailyDigest} />
+            <ToggleRow
+              emoji="📰"
+              title="Daily Digest"
+              subtitle="Summary at 9 AM"
+              value={dailyDigest}
+              onChange={setDailyDigest}
+            />
             <View style={styles.divider} />
-            <ToggleRow emoji="📅" title="Weekly Digest" subtitle="Monday morning" value={weeklyDigest} onChange={setWeeklyDigest} />
+            <ToggleRow
+              emoji="📅"
+              title="Weekly Digest"
+              subtitle="Monday morning"
+              value={weeklyDigest}
+              onChange={setWeeklyDigest}
+            />
           </View>
         </View>
 
@@ -199,26 +314,47 @@ export default function ManagePreferencesScreen(): React.ReactElement {
               <View style={styles.quietItem}>
                 <Text style={styles.quietLabel}>From</Text>
                 {['20:00', '21:00', '22:00', '23:00'].map((t) => (
-                  <TouchableOpacity key={t} style={[styles.timeChip, quietStart === t && styles.timeChipSelected]} onPress={() => setQuietStart(t)}>
-                    <Text style={[styles.timeChipText, quietStart === t && styles.timeChipTextSelected]}>{t}</Text>
+                  <TouchableOpacity
+                    key={t}
+                    style={[styles.timeChip, quietStart === t && styles.timeChipSelected]}
+                    onPress={() => setQuietStart(t)}
+                  >
+                    <Text
+                      style={[styles.timeChipText, quietStart === t && styles.timeChipTextSelected]}
+                    >
+                      {t}
+                    </Text>
                   </TouchableOpacity>
                 ))}
               </View>
               <View style={styles.quietItem}>
                 <Text style={styles.quietLabel}>To</Text>
                 {['06:00', '07:00', '08:00', '09:00'].map((t) => (
-                  <TouchableOpacity key={t} style={[styles.timeChip, quietEnd === t && styles.timeChipSelected]} onPress={() => setQuietEnd(t)}>
-                    <Text style={[styles.timeChipText, quietEnd === t && styles.timeChipTextSelected]}>{t}</Text>
+                  <TouchableOpacity
+                    key={t}
+                    style={[styles.timeChip, quietEnd === t && styles.timeChipSelected]}
+                    onPress={() => setQuietEnd(t)}
+                  >
+                    <Text
+                      style={[styles.timeChipText, quietEnd === t && styles.timeChipTextSelected]}
+                    >
+                      {t}
+                    </Text>
                   </TouchableOpacity>
                 ))}
               </View>
             </View>
           </View>
         </View>
-
       </ScrollView>
       <View style={styles.footer}>
-        <PrimaryButton title="Save Preferences" onPress={() => { void onSubmit(); }} loading={saving} />
+        <PrimaryButton
+          title="Save Preferences"
+          onPress={() => {
+            void onSubmit();
+          }}
+          loading={saving}
+        />
       </View>
     </SafeAreaView>
   );
@@ -227,23 +363,63 @@ export default function ManagePreferencesScreen(): React.ReactElement {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background.primary },
   scroll: { padding: Spacing.xl },
-  header: { color: Colors.text.primary, fontSize: Typography.fontSize.xl, fontWeight: Typography.fontWeight.bold, marginBottom: Spacing.md, marginTop: Spacing.sm },
+  header: {
+    color: Colors.text.primary,
+    fontSize: Typography.fontSize.xl,
+    fontWeight: Typography.fontWeight.bold,
+    marginBottom: Spacing.md,
+    marginTop: Spacing.sm,
+  },
   section: { marginBottom: Spacing.lg },
-  sectionLabel: { color: Colors.text.primary, fontSize: Typography.fontSize.base, fontWeight: Typography.fontWeight.semibold, marginBottom: Spacing.xs },
+  sectionLabel: {
+    color: Colors.text.primary,
+    fontSize: Typography.fontSize.base,
+    fontWeight: Typography.fontWeight.semibold,
+    marginBottom: Spacing.xs,
+  },
   chips: { flexDirection: 'row', flexWrap: 'wrap' },
-  card: { backgroundColor: Colors.background.secondary, borderRadius: BorderRadius.lg, borderWidth: 1, borderColor: Colors.border.subtle, overflow: 'hidden' },
+  card: {
+    backgroundColor: Colors.background.secondary,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    borderColor: Colors.border.subtle,
+    overflow: 'hidden',
+  },
   toggleRow: { flexDirection: 'row', alignItems: 'center', padding: Spacing.md },
   toggleEmoji: { fontSize: 20, marginRight: Spacing.md, width: 28 },
   toggleInfo: { flex: 1 },
-  toggleTitle: { color: Colors.text.primary, fontSize: Typography.fontSize.base, fontWeight: Typography.fontWeight.medium },
+  toggleTitle: {
+    color: Colors.text.primary,
+    fontSize: Typography.fontSize.base,
+    fontWeight: Typography.fontWeight.medium,
+  },
   toggleSubtitle: { color: Colors.text.muted, fontSize: Typography.fontSize.xs, marginTop: 2 },
   divider: { height: 1, backgroundColor: Colors.border.subtle, marginHorizontal: Spacing.md },
   quietRow: { flexDirection: 'row', padding: Spacing.md },
   quietItem: { flex: 1 },
-  quietLabel: { color: Colors.text.muted, fontSize: Typography.fontSize.xs, marginBottom: Spacing.sm },
-  timeChip: { borderWidth: 1, borderColor: Colors.border.default, borderRadius: BorderRadius.sm, paddingVertical: Spacing.xs, paddingHorizontal: Spacing.sm, marginBottom: 6 },
+  quietLabel: {
+    color: Colors.text.muted,
+    fontSize: Typography.fontSize.xs,
+    marginBottom: Spacing.sm,
+  },
+  timeChip: {
+    borderWidth: 1,
+    borderColor: Colors.border.default,
+    borderRadius: BorderRadius.sm,
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+    marginBottom: 6,
+  },
   timeChipSelected: { backgroundColor: 'rgba(124,58,237,0.15)', borderColor: Colors.brand.purple },
   timeChipText: { color: Colors.text.secondary, fontSize: Typography.fontSize.sm },
-  timeChipTextSelected: { color: Colors.brand.purpleLight, fontWeight: Typography.fontWeight.semibold },
-  footer: { padding: Spacing.xl, borderTopWidth: 1, borderTopColor: Colors.border.subtle, backgroundColor: Colors.background.primary },
+  timeChipTextSelected: {
+    color: Colors.brand.purpleLight,
+    fontWeight: Typography.fontWeight.semibold,
+  },
+  footer: {
+    padding: Spacing.xl,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border.subtle,
+    backgroundColor: Colors.background.primary,
+  },
 });

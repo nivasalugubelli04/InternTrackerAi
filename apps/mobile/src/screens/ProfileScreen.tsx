@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -16,6 +16,7 @@ import {
   type Resume,
 } from '../services/profile.service';
 
+import { useFocusEffect } from '@react-navigation/native';
 import { type ProfileStackParamList } from '../navigation/ProfileNavigator';
 
 type Props = NativeStackScreenProps<ProfileStackParamList, 'ProfileHome'>;
@@ -61,9 +62,11 @@ export default function ProfileScreen({ navigation }: Props): React.ReactElement
     }
   }, []);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useFocusEffect(
+    useCallback(() => {
+      void load();
+    }, [load]),
+  );
 
   const onRefresh = (): void => {
     setRefreshing(true);
