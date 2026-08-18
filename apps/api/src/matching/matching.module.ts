@@ -39,6 +39,7 @@ import { SemanticMatchingService } from './services/semantic-matching.service';
     ExplanationGeneratorService,
     RuleBasedMatchingProvider,
     OpenAiMatchingProvider,
+    RecommendationService,
     {
       provide: MATCHING_PROVIDER,
       useFactory: (

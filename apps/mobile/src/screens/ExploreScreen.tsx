@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,8 +10,10 @@ import {
   ActivityIndicator,
   Keyboard,
   RefreshControl,
+  useWindowDimensions,
 } from 'react-native';
 import { useQuery, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
+import { useNavigation } from '@react-navigation/native';
 
 import { Colors, Spacing, Typography, BorderRadius } from '../theme';
 import { opportunitiesService, Opportunity } from '../services/opportunities.service';
@@ -21,20 +23,24 @@ import {
   OpportunityCard,
   OpportunityCardSkeleton,
 } from '../components/opportunities/OpportunityCard';
-import { useNavigation } from '@react-navigation/native';
+import { OpportunityDetailPanel } from '../components/opportunities/OpportunityDetailPanel';
 
 const LIMIT = 20;
 
 export default function ExploreScreen(): React.ReactElement {
   const navigation = useNavigation<any>();
   const queryClient = useQueryClient();
+  const { width } = useWindowDimensions();
 
   const [searchText, setSearchText] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [filters, setFilters] = useState<FeedFilters>({});
   const [filterVisible, setFilterVisible] = useState(false);
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const flatListRef = useRef<FlatList>(null);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const isDesktop = width >= 768;
 
   const onSearchChange = useCallback((text: string) => {
     setSearchText(text);
@@ -93,9 +99,22 @@ export default function ExploreScreen(): React.ReactElement {
   const isLoading = isSearchMode ? searchLoading : feedLoading;
   const totalCount = isSearchMode ? (searchResults?.meta.total ?? 0) : undefined;
 
+  // Auto-select first item on desktop
+  useEffect(() => {
+    if (isDesktop && feedItems.length > 0 && !selectedJobId) {
+      setSelectedJobId(feedItems[0].id);
+    }
+  }, [isDesktop, feedItems, selectedJobId]);
+
   const handleCardPress = useCallback(
-    (id: string) => navigation.navigate('OpportunityDetails', { jobId: id }),
-    [navigation],
+    (id: string) => {
+      if (isDesktop) {
+        setSelectedJobId(id);
+      } else {
+        navigation.navigate('OpportunityDetails', { jobId: id });
+      }
+    },
+    [isDesktop, navigation],
   );
 
   const handleSave = useCallback(
@@ -114,14 +133,17 @@ export default function ExploreScreen(): React.ReactElement {
   const handleDismiss = useCallback(
     async (id: string) => {
       await opportunitiesService.dismiss(id);
-      queryClient.invalidateQueries({ queryKey: ['opportunities', 'feed'] });
-      queryClient.invalidateQueries({ queryKey: ['career-center'] });
+      queryClient.invalidateQueries({ queryKey: ['opportunities'] });
+      if (selectedJobId === id) {
+        setSelectedJobId(null);
+      }
     },
-    [queryClient],
+    [queryClient, selectedJobId],
   );
 
   const handleApplyFilters = useCallback((newFilters: FeedFilters) => {
     setFilters(newFilters);
+    setSelectedJobId(null);
     flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
   }, []);
 
@@ -132,14 +154,18 @@ export default function ExploreScreen(): React.ReactElement {
   const renderItem = useCallback(
     ({ item }: { item: Opportunity }) => (
       <View style={styles.cardWrapper}>
-        <OpportunityCard opportunity={item} onPress={handleCardPress} onSave={handleSave} />
-        {/* Swipe-to-dismiss hint */}
+        <OpportunityCard
+          opportunity={item}
+          onPress={handleCardPress}
+          onSave={handleSave}
+          style={selectedJobId === item.id ? styles.selectedCard : undefined}
+        />
         <TouchableOpacity style={styles.dismissBtn} onPress={() => handleDismiss(item.id)}>
           <Text style={styles.dismissText}>✕ Not interested</Text>
         </TouchableOpacity>
       </View>
     ),
-    [handleCardPress, handleSave, handleDismiss],
+    [handleCardPress, handleSave, handleDismiss, selectedJobId],
   );
 
   const renderSkeleton = () => (
@@ -170,6 +196,131 @@ export default function ExploreScreen(): React.ReactElement {
     );
   };
 
+  if (isDesktop) {
+    return (
+      <View style={[styles.container, styles.desktopContainer]}>
+        {/* Left list pane */}
+        <View style={styles.leftPane}>
+          {/* Search bar + filter button */}
+          <View style={styles.searchHeaderDesktop}>
+            <View style={styles.searchBar}>
+              <Text style={styles.searchBarIcon}>🔍</Text>
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search internships, companies, skills..."
+                placeholderTextColor={Colors.text.muted}
+                value={searchText}
+                onChangeText={onSearchChange}
+                returnKeyType="search"
+                onSubmitEditing={Keyboard.dismiss}
+              />
+              {searchText.length > 0 && (
+                <TouchableOpacity
+                  onPress={() => {
+                    setSearchText('');
+                    setDebouncedSearch('');
+                  }}
+                >
+                  <Text style={styles.clearBtn}>✕</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            <TouchableOpacity
+              style={[styles.filterBtn, activeFilterCount > 0 && styles.filterBtnActive]}
+              onPress={() => setFilterVisible(true)}
+            >
+              <Text style={styles.filterBtnIcon}>⚙️</Text>
+              {activeFilterCount > 0 && (
+                <View style={styles.filterBadge}>
+                  <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          {/* Result count / sort info */}
+          {!isLoading && feedItems.length > 0 && (
+            <View style={styles.resultMeta}>
+              <Text style={styles.resultCount}>
+                {isSearchMode
+                  ? `${totalCount} results for "${debouncedSearch}"`
+                  : `${feedItems.length}+ internships`}
+              </Text>
+              {activeFilterCount > 0 && (
+                <TouchableOpacity onPress={() => setFilters({})}>
+                  <Text style={styles.clearFiltersLink}>Clear Filters ✕</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+
+          {/* Feed list */}
+          <FlatList
+            ref={flatListRef}
+            data={isLoading ? [] : feedItems}
+            keyExtractor={(item) => item.id}
+            renderItem={renderItem}
+            ListEmptyComponent={renderEmpty}
+            contentContainerStyle={styles.list}
+            showsVerticalScrollIndicator={false}
+            onEndReached={() => {
+              if (!isSearchMode && hasNextPage && !isFetchingNextPage) fetchNextPage();
+            }}
+            onEndReachedThreshold={0.3}
+            ListFooterComponent={
+              isFetchingNextPage ? (
+                <View style={styles.loadingMore}>
+                  <ActivityIndicator size="small" color={Colors.brand.purple} />
+                  <Text style={styles.loadingMoreText}>Loading more...</Text>
+                </View>
+              ) : null
+            }
+            refreshControl={
+              !isSearchMode ? (
+                <RefreshControl
+                  refreshing={isRefetching && !isFetchingNextPage}
+                  onRefresh={() => refetchFeed()}
+                  tintColor={Colors.brand.purple}
+                />
+              ) : undefined
+            }
+          />
+        </View>
+
+        {/* Right detail pane */}
+        <View style={styles.rightPane}>
+          {selectedJobId ? (
+            <OpportunityDetailPanel
+              jobId={selectedJobId}
+              isScreen={false}
+              onDismissSuccess={() => setSelectedJobId(null)}
+            />
+          ) : (
+            <View style={styles.placeholderContainer}>
+              <Text style={styles.placeholderEmoji}>🎯</Text>
+              <Text style={styles.placeholderTitle}>Select an Internship Opportunity</Text>
+              <Text style={styles.placeholderSubtitle}>
+                Choose any role from the feed to view matching analysis, score breakdown, and
+                learning actions.
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {/* Filter bottom sheet */}
+        <FilterBottomSheet
+          visible={filterVisible}
+          onClose={() => setFilterVisible(false)}
+          onApply={handleApplyFilters}
+          initialFilters={filters}
+          availableLocations={(filterOptions?.locations as string[]) ?? []}
+          availableIndustries={(filterOptions?.industries as string[]) ?? []}
+        />
+      </View>
+    );
+  }
+
+  // Mobile rendering
   return (
     <View style={styles.container}>
       {/* Search bar + filter button */}
@@ -272,10 +423,28 @@ export default function ExploreScreen(): React.ReactElement {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background.primary },
+  desktopContainer: { flexDirection: 'row' },
+  leftPane: {
+    width: 380,
+    borderRightWidth: 1,
+    borderRightColor: Colors.border.subtle,
+    backgroundColor: Colors.background.secondary,
+  },
+  rightPane: { flex: 1, backgroundColor: Colors.background.primary },
   searchHeader: {
     flexDirection: 'row',
     paddingHorizontal: Spacing.lg,
     paddingTop: Platform.OS === 'ios' ? 56 : Spacing.lg,
+    paddingBottom: Spacing.sm,
+    gap: Spacing.sm,
+    backgroundColor: Colors.background.secondary,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border.subtle,
+  },
+  searchHeaderDesktop: {
+    flexDirection: 'row',
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.lg,
     paddingBottom: Spacing.sm,
     gap: Spacing.sm,
     backgroundColor: Colors.background.secondary,
@@ -341,6 +510,11 @@ const styles = StyleSheet.create({
   },
   list: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.sm, paddingBottom: Spacing.xl },
   cardWrapper: { marginBottom: 4 },
+  selectedCard: {
+    borderColor: Colors.brand.purple,
+    borderWidth: 2,
+    backgroundColor: 'rgba(124,58,237,0.05)',
+  },
   dismissBtn: {
     alignSelf: 'flex-end',
     marginBottom: Spacing.sm,
@@ -382,4 +556,23 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
   },
   loadingMoreText: { color: Colors.text.muted, fontSize: Typography.fontSize.sm },
+  placeholderContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.xl,
+  },
+  placeholderEmoji: { fontSize: 64, marginBottom: Spacing.md },
+  placeholderTitle: {
+    color: Colors.text.primary,
+    fontSize: Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.bold,
+    marginBottom: Spacing.xs,
+  },
+  placeholderSubtitle: {
+    color: Colors.text.muted,
+    fontSize: Typography.fontSize.sm,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
 });

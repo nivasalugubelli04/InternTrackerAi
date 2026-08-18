@@ -22,6 +22,9 @@ import SkillsMarketDemand from './pages/SkillsMarketDemand';
 // Phase 26 — Personalized Learning & Roadmaps
 import LearningOverview from './pages/LearningOverview';
 
+import Opportunities from './pages/Opportunities';
+import Applications from './pages/Applications';
+
 // UI components
 import { Card } from './components/ui/Card';
 import { Button } from './components/ui/Button';
@@ -95,6 +98,8 @@ export default function App() {
           
           <Route path="/" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
             <Route index element={<Dashboard />} />
+            <Route path="opportunities" element={<Opportunities />} />
+            <Route path="applications" element={<Applications />} />
             <Route path="users" element={<Users />} />
             <Route path="companies" element={<Companies />} />
             <Route path="flags" element={<FeatureFlags />} />

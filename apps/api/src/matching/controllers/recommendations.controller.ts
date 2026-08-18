@@ -22,6 +22,13 @@ export class RecommendationsController {
     return this.recommendationService.getRecommendations(userId, query);
   }
 
+  @Get('insights')
+  @ApiOperation({ summary: 'Get AI matching insights' })
+  @ApiResponse({ status: 200, description: 'Matching insights for the user.' })
+  async getInsights(@CurrentUser('id') userId: string) {
+    return this.recommendationService.getInsights(userId);
+  }
+
   @Get(':id')
   @ApiOperation({
     summary: 'Get detailed recommendation by ID including match breakdown and reasons',

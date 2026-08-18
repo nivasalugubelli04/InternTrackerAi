@@ -59,8 +59,15 @@ describe('RuleBasedMatchingProvider', () => {
       branch: 'CS',
       college: 'Stanford',
       yearOfStudy: 3,
+      graduationYear: 2026,
       resumeKeywords: ['Java', 'React'],
       trackedCompanyNames: ['Google'],
+      careerGoals: [{ targetRole: 'Software Engineer Intern', targetCompany: 'Google' }],
+      learningGoals: [{ title: 'Learn React', skillId: null, targetRole: null }],
+      applicationHistory: [],
+      savedJobs: [],
+      interactionHistory: [],
+      certifications: [],
     };
 
     const job: NormalizedJob = {
@@ -78,6 +85,24 @@ describe('RuleBasedMatchingProvider', () => {
       preferredSkills: ['Node.js'],
       descriptionKeywords: ['Java', 'React', 'Node.js', 'PostgreSQL'],
       minCgpa: 3.5,
+      graduationRequirement: null,
+      experienceRequirement: null,
+      employmentType: null,
+      internshipType: null,
+      eligibility: null,
+      applicationDeadline: null,
+      postedAt: new Date(),
+      source: 'Internal',
+      sourceUrl: 'http://localhost/job',
+      company: {
+        id: 'comp-1',
+        name: 'Google',
+        industry: null,
+        logoUrl: null,
+      },
+      industry: null,
+      roleCategory: 'Software Engineering',
+      status: 'ACTIVE',
     };
 
     const result = await provider.calculateMatch(profile, job);
@@ -104,8 +129,15 @@ describe('RuleBasedMatchingProvider', () => {
       branch: 'Arts',
       college: 'NYU',
       yearOfStudy: 1,
+      graduationYear: 2029,
       resumeKeywords: [],
       trackedCompanyNames: [],
+      careerGoals: [],
+      learningGoals: [],
+      applicationHistory: [],
+      savedJobs: [],
+      interactionHistory: [],
+      certifications: [],
     };
 
     const job: NormalizedJob = {
@@ -123,6 +155,24 @@ describe('RuleBasedMatchingProvider', () => {
       preferredSkills: ['Microcontrollers'],
       descriptionKeywords: ['C++', 'Assembly'],
       minCgpa: 3.8,
+      graduationRequirement: null,
+      experienceRequirement: null,
+      employmentType: null,
+      internshipType: null,
+      eligibility: null,
+      applicationDeadline: null,
+      postedAt: new Date(),
+      source: 'Internal',
+      sourceUrl: 'http://localhost/job',
+      company: {
+        id: 'comp-2',
+        name: 'Tesla',
+        industry: null,
+        logoUrl: null,
+      },
+      industry: null,
+      roleCategory: 'Hardware Engineering',
+      status: 'ACTIVE',
     };
 
     const result = await provider.calculateMatch(profile, job);

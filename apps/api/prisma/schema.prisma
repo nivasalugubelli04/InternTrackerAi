@@ -606,6 +606,8 @@ model JobPosting {
   @@index([status])
   @@index([hash])
   @@index([recruiterOrgId])
+  @@index([deadline])
+  @@index([createdAt])
   @@map("job_postings")
 }
 
@@ -691,6 +693,9 @@ model MatchScore {
   companyPreferenceScore Float
   stipendScore           Float
   experienceScore        Float
+  careerGoalScore        Float    @default(0.0)
+  freshnessScore         Float    @default(0.0)
+  behavioralScore        Float    @default(0.0)
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
 
@@ -700,6 +705,7 @@ model MatchScore {
   @@unique([userId, jobId])
   @@index([userId])
   @@index([jobId])
+  @@index([overallScore])
   @@map("match_scores")
 }
 
@@ -1047,12 +1053,16 @@ model JobInteraction {
 enum ApplicationStatus {
   DISCOVERED
   SAVED
+  APPLICATION_STARTED
   APPLIED
   ASSESSMENT
   INTERVIEW
+  FINAL_ROUND
   OFFER
+  ACCEPTED
   REJECTED
   WITHDRAWN
+  EXPIRED
 }
 
 model Application {
@@ -1074,9 +1084,20 @@ model Application {
   updatedAt           DateTime          @updatedAt
   closedAt            DateTime?
 
-  user   User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  job    JobPosting         @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  events ApplicationEvent[]
+  priorityScore       Int               @default(0)
+  priorityLabel       String            @default("LOW") @db.VarChar(50)
+  resumeVersionId     String?           @db.Uuid
+  coverLetterText     String?           @db.Text
+  portfolioUrl        String?           @db.VarChar(1000)
+  transcriptUrl       String?           @db.VarChar(1000)
+  rejectionReason     String?           @db.VarChar(100)
+  rejectionFeedback   String?           @db.Text
+
+  user          User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job           JobPosting            @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  resumeVersion ResumeVersion?        @relation(fields: [resumeVersionId], references: [id], onDelete: SetNull)
+  events        ApplicationEvent[]
+  documents     ApplicationDocument[]
 
   @@unique([userId, jobId])
   @@index([userId])
@@ -1100,6 +1121,19 @@ model ApplicationEvent {
   @@index([applicationId])
   @@index([createdAt])
   @@map("application_events")
+}
+
+model ApplicationDocument {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  applicationId String   @db.Uuid
+  name          String   @db.VarChar(255)
+  fileUrl       String   @db.VarChar(1000)
+  createdAt     DateTime @default(now())
+
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId])
+  @@map("application_documents")
 }
 
 // =============================================================================
@@ -2014,6 +2048,7 @@ model ResumeVersion {
   resumeDocument   ResumeDocument  @relation(fields: [resumeDocumentId], references: [id], onDelete: Cascade)
   analyses         ResumeAnalysis[]
   suggestions      ResumeSuggestion[]
+  applications     Application[]
 
   @@index([resumeDocumentId])
   @@map("resume_versions")

@@ -39,23 +39,44 @@ export class ApplicationsController {
   findAll(
     @CurrentUser() user: JwtPayload,
     @Query('status') status?: string,
+    @Query('priority') priority?: string,
+    @Query('q') q?: string,
+    @Query('sort') sort?: string,
     @Query('cursor') cursor?: string,
     @Query('limit') limit?: string,
   ) {
-    const query: any = {};
-    if (status) query.status = status;
-    if (cursor) query.cursor = cursor;
-    if (limit) query.limit = parseInt(limit, 10);
-    return this.applicationsService.findAll(
-      user.sub,
-      Object.keys(query).length ? query : undefined,
-    );
+    return this.applicationsService.findAll(user.sub, {
+      status,
+      priority,
+      q,
+      sort,
+      cursor,
+      limit: limit ? parseInt(limit, 10) : undefined,
+    });
+  }
+
+  @Get('analytics')
+  @ApiOperation({ summary: 'Get advanced application analytics' })
+  getAnalytics(@CurrentUser() user: JwtPayload) {
+    return this.applicationsService.getStats(user.sub);
   }
 
   @Get('stats')
-  @ApiOperation({ summary: 'Get application progress statistics' })
+  @ApiOperation({ summary: 'Get application progress statistics (deprecated - use analytics)' })
   getStats(@CurrentUser() user: JwtPayload) {
     return this.applicationsService.getStats(user.sub);
+  }
+
+  @Get('priorities')
+  @ApiOperation({ summary: 'Get applications grouped by priority score labels' })
+  getPrioritized(@CurrentUser() user: JwtPayload) {
+    return this.applicationsService.getPrioritizedApplications(user.sub);
+  }
+
+  @Get('actions')
+  @ApiOperation({ summary: 'Get AI daily career action plan items' })
+  getDailyActions(@CurrentUser() user: JwtPayload) {
+    return this.applicationsService.getDailyActions(user.sub);
   }
 
   @Get(':id')
@@ -88,6 +109,34 @@ export class ApplicationsController {
     @Body() changeStatusDto: ChangeApplicationStatusDto,
   ) {
     return this.applicationsService.changeStatus(user.sub, id, changeStatusDto);
+  }
+
+  @Post(':id/ai/analyze')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Analyze application readiness and resume alignment' })
+  analyzeApplication(@CurrentUser() user: JwtPayload, @Param('id', ParseUUIDPipe) id: string) {
+    return this.applicationsService.analyzeApplication(user.sub, id);
+  }
+
+  @Post(':id/ai/cover-letter')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Generate a customized AI cover letter draft' })
+  generateCoverLetter(@CurrentUser() user: JwtPayload, @Param('id', ParseUUIDPipe) id: string) {
+    return this.applicationsService.generateCoverLetter(user.sub, id);
+  }
+
+  @Post(':id/ai/resume-analysis')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Analyze resume alignment with job requirements' })
+  analyzeResume(@CurrentUser() user: JwtPayload, @Param('id', ParseUUIDPipe) id: string) {
+    return this.applicationsService.analyzeApplication(user.sub, id);
+  }
+
+  @Post(':id/follow-up')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Draft a customized AI follow-up email' })
+  generateFollowUp(@CurrentUser() user: JwtPayload, @Param('id', ParseUUIDPipe) id: string) {
+    return this.applicationsService.generateFollowUp(user.sub, id);
   }
 
   @Delete(':id')

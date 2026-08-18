@@ -13,7 +13,9 @@ export type SortOption =
   | 'newest'
   | 'deadline_soon'
   | 'highest_stipend'
-  | 'company_priority';
+  | 'company_priority'
+  | 'company'
+  | 'relevance';
 
 export type WorkMode = 'REMOTE' | 'HYBRID' | 'ONSITE';
 export type DismissReason =
@@ -25,14 +27,7 @@ export type DismissReason =
   | 'OTHER';
 
 export type InteractionType =
-  | 'VIEW'
-  | 'SAVE'
-  | 'UNSAVE'
-  | 'DISMISS'
-  | 'APPLY_CLICK'
-  | 'AI_COPILOT_OPEN'
-  | 'SEARCH'
-  | 'FILTER';
+  'VIEW' | 'SAVE' | 'UNSAVE' | 'DISMISS' | 'APPLY_CLICK' | 'AI_COPILOT_OPEN' | 'SEARCH' | 'FILTER';
 
 export interface MatchScore {
   overallScore: number;
@@ -43,6 +38,9 @@ export interface MatchScore {
   companyPreferenceScore: number;
   stipendScore: number;
   experienceScore: number;
+  careerGoalScore?: number;
+  freshnessScore?: number;
+  behavioralScore?: number;
 }
 
 export interface MatchReason {
@@ -98,6 +96,7 @@ export interface Opportunity {
   company: CompanyInfo;
   matchScore: MatchScore | null;
   recommendation: RecommendationInfo | null;
+  missingSkills?: string[];
   isSaved: boolean;
   isDismissed: boolean;
 }
@@ -229,7 +228,10 @@ export const opportunitiesService = {
 
   // ── Dismiss ───────────────────────────────────────────────────────────────────
 
-  async dismiss(jobId: string, reason: DismissReason = 'NOT_INTERESTED'): Promise<{ dismissed: boolean }> {
+  async dismiss(
+    jobId: string,
+    reason: DismissReason = 'NOT_INTERESTED',
+  ): Promise<{ dismissed: boolean }> {
     const res = await apiClient.post(`/opportunities/${jobId}/dismiss`, { reason });
     return res.data;
   },

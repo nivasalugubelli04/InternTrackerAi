@@ -4,12 +4,16 @@ import api from './api';
 export enum ApplicationStatus {
   DISCOVERED = 'DISCOVERED',
   SAVED = 'SAVED',
+  APPLICATION_STARTED = 'APPLICATION_STARTED',
   APPLIED = 'APPLIED',
   ASSESSMENT = 'ASSESSMENT',
   INTERVIEW = 'INTERVIEW',
+  FINAL_ROUND = 'FINAL_ROUND',
   OFFER = 'OFFER',
+  ACCEPTED = 'ACCEPTED',
   REJECTED = 'REJECTED',
   WITHDRAWN = 'WITHDRAWN',
+  EXPIRED = 'EXPIRED',
 }
 
 export interface ApplicationEvent {
@@ -36,15 +40,34 @@ export interface Application {
   source?: string;
   nextAction?: string;
   nextActionDate?: string;
+  priorityScore: number;
+  priorityLabel: string;
+  resumeVersionId?: string;
+  coverLetterText?: string;
+  portfolioUrl?: string;
+  transcriptUrl?: string;
+  rejectionReason?: string;
+  rejectionFeedback?: string;
   createdAt: string;
   updatedAt: string;
   closedAt?: string;
-  job?: { company?: { logoUrl?: string } };
+  job?: {
+    company?: { logoUrl?: string; name: string };
+    deadline?: string;
+    matchScores?: Array<{ overallScore: number; skillScore?: number }>;
+  };
+  resumeVersion?: { versionName: string };
+  documents?: Array<{ id: string; name: string; fileUrl: string }>;
   events?: ApplicationEvent[];
+  // Dynamic fields
+  interviews?: any[];
+  assessments?: any[];
+  offers?: any[];
 }
 
 export interface ApplicationStats {
   totalApplications: number;
+  active: number;
   applied: number;
   assessments: number;
   interviews: number;
@@ -55,6 +78,7 @@ export interface ApplicationStats {
   discovered: number;
   interviewRate: number;
   successRate: number;
+  avgResponseTimeDays?: number;
 }
 
 const QUERY_KEY = 'applications';
@@ -73,7 +97,7 @@ export const applicationsApi = {
   },
 
   getStats: async () => {
-    const response = await api.get<ApplicationStats>('/applications/stats');
+    const response = await api.get<ApplicationStats>('/applications/analytics');
     return response.data;
   },
 
@@ -99,6 +123,28 @@ export const applicationsApi = {
 
   remove: async (id: string) => {
     await api.delete(`/applications/${id}`);
+  },
+
+  getActions: async () => {
+    const response = await api.get<any[]>('/applications/actions');
+    return response.data;
+  },
+
+  analyze: async (id: string) => {
+    const response = await api.post<any>(`/applications/${id}/ai/analyze`);
+    return response.data;
+  },
+
+  generateCoverLetter: async (id: string) => {
+    const response = await api.post<{ content: string }>(`/applications/${id}/ai/cover-letter`);
+    return response.data;
+  },
+
+  getFollowUpDraft: async (id: string) => {
+    const response = await api.post<{ subject: string; body: string }>(
+      `/applications/${id}/follow-up`,
+    );
+    return response.data;
   },
 };
 
@@ -180,5 +226,34 @@ export const useDeleteApplication = () => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
       queryClient.invalidateQueries({ queryKey: ['career-center'] });
     },
+  });
+};
+
+export const useApplicationActions = () => {
+  return useQuery({
+    queryKey: [QUERY_KEY, 'actions'],
+    queryFn: applicationsApi.getActions,
+  });
+};
+
+export const useAnalyzeApplication = () => {
+  return useMutation({
+    mutationFn: (id: string) => applicationsApi.analyze(id),
+  });
+};
+
+export const useGenerateCoverLetter = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => applicationsApi.generateCoverLetter(id),
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY, 'detail', id] });
+    },
+  });
+};
+
+export const useGetFollowUpDraft = () => {
+  return useMutation({
+    mutationFn: (id: string) => applicationsApi.getFollowUpDraft(id),
   });
 };

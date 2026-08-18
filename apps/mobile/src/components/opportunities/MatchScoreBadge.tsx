@@ -36,15 +36,22 @@ export function MatchScoreBadge({ matchScore, size = 'sm' }: Props): React.React
   );
 }
 
-export function MatchScoreBreakdown({ matchScore }: { matchScore: MatchScore }): React.ReactElement {
+export function MatchScoreBreakdown({
+  matchScore,
+}: {
+  matchScore: MatchScore;
+}): React.ReactElement {
   const rows = [
     { label: 'Skills', value: matchScore.skillScore },
     { label: 'Location', value: matchScore.locationScore },
-    { label: 'Role', value: matchScore.educationScore },
+    { label: 'Role / Profile', value: matchScore.educationScore },
     { label: 'CGPA', value: matchScore.cgpaScore },
     { label: 'Company Preference', value: matchScore.companyPreferenceScore },
     { label: 'Stipend', value: matchScore.stipendScore },
     { label: 'Experience', value: matchScore.experienceScore },
+    { label: 'Career Alignment', value: matchScore.careerGoalScore ?? 0 },
+    { label: 'Freshness', value: matchScore.freshnessScore ?? 0 },
+    { label: 'Behavioral Relevance', value: matchScore.behavioralScore ?? 0 },
   ];
 
   return (

@@ -17,10 +17,16 @@ export interface EvaluatedRecommendation {
   companyPreferenceScore: number;
   stipendScore: number;
   experienceScore: number;
+  careerGoalScore: number;
+  freshnessScore: number;
+  behavioralScore: number;
   confidenceScore: number;
   recommendationType: RecommendationType;
   priority: RecommendationPriority;
   reasons: Array<{ reasonType: string; description: string; weight: number }>;
+  isEligible: boolean;
+  ineligibilityReason?: string | undefined;
+  missingSkills?: string[] | undefined;
 }
 
 @Injectable()
@@ -58,10 +64,16 @@ export class ScoringEngineService {
       companyPreferenceScore: matchResult.companyPreferenceScore,
       stipendScore: matchResult.stipendScore,
       experienceScore: matchResult.experienceScore,
+      careerGoalScore: matchResult.careerGoalScore,
+      freshnessScore: matchResult.freshnessScore,
+      behavioralScore: matchResult.behavioralScore,
       confidenceScore: matchResult.confidenceScore,
       recommendationType,
       priority,
       reasons: matchResult.reasons,
+      isEligible: matchResult.isEligible,
+      ineligibilityReason: matchResult.ineligibilityReason,
+      missingSkills: matchResult.missingSkills,
     };
   }
 

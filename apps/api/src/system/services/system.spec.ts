@@ -17,6 +17,17 @@ import { ScraperObserverService } from './scraper-observer.service';
 import { SelfHealingService } from './self-healing.service';
 import { TelemetryService } from './telemetry.service';
 
+jest.mock('bullmq', () => {
+  return {
+    Queue: jest.fn().mockImplementation(() => {
+      return {
+        getJobCounts: jest.fn().mockResolvedValue({ waiting: 0, active: 0, failed: 0 }),
+        close: jest.fn().mockResolvedValue(true),
+      };
+    }),
+  };
+});
+
 describe('Phase 29 — SRE & Autonomous Operations unit tests', () => {
   let telemetry: TelemetryService;
   let healthMonitor: HealthMonitorService;
@@ -173,7 +184,12 @@ describe('Phase 29 — SRE & Autonomous Operations unit tests', () => {
     });
 
     it('should calculate Data Quality Score from incomplete fields and parser success', async () => {
-      mockPrismaService.jobPosting.count.mockResolvedValue(100);
+      mockPrismaService.jobPosting.count.mockImplementation((args?: any) => {
+        if (args?.where) {
+          return Promise.resolve(0); // No missing fields
+        }
+        return Promise.resolve(100); // Total jobs is 100
+      });
       mockPrismaService.parserHealth.findMany.mockResolvedValue([
         { successRate: 95.0 },
         { successRate: 85.0 },
@@ -259,10 +275,20 @@ describe('Phase 29 — SRE & Autonomous Operations unit tests', () => {
 
     it('should deduplicate alerts and respect 30 minutes cooldown periods', async () => {
       mockPrismaService.incident.findFirst.mockResolvedValue(null); // No active DB incident
+      mockPrismaService.incident.create.mockResolvedValue({
+        id: 'new-incident-id',
+        title: 'Database connection lost',
+        component: 'DATABASE',
+        severity: 'P0',
+        description: 'Error during ping',
+      });
+      mockPrismaService.incidentEvent.create.mockResolvedValue({ id: 'evt-2' });
+      mockPrismaService.user.findMany.mockResolvedValue([]);
       mockPrismaService.sreAlert.findFirst.mockResolvedValue({
         id: 'recent-alert-id',
         status: 'SENT',
       }); // Alert already sent inside cooldown
+      mockPrismaService.sreAlert.create.mockResolvedValue({ id: 'alert-id' });
 
       await incidentManager.triggerIncident(
         'Database connection lost',

@@ -26,6 +26,7 @@ describe('RecommendationService', () => {
       findMany: jest.fn(),
       findUnique: jest.fn(),
       create: jest.fn(),
+      deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
     },
     recommendation: {
       upsert: jest.fn(),
@@ -34,8 +35,12 @@ describe('RecommendationService', () => {
       findFirst: jest.fn(),
       update: jest.fn(),
       create: jest.fn(),
+      deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
     },
-    recommendationReason: { deleteMany: jest.fn(), createMany: jest.fn() },
+    recommendationReason: {
+      deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+      createMany: jest.fn(),
+    },
   };
 
   const mockRedisClient = {
@@ -112,6 +117,7 @@ describe('RecommendationService', () => {
       recommendationType: RecommendationType.PERFECT_MATCH,
       priority: RecommendationPriority.HIGH,
       reasons: [{ reasonType: 'SKILL', description: 'Java matched', weight: 90 }],
+      isEligible: true,
     });
 
     mockPrisma.matchScore.upsert.mockResolvedValueOnce({ id: 'ms-1' });

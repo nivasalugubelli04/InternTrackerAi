@@ -1,8 +1,16 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  RefreshControl,
+  ActivityIndicator,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Colors, Spacing, Typography, BorderRadius } from '../theme';
-import { useApplicationStats } from '../services/applications.service';
+import { useApplicationStats, useApplicationActions } from '../services/applications.service';
 
 const StatCard = ({
   label,
@@ -24,19 +32,52 @@ const StatCard = ({
 
 export default function ApplicationDashboardScreen() {
   const navigation = useNavigation<any>();
-  const { data: stats, isLoading, refetch } = useApplicationStats();
+  const { data: stats, isLoading: statsLoading, refetch: refetchStats } = useApplicationStats();
+  const {
+    data: actions,
+    isLoading: actionsLoading,
+    refetch: refetchActions,
+  } = useApplicationActions();
 
-  const handleViewAll = () => {
-    navigation.navigate('ApplicationList', {});
+  const handleRefresh = async () => {
+    await Promise.all([refetchStats(), refetchActions()]);
+  };
+
+  const getPriorityIndicator = (priority: string) => {
+    switch (priority) {
+      case 'URGENT':
+        return { dot: '🔴', text: Colors.error };
+      case 'HIGH':
+        return { dot: '🔵', text: Colors.brand.purpleLight };
+      case 'MEDIUM':
+        return { dot: '🟡', text: Colors.warning };
+      default:
+        return { dot: '⚪', text: Colors.text.muted };
+    }
+  };
+
+  const handleActionClick = (action: any) => {
+    if (action.type === 'INTERVIEW_PREP' && action.jobId) {
+      navigation.navigate('OpportunityDetails', { jobId: action.jobId });
+    } else if (action.type === 'FOLLOW_UP' && action.applicationId) {
+      navigation.navigate('ApplicationDetail', { id: action.applicationId });
+    } else if (action.type === 'ASSESSMENT_COMPLETION' && action.jobId) {
+      navigation.navigate('OpportunityDetails', { jobId: action.jobId });
+    } else {
+      navigation.navigate('ExploreTab');
+    }
   };
 
   return (
     <View style={styles.container}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} />}
+        refreshControl={
+          <RefreshControl refreshing={statsLoading || actionsLoading} onRefresh={handleRefresh} />
+        }
+        showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.headerTitle}>My Applications</Text>
+        <Text style={styles.headerTitle}>Application Command</Text>
 
         {stats && stats.totalApplications === 0 ? (
           <View style={styles.emptyState}>
@@ -54,12 +95,19 @@ export default function ApplicationDashboardScreen() {
           </View>
         ) : (
           <>
+            {/* Health Stats Grid */}
             <View style={styles.statsGrid}>
               <StatCard
-                label="Applications"
+                label="Total Tracked"
                 value={stats?.totalApplications || 0}
-                emoji="📝"
-                color={Colors.brand.purple}
+                emoji="📋"
+                color={Colors.brand.purpleLight}
+              />
+              <StatCard
+                label="Active Stages"
+                value={stats?.active || 0}
+                emoji="⚡"
+                color={Colors.brand.cyan}
               />
               <StatCard
                 label="Interviews"
@@ -68,48 +116,90 @@ export default function ApplicationDashboardScreen() {
                 color={Colors.warning}
               />
               <StatCard
-                label="Offers"
+                label="Offers Recieved"
                 value={stats?.offers || 0}
                 emoji="🎉"
                 color={Colors.success}
               />
-              <StatCard
-                label="Rejected"
-                value={stats?.rejected || 0}
-                emoji="❌"
-                color={Colors.error}
-              />
             </View>
 
+            {/* AI Action Plan */}
+            <View style={styles.planSection}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>✨ Today's AI Action Plan</Text>
+                <Text style={styles.sectionSubtitle}>
+                  Factual recommendations based on live tracking data
+                </Text>
+              </View>
+
+              {actionsLoading ? (
+                <ActivityIndicator
+                  color={Colors.brand.purpleLight}
+                  style={{ marginVertical: Spacing.md }}
+                />
+              ) : actions && actions.length > 0 ? (
+                <View style={styles.actionsList}>
+                  {actions.map((act, index) => {
+                    const indicator = getPriorityIndicator(act.priority);
+                    return (
+                      <TouchableOpacity
+                        key={act.id || index}
+                        style={styles.actionCard}
+                        onPress={() => handleActionClick(act)}
+                        activeOpacity={0.8}
+                      >
+                        <View style={styles.actionCardHeader}>
+                          <Text style={[styles.actionPriority, { color: indicator.text }]}>
+                            {indicator.dot} {act.priority}
+                          </Text>
+                          <Text style={styles.actionType}>{act.type.replace('_', ' ')}</Text>
+                        </View>
+                        <Text style={styles.actionTitle}>{act.title}</Text>
+                        <Text style={styles.actionDesc}>{act.description}</Text>
+                        <View style={styles.actionFooter}>
+                          <Text style={styles.actionLinkText}>Take Action →</Text>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              ) : (
+                <Text style={styles.emptyPlanText}>
+                  All caught up! Check back later for follow-ups.
+                </Text>
+              )}
+            </View>
+
+            {/* Success rates and metrics */}
             <View style={styles.progressSection}>
-              <Text style={styles.sectionTitle}>Progress Metrics</Text>
+              <Text style={styles.sectionTitle}>Performance Metrics</Text>
               <View style={styles.metricRow}>
-                <Text style={styles.metricLabel}>Interview Rate</Text>
+                <Text style={styles.metricLabel}>Interview Conversion Rate</Text>
                 <Text style={styles.metricValue}>{stats?.interviewRate?.toFixed(1)}%</Text>
               </View>
               <View style={styles.metricRow}>
-                <Text style={styles.metricLabel}>Success Rate</Text>
+                <Text style={styles.metricLabel}>Offer Success Rate</Text>
                 <Text style={styles.metricValue}>{stats?.successRate?.toFixed(1)}%</Text>
               </View>
+              {stats?.avgResponseTimeDays !== undefined && stats.avgResponseTimeDays > 0 && (
+                <View style={styles.metricRow}>
+                  <Text style={styles.metricLabel}>Avg. Response Time</Text>
+                  <Text style={styles.metricValue}>
+                    {stats.avgResponseTimeDays.toFixed(1)} Days
+                  </Text>
+                </View>
+              )}
             </View>
 
-            <TouchableOpacity style={styles.viewAllBtn} onPress={handleViewAll}>
-              <Text style={styles.viewAllBtnText}>View Application Board</Text>
-            </TouchableOpacity>
-
             <TouchableOpacity
-              style={styles.aiBtn}
-              onPress={() =>
-                navigation.navigate('HomeTab', {
-                  screen: 'AiCopilot',
-                  params: { initialMessage: 'Analyze My Application Progress' },
-                })
-              }
+              style={styles.viewAllBtn}
+              onPress={() => navigation.navigate('ApplicationList', {})}
             >
-              <Text style={styles.aiBtnText}>✨ Analyze My Progress with AI</Text>
+              <Text style={styles.viewAllBtnText}>Open Kanban Board</Text>
             </TouchableOpacity>
           </>
         )}
+        <View style={{ height: 40 }} />
       </ScrollView>
     </View>
   );
@@ -122,13 +212,14 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: Spacing.xl,
-    paddingTop: Spacing['2xl'] + Spacing.xl,
+    paddingTop: 64,
   },
   headerTitle: {
     fontSize: Typography.fontSize['2xl'],
     fontWeight: Typography.fontWeight.bold,
     color: Colors.text.primary,
     marginBottom: Spacing.xl,
+    fontFamily: 'Outfit',
   },
   statsGrid: {
     flexDirection: 'row',
@@ -144,7 +235,7 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.lg,
     borderWidth: 1,
     alignItems: 'center',
-    marginBottom: Spacing.sm,
+    marginBottom: Spacing.xs,
   },
   statEmoji: {
     fontSize: 24,
@@ -160,17 +251,86 @@ const styles = StyleSheet.create({
     color: Colors.text.secondary,
     fontWeight: Typography.fontWeight.medium,
   },
+  planSection: {
+    marginBottom: Spacing.xl,
+  },
+  sectionHeader: {
+    marginBottom: Spacing.md,
+  },
+  sectionTitle: {
+    fontSize: Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.primary,
+    marginBottom: 2,
+    fontFamily: 'Outfit',
+  },
+  sectionSubtitle: {
+    fontSize: Typography.fontSize.xs,
+    color: Colors.text.muted,
+    fontWeight: Typography.fontWeight.medium,
+  },
+  actionsList: {
+    gap: Spacing.md,
+  },
+  actionCard: {
+    backgroundColor: Colors.background.secondary,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.lg,
+    borderWidth: 1,
+    borderColor: Colors.border.subtle,
+  },
+  actionCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
+  },
+  actionPriority: {
+    fontSize: 10,
+    fontWeight: Typography.fontWeight.bold,
+  },
+  actionType: {
+    fontSize: 9,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.muted,
+    textTransform: 'uppercase',
+  },
+  actionTitle: {
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.primary,
+    marginBottom: 4,
+  },
+  actionDesc: {
+    fontSize: Typography.fontSize.sm,
+    color: Colors.text.secondary,
+    lineHeight: 20,
+    marginBottom: Spacing.md,
+  },
+  actionFooter: {
+    borderTopWidth: 1,
+    borderTopColor: Colors.border.subtle,
+    paddingTop: Spacing.sm,
+    alignItems: 'flex-end',
+  },
+  actionLinkText: {
+    fontSize: Typography.fontSize.xs,
+    color: Colors.brand.purpleLight,
+    fontWeight: Typography.fontWeight.bold,
+  },
+  emptyPlanText: {
+    fontSize: Typography.fontSize.sm,
+    color: Colors.text.muted,
+    textAlign: 'center',
+    paddingVertical: Spacing.lg,
+  },
   progressSection: {
     backgroundColor: Colors.background.secondary,
     padding: Spacing.lg,
     borderRadius: BorderRadius.lg,
     marginBottom: Spacing.xl,
-  },
-  sectionTitle: {
-    fontSize: Typography.fontSize.lg,
-    fontWeight: Typography.fontWeight.semibold,
-    color: Colors.text.primary,
-    marginBottom: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.border.subtle,
   },
   metricRow: {
     flexDirection: 'row',
@@ -191,23 +351,9 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
     borderRadius: BorderRadius.md,
     alignItems: 'center',
-    marginBottom: Spacing.md,
   },
   viewAllBtnText: {
     color: Colors.text.inverse,
-    fontSize: Typography.fontSize.md,
-    fontWeight: Typography.fontWeight.semibold,
-  },
-  aiBtn: {
-    backgroundColor: Colors.brand.purple + '22',
-    padding: Spacing.md,
-    borderRadius: BorderRadius.md,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: Colors.brand.purple + '55',
-  },
-  aiBtnText: {
-    color: Colors.brand.purple,
     fontSize: Typography.fontSize.md,
     fontWeight: Typography.fontWeight.semibold,
   },

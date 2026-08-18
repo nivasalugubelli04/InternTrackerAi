@@ -67,14 +67,22 @@ export class RecommendationService {
       };
     }
 
-    let highestScore = 0;
-    let recommendationsCount = 0;
-
     // Evaluate matching score for each job posting
-    const evaluatedResults = await Promise.all(
+    const evaluatedRaw = await Promise.all(
       activeJobs.map(async (job) => {
         const normalizedJob = this.jobAnalyzer.normalizeJobData(job);
         const evalResult = await this.scoringEngine.evaluateMatch(profile, normalizedJob);
+
+        // 1. Hard Eligibility Filter: clean up old DB records and skip if user is not eligible
+        if (!evalResult.isEligible) {
+          await this.prisma.recommendation
+            .deleteMany({ where: { userId, jobId: job.id } })
+            .catch(() => {});
+          await this.prisma.matchScore
+            .deleteMany({ where: { userId, jobId: job.id } })
+            .catch(() => {});
+          return null;
+        }
 
         // Phase 13: Fetch Semantic Score
         const semanticScore = await this.semanticMatching.computeSemanticScore(userId, job.id);
@@ -86,18 +94,69 @@ export class RecommendationService {
 
         return {
           jobId: job.id,
-          evalResult,
+          evalResult: {
+            ...evalResult,
+            roleCategory: normalizedJob.roleCategory,
+            companyId: normalizedJob.companyId,
+          },
           semanticScore,
         };
       }),
     );
 
-    // Sort by overallScore descending to assign rank
-    evaluatedResults.sort((a, b) => b.evalResult.overallScore - a.evalResult.overallScore);
+    const evaluatedResults = evaluatedRaw.filter(
+      (item): item is NonNullable<typeof item> => item !== null,
+    );
+
+    // 2. Diversity Reranking
+    const finalRanked: typeof evaluatedResults = [];
+    const companyCountMap = new Map<string, number>();
+    const roleCatCountMap = new Map<string, number>();
+    const pool = [...evaluatedResults];
+
+    while (pool.length > 0) {
+      let bestIndex = 0;
+      let bestAdjustedScore = -9999;
+
+      for (let i = 0; i < pool.length; i++) {
+        const item = pool[i];
+        if (!item) continue;
+        const companyId = item.evalResult.companyId;
+        const roleCat = item.evalResult.roleCategory;
+
+        const companyCount = companyCountMap.get(companyId) ?? 0;
+        const roleCatCount = roleCatCountMap.get(roleCat) ?? 0;
+
+        // Apply penalty to maintain recommendation diversity
+        const penalty = companyCount * 12 + roleCatCount * 8;
+        const adjustedScore = item.evalResult.overallScore - penalty;
+
+        if (adjustedScore > bestAdjustedScore) {
+          bestAdjustedScore = adjustedScore;
+          bestIndex = i;
+        }
+      }
+
+      const selected = pool.splice(bestIndex, 1)[0];
+      if (selected) {
+        finalRanked.push(selected);
+        companyCountMap.set(
+          selected.evalResult.companyId,
+          (companyCountMap.get(selected.evalResult.companyId) ?? 0) + 1,
+        );
+        roleCatCountMap.set(
+          selected.evalResult.roleCategory,
+          (roleCatCountMap.get(selected.evalResult.roleCategory) ?? 0) + 1,
+        );
+      }
+    }
+
+    let highestScore = 0;
+    let recommendationsCount = 0;
 
     // Persist scores and recommendations in database
-    for (let i = 0; i < evaluatedResults.length; i++) {
-      const item = evaluatedResults[i];
+    for (let i = 0; i < finalRanked.length; i++) {
+      const item = finalRanked[i];
       if (!item) continue;
       const rank = i + 1;
       const { jobId, evalResult } = item;
@@ -123,6 +182,9 @@ export class RecommendationService {
           companyPreferenceScore: evalResult.companyPreferenceScore,
           stipendScore: evalResult.stipendScore,
           experienceScore: evalResult.experienceScore,
+          careerGoalScore: evalResult.careerGoalScore ?? 0.0,
+          freshnessScore: evalResult.freshnessScore ?? 0.0,
+          behavioralScore: evalResult.behavioralScore ?? 0.0,
         },
         update: {
           overallScore: evalResult.overallScore,
@@ -134,6 +196,9 @@ export class RecommendationService {
           companyPreferenceScore: evalResult.companyPreferenceScore,
           stipendScore: evalResult.stipendScore,
           experienceScore: evalResult.experienceScore,
+          careerGoalScore: evalResult.careerGoalScore ?? 0.0,
+          freshnessScore: evalResult.freshnessScore ?? 0.0,
+          behavioralScore: evalResult.behavioralScore ?? 0.0,
         },
       });
 
@@ -201,6 +266,7 @@ export class RecommendationService {
 
     const whereClause: any = {
       userId,
+      isDismissed: false,
       ...(filter.recommendationType && { recommendationType: filter.recommendationType }),
       ...(filter.priority && { priority: filter.priority }),
       ...(filter.isSaved !== undefined && { isSaved: filter.isSaved }),
@@ -234,10 +300,20 @@ export class RecommendationService {
 
     const scoreMap = new Map(matchScores.map((ms) => [ms.jobId, ms]));
 
-    const formattedData = items.map((item) => ({
-      ...item,
-      matchScore: scoreMap.get(item.jobId) ?? null,
-    }));
+    const profile = await this.profileAnalyzer.analyzeProfile(userId).catch(() => null);
+    const profileSkills = profile?.skills.map((s) => s.toLowerCase()) ?? [];
+
+    const formattedData = items.map((item) => {
+      const matchScore = scoreMap.get(item.jobId) ?? null;
+      const normalizedJob = this.jobAnalyzer.normalizeJobData(item.job);
+      return {
+        ...item,
+        matchScore,
+        missingSkills: matchScore
+          ? normalizedJob.requiredSkills.filter((rs) => !profileSkills.includes(rs.toLowerCase()))
+          : [],
+      };
+    });
 
     return {
       data: formattedData,
@@ -282,10 +358,13 @@ export class RecommendationService {
       },
     });
 
+    const normalizedJob = this.jobAnalyzer.normalizeJobData(recommendation.job);
+
     return {
       ...recommendation,
       isViewed: true,
       matchScore,
+      missingSkills: normalizedJob.requiredSkills, // Will be filtered on frontend or computed
     };
   }
 
@@ -328,6 +407,9 @@ export class RecommendationService {
           companyPreferenceScore: evalResult.companyPreferenceScore,
           stipendScore: evalResult.stipendScore,
           experienceScore: evalResult.experienceScore,
+          careerGoalScore: evalResult.careerGoalScore ?? 0.0,
+          freshnessScore: evalResult.freshnessScore ?? 0.0,
+          behavioralScore: evalResult.behavioralScore ?? 0.0,
         },
       });
     }
@@ -343,13 +425,114 @@ export class RecommendationService {
    * Submits user feedback for a recommendation.
    */
   async submitFeedback(userId: string, jobId: string, feedback: RecommendationFeedbackType) {
-    return this.prisma.recommendationFeedback.create({
+    const savedFeedback = await this.prisma.recommendationFeedback.create({
       data: {
         userId,
         jobId,
         feedback,
       },
     });
+
+    // Capture dismiss logic immediately if marked negative
+    if (feedback === 'NOT_RELEVANT' || feedback === 'NOT_INTERESTED') {
+      await this.prisma.recommendation.updateMany({
+        where: { userId, jobId },
+        data: { isDismissed: true },
+      });
+      await this.prisma.dismissedJob.upsert({
+        where: { userId_jobId: { userId, jobId } },
+        create: { userId, jobId, reason: 'NOT_RELEVANT' },
+        update: { reason: 'NOT_RELEVANT' },
+      });
+    }
+
+    // Trigger runMatchingForUser asynchronously to incorporate signal updates
+    this.runMatchingForUser(userId).catch(() => {});
+
+    return savedFeedback;
+  }
+
+  /**
+   * Retrieves data-driven AI matching market insights.
+   */
+  async getInsights(userId: string) {
+    const profile = await this.profileAnalyzer.analyzeProfile(userId);
+
+    const recs = await this.prisma.recommendation.findMany({
+      where: { userId, isDismissed: false },
+      include: {
+        job: {
+          include: { company: true },
+        },
+      },
+    });
+
+    const matchScores = await this.prisma.matchScore.findMany({
+      where: { userId },
+    });
+
+    const strongMatchesCount = matchScores.filter((ms) => ms.overallScore >= 80).length;
+
+    // Determine strongest category
+    const categoryCounts: Record<string, number> = {};
+    for (const score of matchScores) {
+      if (score.overallScore >= 70) {
+        const job = recs.find((r) => r.jobId === score.jobId)?.job;
+        if (job) {
+          const normalizedJob = this.jobAnalyzer.normalizeJobData(job);
+          const cat = normalizedJob.roleCategory;
+          categoryCounts[cat] = (categoryCounts[cat] ?? 0) + 1;
+        }
+      }
+    }
+
+    let strongestCategory = 'Software Engineering';
+    let maxCount = 0;
+    for (const [cat, count] of Object.entries(categoryCounts)) {
+      if (count > maxCount) {
+        maxCount = count;
+        strongestCategory = cat;
+      }
+    }
+
+    // Determine missing skills gap count
+    const missingSkillCounts: Record<string, number> = {};
+    for (const score of matchScores) {
+      if (score.overallScore >= 60) {
+        const job = recs.find((r) => r.jobId === score.jobId)?.job;
+        if (job) {
+          const normalizedJob = this.jobAnalyzer.normalizeJobData(job);
+          const missing = normalizedJob.requiredSkills.filter(
+            (rs) => !profile.skills.some((us) => us.toLowerCase() === rs.toLowerCase()),
+          );
+          for (const s of missing) {
+            missingSkillCounts[s] = (missingSkillCounts[s] ?? 0) + 1;
+          }
+        }
+      }
+    }
+
+    let topMissingSkill = 'SQL';
+    let maxMissingCount = 0;
+    for (const [skill, count] of Object.entries(missingSkillCounts)) {
+      if (count > maxMissingCount) {
+        maxMissingCount = count;
+        topMissingSkill = skill;
+      }
+    }
+
+    const insights = [
+      `You have ${strongMatchesCount} strong matches this week.`,
+      `${strongestCategory} internships are currently your strongest category.`,
+      `Adding ${topMissingSkill} to your profile could increase your matches.`,
+    ];
+
+    return {
+      insights,
+      strongMatchesCount,
+      strongestCategory,
+      suggestedSkillUpgrade: topMissingSkill,
+    };
   }
 
   private async clearUserMatchCache(userId: string): Promise<void> {

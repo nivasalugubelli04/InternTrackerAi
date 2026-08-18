@@ -19,6 +19,8 @@ export enum SortOption {
   DEADLINE_SOON = 'deadline_soon',
   HIGHEST_STIPEND = 'highest_stipend',
   COMPANY_PRIORITY = 'company_priority',
+  COMPANY = 'company',
+  RELEVANCE = 'relevance',
 }
 
 export class OpportunitiesQueryDto {

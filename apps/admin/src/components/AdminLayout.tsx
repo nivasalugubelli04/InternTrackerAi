@@ -37,6 +37,8 @@ export default function AdminLayout() {
       title: 'Core Operations',
       items: [
         { to: '/', icon: <LayoutDashboard size={18} />, label: 'Dashboard' },
+        { to: '/opportunities', icon: <Compass size={18} />, label: 'Opportunity Discovery' },
+        { to: '/applications', icon: <Briefcase size={18} />, label: 'Applications Tracker' },
         { to: '/users', icon: <Users size={18} />, label: 'Users' },
         { to: '/companies', icon: <Building2 size={18} />, label: 'Companies & Scrapers' },
         { to: '/flags', icon: <Flag size={18} />, label: 'Feature Flags' },

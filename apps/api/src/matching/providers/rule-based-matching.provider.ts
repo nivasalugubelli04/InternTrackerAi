@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { WorkMode } from '@prisma/client';
 
 import { ExplanationGeneratorService } from '../services/explanation-generator.service';
 import type { NormalizedJob } from '../services/job-analyzer.service';
@@ -16,75 +17,118 @@ export class RuleBasedMatchingProvider implements IMatchingProvider {
 
   async calculateMatch(profile: NormalizedProfile, job: NormalizedJob): Promise<MatchResult> {
     const weights = this.configService.get('matching.weights') ?? {
-      skills: 35,
+      skills: 30,
       role: 20,
-      location: 15,
-      company: 10,
-      cgpa: 10,
-      stipend: 5,
-      experience: 5,
+      careerGoal: 15,
+      location: 10,
+      eligibility: 10,
+      company: 5,
+      freshness: 5,
+      behavioralRelevance: 5,
     };
 
-    // 1. Skill Score Calculation (0-100)
-    const { skillScore, matchedSkills } = this.calculateSkillMatch(profile, job);
+    // 1. Hard Eligibility Filter
+    const eligibilityCheck = this.checkHardEligibility(profile, job);
+    if (!eligibilityCheck.isEligible) {
+      return {
+        overallScore: 0,
+        skillScore: 0,
+        educationScore: 0,
+        locationScore: 0,
+        cgpaScore: 0,
+        companyPreferenceScore: 0,
+        stipendScore: 0,
+        experienceScore: 0,
+        careerGoalScore: 0,
+        freshnessScore: 0,
+        behavioralScore: 0,
+        matchedSkills: [],
+        matchedRoles: [],
+        matchedLocations: [],
+        matchedCompanies: [],
+        confidenceScore: 100,
+        reasons: [
+          {
+            reasonType: 'ELIGIBILITY',
+            description: `Not eligible: ${eligibilityCheck.reason}`,
+            weight: 0,
+          },
+        ],
+        isEligible: false,
+        ineligibilityReason: eligibilityCheck.reason,
+        missingSkills: [],
+      };
+    }
 
-    // 2. Role Match Score (0-100)
+    // 2. Skill Score Calculation (0-100) & Missing Skills
+    const { skillScore, matchedSkills, missingSkills } = this.calculateSkillMatch(profile, job);
+
+    // 3. Role Match Score (0-100)
     const { roleScore, matchedRoles } = this.calculateRoleMatch(profile, job);
 
-    // 3. Location Match Score (0-100)
+    // 4. Career Goal Match Score (0-100)
+    const careerGoalScore = this.calculateCareerGoalMatch(profile, job);
+
+    // 5. Location Match Score (0-100)
     const { locationScore, matchedLocations } = this.calculateLocationMatch(profile, job);
 
-    // 4. Company Preference Score (0-100)
+    // 6. Eligibility Detail Score (0-100)
+    const eligibilityScore = this.calculateEligibilityScore(profile, job);
+
+    // 7. Company Preference Score (0-100)
     const { companyScore, matchedCompanies } = this.calculateCompanyMatch(profile, job);
 
-    // 5. CGPA Score (0-100)
-    const cgpaScore = this.calculateCgpaMatch(profile, job);
+    // 8. Freshness Score (0-100)
+    const freshnessScore = this.calculateFreshnessMatch(job);
 
-    // 6. Stipend Score (0-100)
-    const stipendScore = this.calculateStipendMatch(profile, job);
+    // 9. Behavioral Relevance Score (0-100)
+    const behavioralScore = this.calculateBehavioralRelevance(profile, job);
 
-    // 7. Experience / Duration Score (0-100)
-    const experienceScore = this.calculateExperienceMatch(profile, job);
-
-    // Normalize weights to sum to 1.0
+    // Normalized Weights
     const totalWeight =
-      weights.skills +
-      weights.role +
-      weights.location +
-      weights.company +
-      weights.cgpa +
-      weights.stipend +
-      weights.experience;
+      (weights.skills ?? 30) +
+      (weights.role ?? 20) +
+      (weights.careerGoal ?? 15) +
+      (weights.location ?? 10) +
+      (weights.eligibility ?? 10) +
+      (weights.company ?? 5) +
+      (weights.freshness ?? 5) +
+      (weights.behavioralRelevance ?? 5);
 
-    const wSkills = weights.skills / totalWeight;
-    const wRole = weights.role / totalWeight;
-    const wLoc = weights.location / totalWeight;
-    const wComp = weights.company / totalWeight;
-    const wCgpa = weights.cgpa / totalWeight;
-    const wStipend = weights.stipend / totalWeight;
-    const wExp = weights.experience / totalWeight;
+    const wSkills = (weights.skills ?? 30) / totalWeight;
+    const wRole = (weights.role ?? 20) / totalWeight;
+    const wGoal = (weights.careerGoal ?? 15) / totalWeight;
+    const wLoc = (weights.location ?? 10) / totalWeight;
+    const wElig = (weights.eligibility ?? 10) / totalWeight;
+    const wComp = (weights.company ?? 5) / totalWeight;
+    const wFresh = (weights.freshness ?? 5) / totalWeight;
+    const wBehav = (weights.behavioralRelevance ?? 5) / totalWeight;
 
     const overallScore = Math.round(
       skillScore * wSkills +
         roleScore * wRole +
+        careerGoalScore * wGoal +
         locationScore * wLoc +
+        eligibilityScore * wElig +
         companyScore * wComp +
-        cgpaScore * wCgpa +
-        stipendScore * wStipend +
-        experienceScore * wExp,
+        freshnessScore * wFresh +
+        behavioralScore * wBehav,
     );
 
-    // Calculate confidence score based on available data completeness
+    // Calculate confidence score based on data completeness
     const confidenceScore = this.calculateConfidence(profile, job);
 
     const componentScores = {
       skillScore: Math.round(skillScore),
-      educationScore: Math.round(roleScore), // Map role score to educationScore DB column
+      educationScore: Math.round(roleScore), // Maps to roleScore
       locationScore: Math.round(locationScore),
       companyPreferenceScore: Math.round(companyScore),
-      cgpaScore: Math.round(cgpaScore),
-      stipendScore: Math.round(stipendScore),
-      experienceScore: Math.round(experienceScore),
+      cgpaScore: Math.round(profile.cgpa ? eligibilityScore : 70),
+      stipendScore: this.calculateStipendMatch(profile, job),
+      experienceScore: Math.round(profile.yearOfStudy ? eligibilityScore : 70),
+      careerGoalScore: Math.round(careerGoalScore),
+      freshnessScore: Math.round(freshnessScore),
+      behavioralScore: Math.round(behavioralScore),
     };
 
     const reasons = this.explanationGenerator.generateExplanations(
@@ -106,28 +150,91 @@ export class RuleBasedMatchingProvider implements IMatchingProvider {
       matchedCompanies,
       confidenceScore,
       reasons,
+      isEligible: true,
+      missingSkills,
     };
+  }
+
+  /**
+   * Helper to perform hard eligibility exclusions.
+   */
+  checkHardEligibility(
+    profile: NormalizedProfile,
+    job: NormalizedJob,
+  ): { isEligible: boolean; reason?: string } {
+    const now = new Date();
+
+    // 1. Expired
+    if (job.applicationDeadline && job.applicationDeadline < now) {
+      return { isEligible: false, reason: 'Job application deadline has passed' };
+    }
+
+    // 2. Impossible CGPA Requirement
+    if (profile.cgpa !== null && job.minCgpa !== null && profile.cgpa < job.minCgpa) {
+      return {
+        isEligible: false,
+        reason: `CGPA requirement mismatch (User CGPA: ${profile.cgpa}, Min Required: ${job.minCgpa})`,
+      };
+    }
+
+    // 3. Graduation year mismatch
+    if (
+      profile.graduationYear !== null &&
+      job.graduationRequirement !== null &&
+      profile.graduationYear !== job.graduationRequirement
+    ) {
+      return {
+        isEligible: false,
+        reason: `Graduation batch mismatch (User batch: ${profile.graduationYear}, Required: ${job.graduationRequirement})`,
+      };
+    }
+
+    // 4. Experience requirement mismatch
+    if (job.experienceRequirement !== null && job.experienceRequirement > 0) {
+      const estimatedExpYears = profile.yearOfStudy ? Math.max(0, profile.yearOfStudy - 1) : 0;
+      if (estimatedExpYears < job.experienceRequirement) {
+        return {
+          isEligible: false,
+          reason: `Experience requirement mismatch (Required: ${job.experienceRequirement} years)`,
+        };
+      }
+    }
+
+    // 5. Work mode explicitly excluded
+    if (
+      profile.preferredWorkModes.length === 1 &&
+      profile.preferredWorkModes.includes(WorkMode.REMOTE) &&
+      job.workMode === WorkMode.ONSITE
+    ) {
+      return { isEligible: false, reason: 'User restricts preferences to Remote roles only' };
+    }
+
+    return { isEligible: true };
   }
 
   private calculateSkillMatch(
     profile: NormalizedProfile,
     job: NormalizedJob,
-  ): { skillScore: number; matchedSkills: string[] } {
-    if (job.requiredSkills.length === 0 && job.descriptionKeywords.length === 0) {
-      return { skillScore: 70, matchedSkills: [] }; // Neutral score if no job skills detected
+  ): { skillScore: number; matchedSkills: string[]; missingSkills: string[] } {
+    const jobSkills = Array.from(new Set([...job.requiredSkills, ...job.descriptionKeywords]));
+    if (jobSkills.length === 0) {
+      return { skillScore: 70, matchedSkills: [], missingSkills: [] };
     }
 
-    const jobSkills = Array.from(new Set([...job.requiredSkills, ...job.descriptionKeywords]));
     const matchedSkills = profile.skills.filter((userSkill) =>
       jobSkills.some((js) => js.toLowerCase() === userSkill.toLowerCase()),
     );
 
-    const requiredOverlap = job.requiredSkills.filter((rs) =>
-      profile.skills.some((us) => us.toLowerCase() === rs.toLowerCase()),
+    const missingSkills = job.requiredSkills.filter(
+      (reqSkill) =>
+        !profile.skills.some((userSkill) => userSkill.toLowerCase() === reqSkill.toLowerCase()),
     );
 
     let score = 0;
     if (job.requiredSkills.length > 0) {
+      const requiredOverlap = job.requiredSkills.filter((rs) =>
+        profile.skills.some((us) => us.toLowerCase() === rs.toLowerCase()),
+      );
       const requiredScore = (requiredOverlap.length / job.requiredSkills.length) * 70;
       const bonusScore = (matchedSkills.length / Math.max(1, jobSkills.length)) * 30;
       score = requiredScore + bonusScore;
@@ -138,6 +245,7 @@ export class RuleBasedMatchingProvider implements IMatchingProvider {
     return {
       skillScore: Math.min(100, score),
       matchedSkills,
+      missingSkills,
     };
   }
 
@@ -146,13 +254,19 @@ export class RuleBasedMatchingProvider implements IMatchingProvider {
     job: NormalizedJob,
   ): { roleScore: number; matchedRoles: string[] } {
     if (profile.preferredRoles.length === 0) {
-      return { roleScore: 60, matchedRoles: [] }; // Default neutral
+      return { roleScore: 60, matchedRoles: [] };
     }
 
     const titleLower = job.title.toLowerCase();
+    const roleCatLower = job.roleCategory.toLowerCase();
+
     const matchedRoles = profile.preferredRoles.filter((role) => {
       const roleLower = role.toLowerCase();
-      return titleLower.includes(roleLower) || roleLower.includes(titleLower);
+      return (
+        titleLower.includes(roleLower) ||
+        roleLower.includes(titleLower) ||
+        roleCatLower.includes(roleLower)
+      );
     });
 
     const score = matchedRoles.length > 0 ? 100 : 20;
@@ -163,12 +277,44 @@ export class RuleBasedMatchingProvider implements IMatchingProvider {
     };
   }
 
+  private calculateCareerGoalMatch(profile: NormalizedProfile, job: NormalizedJob): number {
+    if (profile.careerGoals.length === 0) {
+      return 50; // Neutral default
+    }
+
+    const titleLower = job.title.toLowerCase();
+    const compLower = job.companyName.toLowerCase();
+
+    let maxGoalScore = 20;
+
+    for (const goal of profile.careerGoals) {
+      const targetRoleLower = goal.targetRole.toLowerCase();
+      const targetCompLower = goal.targetCompany?.toLowerCase() ?? '';
+
+      const roleMatch =
+        titleLower.includes(targetRoleLower) || targetRoleLower.includes(titleLower);
+      const compMatch =
+        targetCompLower &&
+        (compLower.includes(targetCompLower) || targetCompLower.includes(compLower));
+
+      if (roleMatch && compMatch) {
+        maxGoalScore = Math.max(maxGoalScore, 100);
+      } else if (roleMatch) {
+        maxGoalScore = Math.max(maxGoalScore, 85);
+      } else if (compMatch) {
+        maxGoalScore = Math.max(maxGoalScore, 70);
+      }
+    }
+
+    return maxGoalScore;
+  }
+
   private calculateLocationMatch(
     profile: NormalizedProfile,
     job: NormalizedJob,
   ): { locationScore: number; matchedLocations: string[] } {
     const matchedLocations: string[] = [];
-    let score = 50; // Neutral default
+    let score = 50;
 
     if (job.workMode && profile.preferredWorkModes.includes(job.workMode)) {
       matchedLocations.push(`WorkMode: ${job.workMode}`);
@@ -190,6 +336,39 @@ export class RuleBasedMatchingProvider implements IMatchingProvider {
       locationScore: Math.min(100, score),
       matchedLocations,
     };
+  }
+
+  private calculateEligibilityScore(profile: NormalizedProfile, job: NormalizedJob): number {
+    let matchesCount = 0;
+    let totalChecks = 0;
+
+    // CGPA checks
+    if (job.minCgpa !== null) {
+      totalChecks++;
+      if (profile.cgpa !== null && profile.cgpa >= job.minCgpa) {
+        matchesCount++;
+      }
+    }
+
+    // Experience checks
+    if (job.experienceRequirement !== null && job.experienceRequirement > 0) {
+      totalChecks++;
+      const userExp = profile.yearOfStudy ? Math.max(0, profile.yearOfStudy - 1) : 0;
+      if (userExp >= job.experienceRequirement) {
+        matchesCount++;
+      }
+    }
+
+    // Graduation batch checks
+    if (job.graduationRequirement !== null) {
+      totalChecks++;
+      if (profile.graduationYear === job.graduationRequirement) {
+        matchesCount++;
+      }
+    }
+
+    if (totalChecks === 0) return 100;
+    return Math.round((matchesCount / totalChecks) * 100);
   }
 
   private calculateCompanyMatch(
@@ -214,16 +393,37 @@ export class RuleBasedMatchingProvider implements IMatchingProvider {
     return { companyScore: 50, matchedCompanies: [] };
   }
 
-  private calculateCgpaMatch(profile: NormalizedProfile, job: NormalizedJob): number {
-    if (profile.cgpa === null) return 70; // Neutral
-    if (job.minCgpa === null) return 100; // Satisfies any requirement
+  private calculateFreshnessMatch(job: NormalizedJob): number {
+    const ageMs = Date.now() - job.postedAt.getTime();
+    const ageDays = ageMs / (1000 * 60 * 60 * 24);
 
-    if (profile.cgpa >= job.minCgpa) {
-      return 100;
-    } else {
-      const ratio = profile.cgpa / job.minCgpa;
-      return Math.round(ratio * 70);
-    }
+    if (ageDays <= 1) return 100; // New today
+    if (ageDays <= 3) return 85; // Recent
+    if (ageDays <= 7) return 60; // Older
+    return 30; // Cold
+  }
+
+  private calculateBehavioralRelevance(profile: NormalizedProfile, job: NormalizedJob): number {
+    // If the user has saved or applied to this specific job
+    if (profile.savedJobs.includes(job.jobId)) return 100;
+    if (profile.applicationHistory.some((app) => app.jobId === job.jobId)) return 100;
+
+    // Check interaction signals
+    const hasViewed = profile.interactionHistory.some(
+      (ji) => ji.jobId === job.jobId && ji.interactionType === 'VIEW',
+    );
+    if (hasViewed) return 80;
+
+    // Mapped signals for same company/role category
+    const interactedWithSameCompany = profile.interactionHistory.some(
+      (ji) =>
+        ji.jobId &&
+        profile.savedJobs.includes(ji.jobId) &&
+        job.companyName.toLowerCase().includes(job.companyName.toLowerCase()),
+    );
+    if (interactedWithSameCompany) return 70;
+
+    return 50; // Neutral default
   }
 
   private calculateStipendMatch(profile: NormalizedProfile, job: NormalizedJob): number {
@@ -232,21 +432,6 @@ export class RuleBasedMatchingProvider implements IMatchingProvider {
 
     const ratio = job.stipend / profile.minimumStipend;
     return Math.round(ratio * 100);
-  }
-
-  private calculateExperienceMatch(profile: NormalizedProfile, job: NormalizedJob): number {
-    if (!job.experienceLevel) return 80;
-    const expLower = job.experienceLevel.toLowerCase();
-
-    if (expLower.includes('intern') || expLower.includes('entry') || expLower.includes('fresh')) {
-      return 100;
-    }
-
-    if (profile.yearOfStudy && profile.yearOfStudy >= 3) {
-      return 90;
-    }
-
-    return 70;
   }
 
   private calculateConfidence(profile: NormalizedProfile, job: NormalizedJob): number {

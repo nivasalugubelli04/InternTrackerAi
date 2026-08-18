@@ -54,4 +54,34 @@ export class CreateApplicationDto {
   @IsDateString()
   @IsOptional()
   nextActionDate?: string;
+
+  @ApiPropertyOptional({ description: 'Linked Resume Version ID' })
+  @IsUUID()
+  @IsOptional()
+  resumeVersionId?: string;
+
+  @ApiPropertyOptional({ description: 'Text of the Cover Letter' })
+  @IsString()
+  @IsOptional()
+  coverLetterText?: string;
+
+  @ApiPropertyOptional({ description: 'Link to portfolio used' })
+  @IsString()
+  @IsOptional()
+  portfolioUrl?: string;
+
+  @ApiPropertyOptional({ description: 'Link to transcript used' })
+  @IsString()
+  @IsOptional()
+  transcriptUrl?: string;
+
+  @ApiPropertyOptional({ description: 'Category/Reason for rejection' })
+  @IsString()
+  @IsOptional()
+  rejectionReason?: string;
+
+  @ApiPropertyOptional({ description: 'Detailed rejection feedback/note' })
+  @IsString()
+  @IsOptional()
+  rejectionFeedback?: string;
 }

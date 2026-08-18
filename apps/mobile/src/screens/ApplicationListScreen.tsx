@@ -25,35 +25,79 @@ const formatDate = (date: string | Date) => {
 
 const COLUMNS = [
   { status: ApplicationStatus.SAVED, label: 'Saved', color: Colors.text.muted },
+  {
+    status: ApplicationStatus.APPLICATION_STARTED,
+    label: 'Started',
+    color: Colors.brand.purpleLight,
+  },
   { status: ApplicationStatus.APPLIED, label: 'Applied', color: Colors.brand.purple },
   { status: ApplicationStatus.ASSESSMENT, label: 'Assessment', color: Colors.brand.cyan },
   { status: ApplicationStatus.INTERVIEW, label: 'Interview', color: Colors.warning },
   { status: ApplicationStatus.OFFER, label: 'Offer', color: Colors.success },
-  { status: ApplicationStatus.REJECTED, label: 'Rejected', color: Colors.error },
+  { status: 'CLOSED' as any, label: 'Closed', color: Colors.error },
 ];
 
 const ApplicationCard = ({ app, onPress }: { app: Application; onPress: () => void }) => {
+  const getPriorityColor = (label: string) => {
+    switch (label) {
+      case 'URGENT':
+        return Colors.error;
+      case 'HIGH':
+        return Colors.brand.purpleLight;
+      case 'MEDIUM':
+        return Colors.warning;
+      default:
+        return Colors.text.muted;
+    }
+  };
+
+  const priorityColor = getPriorityColor(app.priorityLabel);
+  const matchScore = app.job?.matchScores?.[0]?.overallScore ?? 75;
+
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7}>
-      <Text style={styles.companyName} numberOfLines={1}>
-        {app.companyNameSnapshot}
-      </Text>
+      <View style={styles.cardHeader}>
+        <Text style={styles.companyName} numberOfLines={1}>
+          {app.companyNameSnapshot}
+        </Text>
+        <Text
+          style={[
+            styles.priorityBadge,
+            {
+              color: priorityColor,
+              borderColor: `${priorityColor}44`,
+              backgroundColor: `${priorityColor}11`,
+            },
+          ]}
+        >
+          {app.priorityLabel}
+        </Text>
+      </View>
+
       <Text style={styles.jobTitle} numberOfLines={2}>
         {app.jobTitleSnapshot}
       </Text>
 
       <View style={styles.metaRow}>
         <Text style={styles.location} numberOfLines={1}>
-          {app.locationSnapshot}
+          📍 {app.locationSnapshot || 'Remote'}
         </Text>
         <View style={styles.badge}>
-          <Text style={styles.badgeText}>{app.status}</Text>
+          <Text style={styles.badgeText}>{app.status.replace('_', ' ')}</Text>
         </View>
       </View>
 
       <View style={styles.footerRow}>
-        {app.appliedAt && <Text style={styles.dateText}>Applied: {formatDate(app.appliedAt)}</Text>}
-        {app.nextAction && <Text style={styles.actionText}>Next: {app.nextAction}</Text>}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%' }}>
+          <Text style={styles.matchText}>🎯 {matchScore}% Match</Text>
+          {app.appliedAt && <Text style={styles.dateText}>Sent: {formatDate(app.appliedAt)}</Text>}
+        </View>
+        {app.nextAction && (
+          <Text style={styles.actionText} numberOfLines={1}>
+            ⏰ Next: {app.nextAction}{' '}
+            {app.nextActionDate ? `(${formatDate(app.nextActionDate)})` : ''}
+          </Text>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -71,7 +115,6 @@ const KanbanColumn = ({
   const navigation = useNavigation<any>();
   const { data, isLoading, refetch } = useApplications(status);
 
-  // Flatten infinite pages
   const apps = data?.pages.flatMap((page) => page.data) || [];
 
   return (
@@ -117,14 +160,14 @@ export default function ApplicationListScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={styles.backBtn}>← Back</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Board</Text>
+        <Text style={styles.headerTitle}>Application Board</Text>
         <View style={{ width: 50 }} />
       </View>
 
       <FlatList
         horizontal
         data={COLUMNS}
-        keyExtractor={(item) => item.status}
+        keyExtractor={(item) => item.label}
         renderItem={({ item }) => (
           <KanbanColumn status={item.status} label={item.label} color={item.color} />
         )}
@@ -172,6 +215,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background.secondary,
     borderRadius: BorderRadius.lg,
     padding: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.border.subtle,
   },
   columnHeader: {
     flexDirection: 'row',
@@ -187,12 +232,14 @@ const styles = StyleSheet.create({
     fontSize: Typography.fontSize.lg,
     fontWeight: Typography.fontWeight.bold,
     color: Colors.text.primary,
+    marginTop: 4,
   },
   countBadge: {
     backgroundColor: Colors.background.primary,
     paddingHorizontal: Spacing.sm,
     paddingVertical: 2,
     borderRadius: BorderRadius.full,
+    marginTop: 4,
   },
   countText: {
     fontSize: Typography.fontSize.xs,
@@ -208,6 +255,7 @@ const styles = StyleSheet.create({
     color: Colors.text.muted,
     marginTop: Spacing.xl,
     fontStyle: 'italic',
+    fontSize: Typography.fontSize.xs,
   },
   card: {
     backgroundColor: Colors.background.primary,
@@ -217,11 +265,25 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border.subtle,
   },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
   companyName: {
     fontSize: Typography.fontSize.sm,
     fontWeight: Typography.fontWeight.bold,
     color: Colors.text.secondary,
-    marginBottom: 2,
+    flex: 1,
+  },
+  priorityBadge: {
+    fontSize: 9,
+    fontWeight: Typography.fontWeight.bold,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    borderWidth: 1,
   },
   jobTitle: {
     fontSize: Typography.fontSize.md,
@@ -241,29 +303,35 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   badge: {
-    backgroundColor: Colors.brand.purple + '22',
+    backgroundColor: Colors.brand.purple + '15',
     paddingHorizontal: Spacing.sm,
     paddingVertical: 2,
     borderRadius: BorderRadius.sm,
   },
   badgeText: {
-    fontSize: 10,
+    fontSize: 9,
     color: Colors.brand.purple,
     fontWeight: Typography.fontWeight.bold,
+    textTransform: 'uppercase',
   },
   footerRow: {
     borderTopWidth: 1,
     borderTopColor: Colors.border.subtle,
     paddingTop: Spacing.sm,
-    gap: 4,
+    gap: 6,
+  },
+  matchText: {
+    fontSize: Typography.fontSize.xs,
+    color: Colors.success,
+    fontWeight: Typography.fontWeight.bold,
   },
   dateText: {
     fontSize: Typography.fontSize.xs,
-    color: Colors.text.secondary,
+    color: Colors.text.muted,
   },
   actionText: {
     fontSize: Typography.fontSize.xs,
-    color: Colors.brand.purple,
-    fontWeight: Typography.fontWeight.medium,
+    color: Colors.brand.purpleLight,
+    fontWeight: Typography.fontWeight.semibold,
   },
 });

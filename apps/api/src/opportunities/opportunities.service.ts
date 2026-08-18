@@ -163,40 +163,123 @@ export class OpportunitiesService {
       where.id = { notIn: dismissedJobIds };
     }
 
-    // Text search
+    // Parse natural language queries if present
+    let finalQuery = { ...query };
     if (query.q) {
+      const nlpFilters = this.parseNaturalLanguageQuery(query.q);
+      finalQuery = { ...query, ...nlpFilters };
+    }
+
+    // Text search
+    if (finalQuery.q) {
       where.OR = [
-        { title: { contains: query.q, mode: 'insensitive' } },
-        { location: { contains: query.q, mode: 'insensitive' } },
-        { description: { contains: query.q, mode: 'insensitive' } },
-        { company: { name: { contains: query.q, mode: 'insensitive' } } },
-        { company: { industry: { contains: query.q, mode: 'insensitive' } } },
+        { title: { contains: finalQuery.q, mode: 'insensitive' } },
+        { location: { contains: finalQuery.q, mode: 'insensitive' } },
+        { description: { contains: finalQuery.q, mode: 'insensitive' } },
+        { company: { name: { contains: finalQuery.q, mode: 'insensitive' } } },
+        { company: { industry: { contains: finalQuery.q, mode: 'insensitive' } } },
       ];
     }
 
-    if (query.companyId) where.companyId = query.companyId;
-    if (query.location) where.location = { contains: query.location, mode: 'insensitive' };
-    if (query.workMode) where.workMode = query.workMode;
-    if (query.employmentType)
-      where.employmentType = { contains: query.employmentType, mode: 'insensitive' };
-    if (query.minStipend !== undefined) where.stipend = { gte: query.minStipend };
-    if (query.maxStipend !== undefined) {
-      where.stipend = { ...(where.stipend as object), lte: query.maxStipend };
+    if (finalQuery.companyId) where.companyId = finalQuery.companyId;
+    if (finalQuery.location)
+      where.location = { contains: finalQuery.location, mode: 'insensitive' };
+    if (finalQuery.workMode) where.workMode = finalQuery.workMode;
+    if (finalQuery.employmentType)
+      where.employmentType = { contains: finalQuery.employmentType, mode: 'insensitive' };
+    if (finalQuery.minStipend !== undefined) where.stipend = { gte: finalQuery.minStipend };
+    if (finalQuery.maxStipend !== undefined) {
+      where.stipend = { ...(where.stipend as object), lte: finalQuery.maxStipend };
     }
-    if (query.postedAfter) where.postedDate = { gte: new Date(query.postedAfter) };
-    if (query.postedBefore) {
-      where.postedDate = { ...(where.postedDate as object), lte: new Date(query.postedBefore) };
+    if (finalQuery.postedAfter) where.postedDate = { gte: new Date(finalQuery.postedAfter) };
+    if (finalQuery.postedBefore) {
+      where.postedDate = {
+        ...(where.postedDate as object),
+        lte: new Date(finalQuery.postedBefore),
+      };
     }
-    if (query.deadlineBefore) where.deadline = { lte: new Date(query.deadlineBefore) };
-    if (query.trackedCompaniesOnly && trackedCompanyIds.length) {
+    if (finalQuery.deadlineBefore) where.deadline = { lte: new Date(finalQuery.deadlineBefore) };
+    if (finalQuery.trackedCompaniesOnly && trackedCompanyIds.length) {
       where.companyId = { in: trackedCompanyIds };
     }
-    if (query.skills) {
-      const skillList = query.skills.split(',').map((s) => s.trim());
+    if (finalQuery.skills) {
+      const skillList = finalQuery.skills.split(',').map((s) => s.trim());
       where.requirements = { hasSome: skillList };
     }
 
     return where;
+  }
+
+  parseNaturalLanguageQuery(q: string): Partial<OpportunitiesQueryDto> {
+    const filters: Partial<OpportunitiesQueryDto> = {};
+    const lower = q.toLowerCase();
+
+    // 1. Work Mode
+    if (lower.includes('remote')) {
+      filters.workMode = 'REMOTE';
+    } else if (lower.includes('hybrid')) {
+      filters.workMode = 'HYBRID';
+    } else if (
+      lower.includes('onsite') ||
+      lower.includes('on-site') ||
+      lower.includes('in-office')
+    ) {
+      filters.workMode = 'ONSITE';
+    }
+
+    // 2. Experience / Freshers
+    if (
+      lower.includes('fresher') ||
+      lower.includes('entry') ||
+      lower.includes('junior') ||
+      lower.includes('no experience')
+    ) {
+      filters.employmentType = 'internship';
+    }
+
+    // 3. Extract common roles / skills
+    if (
+      lower.includes('machine learning') ||
+      lower.includes('ml') ||
+      lower.includes('ai') ||
+      lower.includes('artificial intelligence')
+    ) {
+      filters.q = 'Machine Learning';
+    } else if (lower.includes('frontend') || lower.includes('front-end') || lower.includes('web')) {
+      filters.q = 'Frontend';
+    } else if (lower.includes('backend') || lower.includes('back-end')) {
+      filters.q = 'Backend';
+    } else if (
+      lower.includes('fullstack') ||
+      lower.includes('full stack') ||
+      lower.includes('full-stack')
+    ) {
+      filters.q = 'Full Stack';
+    }
+
+    // 4. Locations
+    const cities = [
+      'bangalore',
+      'bengaluru',
+      'mumbai',
+      'delhi',
+      'noida',
+      'gurgaon',
+      'hyderabad',
+      'pune',
+      'chennai',
+      'san francisco',
+      'new york',
+      'london',
+    ];
+    for (const city of cities) {
+      if (lower.includes(city)) {
+        filters.location = city;
+        break;
+      }
+    }
+
+    return filters;
   }
 
   // ── Main Feed ────────────────────────────────────────────────────────────────
@@ -241,6 +324,9 @@ export class OpportunitiesService {
       case SortOption.HIGHEST_STIPEND:
         orderBy = [{ stipend: 'desc' }, { id: 'desc' }];
         break;
+      case SortOption.COMPANY:
+        orderBy = [{ company: { name: 'asc' } }, { id: 'asc' }];
+        break;
       default:
         orderBy = [{ createdAt: 'desc' }];
     }
@@ -259,7 +345,11 @@ export class OpportunitiesService {
       formatted = formatted.filter((j) => (j.matchScore?.overallScore ?? 0) >= minScore);
     }
 
-    if (query.sort === SortOption.BEST_MATCH || !query.sort) {
+    if (
+      query.sort === SortOption.BEST_MATCH ||
+      query.sort === SortOption.RELEVANCE ||
+      !query.sort
+    ) {
       formatted.sort(
         (a, b) => (b.matchScore?.overallScore ?? 0) - (a.matchScore?.overallScore ?? 0),
       );

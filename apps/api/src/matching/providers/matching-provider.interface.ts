@@ -10,18 +10,24 @@ export interface MatchReasonData {
 export interface MatchResult {
   overallScore: number;
   skillScore: number;
-  educationScore: number;
+  educationScore: number; // maps to roleScore
   locationScore: number;
   cgpaScore: number;
   companyPreferenceScore: number;
   stipendScore: number;
   experienceScore: number;
+  careerGoalScore: number;
+  freshnessScore: number;
+  behavioralScore: number;
   matchedSkills: string[];
   matchedRoles: string[];
   matchedLocations: string[];
   matchedCompanies: string[];
   confidenceScore: number;
   reasons: MatchReasonData[];
+  isEligible: boolean;
+  ineligibilityReason?: string | undefined;
+  missingSkills?: string[] | undefined;
 }
 
 export const MATCHING_PROVIDER = 'MATCHING_PROVIDER';

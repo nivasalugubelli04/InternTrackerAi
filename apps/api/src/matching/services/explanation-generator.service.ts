@@ -25,6 +25,9 @@ export class ExplanationGeneratorService {
       cgpaScore: number;
       stipendScore: number;
       experienceScore: number;
+      careerGoalScore?: number;
+      freshnessScore?: number;
+      behavioralScore?: number;
     },
   ): MatchReasonData[] {
     const reasons: MatchReasonData[] = [];
@@ -107,6 +110,33 @@ export class ExplanationGeneratorService {
         reasonType: 'EXPERIENCE',
         description: `✔ Educational background (${profile.degree ?? 'Student'}) matches experience expectations.`,
         weight: componentScores.experienceScore,
+      });
+    }
+
+    // 8. Career Goals
+    if (componentScores.careerGoalScore && componentScores.careerGoalScore >= 70) {
+      reasons.push({
+        reasonType: 'CAREER_GOAL',
+        description: `✔ Career alignment: This opportunity fits your target career goals.`,
+        weight: componentScores.careerGoalScore,
+      });
+    }
+
+    // 9. Freshness
+    if (componentScores.freshnessScore && componentScores.freshnessScore >= 80) {
+      reasons.push({
+        reasonType: 'FRESHNESS',
+        description: `✔ Fresh opportunity: Posted recently.`,
+        weight: componentScores.freshnessScore,
+      });
+    }
+
+    // 10. Behavioral Relevance
+    if (componentScores.behavioralScore && componentScores.behavioralScore >= 70) {
+      reasons.push({
+        reasonType: 'BEHAVIORAL_RELEVANCE',
+        description: `✔ Activity-based match: Recommended based on your engagement history.`,
+        weight: componentScores.behavioralScore,
       });
     }
 
