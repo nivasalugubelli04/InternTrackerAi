@@ -188,9 +188,8 @@ export class CareerCenterService {
       orderBy: { scheduledStart: 'asc' },
     });
 
-    const interviews = await Promise.all(
+    let interviews = await Promise.all(
       upcoming.map(async (i) => {
-        // Query if there is prep plan
         const prepPlan = i.jobId
           ? await this.prisma.preparationPlan.findFirst({
               where: { userId, jobId: i.jobId },
@@ -198,7 +197,6 @@ export class CareerCenterService {
             })
           : null;
 
-        // Query mock interview score if any completed mock matches the job role
         const mockMatch = i.jobId
           ? await this.prisma.mockInterview.findFirst({
               where: { userId, jobId: i.jobId, status: 'COMPLETED' },
@@ -230,6 +228,48 @@ export class CareerCenterService {
         };
       }),
     );
+
+    // Fallback: If no recruiter interviews, include tracked applications in INTERVIEW status
+    if (interviews.length === 0) {
+      const interviewApps = await this.prisma.application.findMany({
+        where: { userId, status: ApplicationStatus.INTERVIEW },
+        include: { job: { include: { company: true } } },
+      });
+
+      interviews = await Promise.all(
+        interviewApps.map(async (app) => {
+          const prepPlan = await this.prisma.preparationPlan.findFirst({
+            where: { userId, jobId: app.jobId },
+            include: { tasks: true },
+          });
+
+          const mockMatch = await this.prisma.mockInterview.findFirst({
+            where: { userId, jobId: app.jobId, status: 'COMPLETED' },
+            orderBy: { score: 'desc' },
+          });
+
+          return {
+            id: app.id,
+            title: `Interview Prep: ${app.job.title}`,
+            type: 'MOCK_PRACTICE' as any,
+            company: app.job.company.name,
+            role: app.job.title,
+            scheduledStart: app.nextActionDate || app.updatedAt,
+            meetingUrl: null,
+            preparationStatus: prepPlan
+              ? prepPlan.tasks.every((t) => t.status === 'COMPLETED')
+                ? 'READY'
+                : 'IN_PROGRESS'
+              : 'NOT_STARTED',
+            simulationScore: mockMatch?.score || null,
+            recommendedPrep: prepPlan?.tasks
+              .filter((t) => t.status === 'TODO')
+              .slice(0, 3)
+              .map((t) => t.title) || ['Complete 1 Mock Interview session'],
+          };
+        }),
+      );
+    }
 
     return interviews;
   }

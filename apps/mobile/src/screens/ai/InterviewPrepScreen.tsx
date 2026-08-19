@@ -6,319 +6,420 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
-import { aiService } from '../../services/ai.service';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { useRoute, useNavigation } from '@react-navigation/native';
+import { Colors, Typography, Spacing, BorderRadius } from '../../theme';
+import { interviewsService } from '../../services/interviews.service';
 
-interface Props {
-  route?: any;
-}
+export default function InterviewPrepScreen(): React.ReactElement {
+  const route = useRoute();
+  const navigation = useNavigation<any>();
+  const { jobId } = (route.params as { jobId: string }) || {};
 
-export default function InterviewPrepScreen({ route }: Props) {
-  const jobId = route?.params?.jobId;
-  const [prepData, setPrepData] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'technical' | 'behavioral' | 'hr' | 'roleSpecific'>('technical');
-  const [expandedQuestionIdx, setExpandedQuestionIdx] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [workspace, setWorkspace] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState<'overview' | 'topics' | 'plan'>('overview');
 
   useEffect(() => {
-    const fetchInterviewPrep = async () => {
-      try {
-        const result = await aiService.generateInterviewPrep(jobId);
-        setPrepData(result);
-      } catch (err: any) {
-        Alert.alert('Error', 'Failed to generate interview preparation questions.');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    if (jobId) fetchInterviewPrep();
+    if (jobId) {
+      interviewsService
+        .getPreparationWorkspace(jobId)
+        .then(setWorkspace)
+        .catch((err) => console.error('Failed to load workspace:', err))
+        .finally(() => setLoading(false));
+    } else {
+      setLoading(false);
+    }
   }, [jobId]);
 
-  if (isLoading) {
+  if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#6200EE" />
-        <Text style={styles.loadingText}>Generating interview preparation guide...</Text>
-      </View>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={Colors.brand.purple} />
+          <Text style={styles.loadingText}>Building Interview Workspace...</Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
-  const getQuestionsByTab = () => {
-    if (!prepData) return [];
-    switch (activeTab) {
-      case 'technical':
-        return prepData.technical || [];
-      case 'behavioral':
-        return prepData.behavioral || [];
-      case 'hr':
-        return prepData.hr || [];
-      case 'roleSpecific':
-        return prepData.roleSpecific || [];
-    }
-  };
+  if (!workspace) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.center}>
+          <Ionicons name="alert-circle-outline" size={48} color={Colors.warning} />
+          <Text style={styles.loadingText}>No interview workspace found for this job.</Text>
+          <TouchableOpacity style={styles.primaryBtn} onPress={() => navigation.goBack()}>
+            <Text style={styles.primaryBtnText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
-  const questions = getQuestionsByTab();
+  const { job, readiness, topics, userStrengths, missingSkills, preparationPlan } = workspace;
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Interview Preparation</Text>
-      <Text style={styles.subtitle}>
-        AI-generated mock interview questions tailored to your profile and the internship posting.
-      </Text>
+    <SafeAreaView style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Preparation Workspace</Text>
+        <TouchableOpacity
+          onPress={() =>
+            navigation.navigate('InterviewCoach', { jobId: job.id, jobTitle: job.title })
+          }
+          style={styles.coachIconBtn}
+        >
+          <Ionicons name="sparkles" size={20} color={Colors.brand.purpleLight} />
+        </TouchableOpacity>
+      </View>
 
       {/* Tabs */}
       <View style={styles.tabBar}>
-        {(['technical', 'behavioral', 'hr', 'roleSpecific'] as const).map((tab) => (
-          <TouchableOpacity
-            key={tab}
-            onPress={() => {
-              setActiveTab(tab);
-              setExpandedQuestionIdx(null);
-            }}
-            style={[styles.tab, activeTab === tab && styles.activeTab]}
-          >
-            <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
-              {tab === 'roleSpecific' ? 'Role' : tab.charAt(0).toUpperCase() + tab.slice(1)}
-            </Text>
-          </TouchableOpacity>
-        ))}
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'overview' && styles.activeTab]}
+          onPress={() => setActiveTab('overview')}
+        >
+          <Text style={[styles.tabText, activeTab === 'overview' && styles.activeTabText]}>
+            Overview
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'topics' && styles.activeTab]}
+          onPress={() => setActiveTab('topics')}
+        >
+          <Text style={[styles.tabText, activeTab === 'topics' && styles.activeTabText]}>
+            Topics
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'plan' && styles.activeTab]}
+          onPress={() => setActiveTab('plan')}
+        >
+          <Text style={[styles.tabText, activeTab === 'plan' && styles.activeTabText]}>
+            Prep Plan
+          </Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {prepData && prepData.practiceDisclaimer && (
-          <View style={styles.disclaimerBox}>
-            <Text style={styles.disclaimerText}>{prepData.practiceDisclaimer}</Text>
+        {/* Banner */}
+        <View style={styles.banner}>
+          <Text style={styles.jobTitle}>{job.title}</Text>
+          <Text style={styles.companyName}>
+            {job.companyName} • {job.location || 'Remote'}
+          </Text>
+
+          <View style={styles.readinessRow}>
+            <View style={styles.readinessBadge}>
+              <Text style={styles.readinessScoreNum}>{readiness?.overallReadiness || 75}%</Text>
+              <Text style={styles.readinessScoreLabel}>READINESS</Text>
+            </View>
+            <View style={styles.readinessMeta}>
+              <Text style={styles.metaText}>Technical: {readiness?.technicalReadiness || 70}%</Text>
+              <Text style={styles.metaText}>
+                Behavioral: {readiness?.behavioralReadiness || 65}%
+              </Text>
+            </View>
           </View>
-        )}
+        </View>
 
-        {questions && questions.length > 0 ? (
-          questions.map((q: any, idx: number) => {
-            const isExpanded = expandedQuestionIdx === idx;
-            return (
-              <View key={idx} style={styles.qCard}>
-                <TouchableOpacity
-                  onPress={() => setExpandedQuestionIdx(isExpanded ? null : idx)}
-                  style={styles.qHeader}
-                >
-                  <View style={styles.qTitleRow}>
-                    <Text style={styles.qNumber}>Q{idx + 1}</Text>
-                    <Text style={styles.qText}>{q.question}</Text>
-                  </View>
-                  <View style={styles.qMetadataRow}>
-                    <View style={styles.difficultyBadge}>
-                      <Text style={styles.difficultyText}>{q.difficulty || 'Medium'}</Text>
-                    </View>
-                    <Text style={styles.expandIcon}>{isExpanded ? '▲' : '▼'}</Text>
-                  </View>
-                </TouchableOpacity>
-
-                {isExpanded && (
-                  <View style={styles.qBody}>
-                    <Text style={styles.bodyLabel}>Key Topics:</Text>
-                    <View style={styles.topicRow}>
-                      {q.expectedTopics?.map((topic: string, tIdx: number) => (
-                        <View key={tIdx} style={styles.topicBadge}>
-                          <Text style={styles.topicText}>{topic}</Text>
-                        </View>
-                      ))}
-                    </View>
-
-                    <Text style={styles.bodyLabel}>Preparation Tips:</Text>
-                    <Text style={styles.bodyText}>{q.preparationTips}</Text>
-
-                    <Text style={styles.bodyLabel}>Sample Answer Guidance:</Text>
-                    <Text style={styles.bodyText}>{q.sampleAnswerGuidance}</Text>
-                  </View>
-                )}
+        {activeTab === 'overview' && (
+          <View>
+            {/* Strengths vs Missing */}
+            <Text style={styles.sectionTitle}>Skill Alignment</Text>
+            <View style={styles.alignmentRow}>
+              <View style={styles.alignmentCard}>
+                <Text style={[styles.alignmentHeader, { color: Colors.success }]}>
+                  Matching Skills ({userStrengths?.length || 0})
+                </Text>
+                {(userStrengths || []).slice(0, 4).map((s: string, idx: number) => (
+                  <Text key={idx} style={styles.alignmentItem}>
+                    ✓ {s}
+                  </Text>
+                ))}
               </View>
-            );
-          })
-        ) : (
-          <View style={styles.emptyCard}>
-            <Text style={styles.emptyText}>No questions generated for this category.</Text>
+
+              <View style={styles.alignmentCard}>
+                <Text style={[styles.alignmentHeader, { color: Colors.warning }]}>
+                  Skill Gaps ({missingSkills?.length || 0})
+                </Text>
+                {(missingSkills || []).slice(0, 4).map((s: string, idx: number) => (
+                  <Text key={idx} style={styles.alignmentItem}>
+                    ⚠ {s}
+                  </Text>
+                ))}
+              </View>
+            </View>
+
+            {/* Quick Coach Advice */}
+            <View style={styles.coachCard}>
+              <View style={styles.coachHeader}>
+                <Ionicons name="sparkles" size={18} color={Colors.brand.purpleLight} />
+                <Text style={styles.coachTitle}>AI Coach Strategy</Text>
+              </View>
+              <Text style={styles.coachText}>
+                Focus your preparation on closing your key missing skills (
+                {missingSkills?.[0] || 'core concepts'}). Complete 1 Full Mock Interview to elevate
+                your behavioral STAR readiness.
+              </Text>
+              <TouchableOpacity
+                style={styles.askCoachBtn}
+                onPress={() =>
+                  navigation.navigate('InterviewCoach', { jobId: job.id, jobTitle: job.title })
+                }
+              >
+                <Text style={styles.askCoachBtnText}>Ask AI Coach →</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
+
+        {activeTab === 'topics' && (
+          <View>
+            <Text style={styles.sectionTitle}>Expected Interview Topics</Text>
+            {topics?.technicalTopics && (
+              <View style={styles.topicCategoryCard}>
+                <Text style={styles.topicCatHeader}>💻 Technical Topics</Text>
+                <View style={styles.chipRow}>
+                  {topics.technicalTopics.map((t: string, idx: number) => (
+                    <View key={idx} style={styles.topicChip}>
+                      <Text style={styles.topicChipText}>{t}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {topics?.behavioralTopics && (
+              <View style={styles.topicCategoryCard}>
+                <Text style={styles.topicCatHeader}>🗣️ Behavioral Topics</Text>
+                <View style={styles.chipRow}>
+                  {topics.behavioralTopics.map((t: string, idx: number) => (
+                    <View key={idx} style={styles.topicChip}>
+                      <Text style={styles.topicChipText}>{t}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+          </View>
+        )}
+
+        {activeTab === 'plan' && preparationPlan && (
+          <View>
+            <Text style={styles.sectionTitle}>Preparation Tasks</Text>
+            {(preparationPlan.tasks || []).map((task: any, idx: number) => (
+              <View key={task.id || idx} style={styles.taskCard}>
+                <Ionicons
+                  name={task.status === 'COMPLETED' ? 'checkbox' : 'square-outline'}
+                  size={20}
+                  color={task.status === 'COMPLETED' ? Colors.success : Colors.brand.purpleLight}
+                />
+                <View style={{ marginLeft: 12, flex: 1 }}>
+                  <Text style={styles.taskTitle}>{task.title}</Text>
+                  <Text style={styles.taskMeta}>
+                    {task.category} • {task.priority}
+                  </Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Start Mock CTA */}
+        <TouchableOpacity
+          style={styles.primaryBtn}
+          onPress={() => navigation.navigate('MockInterview', { jobId: job.id })}
+        >
+          <Ionicons name="play" size={20} color={Colors.white} style={{ marginRight: 8 }} />
+          <Text style={styles.primaryBtnText}>Start Mock Interview</Text>
+        </TouchableOpacity>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F8F9FA',
-    padding: 16,
-  },
-  center: {
-    flex: 1,
-    justifyContent: 'center',
+  container: { flex: 1, backgroundColor: Colors.background.primary },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadingText: { color: Colors.text.secondary, marginTop: 12 },
+  header: {
+    flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8F9FA',
-    padding: 24,
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border.subtle,
   },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 14,
-    color: '#718096',
+  backBtn: { padding: Spacing.xs },
+  headerTitle: {
+    fontSize: Typography.fontSize.base,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.primary,
   },
-  title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#1A202C',
-    marginBottom: 6,
-  },
-  subtitle: {
-    fontSize: 13,
-    color: '#718096',
-    lineHeight: 18,
-    marginBottom: 16,
-  },
+  coachIconBtn: { padding: Spacing.xs },
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: '#EDF2F7',
-    borderRadius: 8,
+    backgroundColor: Colors.background.secondary,
     padding: 4,
-    marginBottom: 16,
+    marginHorizontal: Spacing.md,
+    marginTop: Spacing.md,
+    borderRadius: BorderRadius.md,
   },
-  tab: {
-    flex: 1,
-    paddingVertical: 8,
-    alignItems: 'center',
-    borderRadius: 6,
-  },
-  activeTab: {
-    backgroundColor: '#FFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 1,
-    elevation: 2,
-  },
+  tab: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: BorderRadius.sm },
+  activeTab: { backgroundColor: Colors.background.tertiary },
   tabText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#718096',
+    fontSize: Typography.fontSize.xs,
+    color: Colors.text.muted,
+    fontWeight: Typography.fontWeight.semibold,
   },
-  activeTabText: {
-    color: '#6200EE',
-  },
-  scrollContent: {
-    paddingBottom: 24,
-  },
-  disclaimerBox: {
-    backgroundColor: '#FFF8E1',
+  activeTabText: { color: Colors.brand.purpleLight },
+  scrollContent: { padding: Spacing.md },
+  banner: {
+    backgroundColor: Colors.background.secondary,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.lg,
     borderWidth: 1,
-    borderColor: '#FFE082',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
+    borderColor: Colors.glass.border,
+    marginBottom: Spacing.lg,
   },
-  disclaimerText: {
-    fontSize: 11,
-    color: '#F57F17',
-    fontWeight: '500',
-    textAlign: 'center',
+  jobTitle: {
+    fontSize: Typography.fontSize.xl,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.primary,
   },
-  qCard: {
-    backgroundColor: '#FFF',
-    borderRadius: 8,
+  companyName: { fontSize: Typography.fontSize.sm, color: Colors.text.secondary, marginTop: 2 },
+  readinessRow: { flexDirection: 'row', alignItems: 'center', marginTop: Spacing.md },
+  readinessBadge: {
+    backgroundColor: Colors.glass.surface,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: BorderRadius.md,
+    alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    marginBottom: 12,
-    overflow: 'hidden',
+    borderColor: Colors.glass.border,
   },
-  qHeader: {
-    padding: 14,
-    backgroundColor: '#FFF',
+  readinessScoreNum: {
+    fontSize: Typography.fontSize.xl,
+    fontWeight: Typography.fontWeight.extrabold,
+    color: Colors.text.primary,
   },
-  qTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+  readinessScoreLabel: {
+    fontSize: 8,
+    color: Colors.brand.purpleLight,
+    fontWeight: Typography.fontWeight.bold,
   },
-  qNumber: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#6200EE',
-    marginRight: 8,
-    marginTop: 2,
+  readinessMeta: { marginLeft: Spacing.md },
+  metaText: { fontSize: Typography.fontSize.xs, color: Colors.text.secondary, marginVertical: 1 },
+  sectionTitle: {
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.primary,
+    marginBottom: Spacing.md,
+    marginTop: Spacing.xs,
   },
-  qText: {
+  alignmentRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: Spacing.md },
+  alignmentCard: {
     flex: 1,
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#2D3748',
-    lineHeight: 20,
-  },
-  qMetadataRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 10,
-    paddingLeft: 28,
-  },
-  difficultyBadge: {
-    backgroundColor: '#EDF2F7',
-    paddingVertical: 3,
-    paddingHorizontal: 8,
-    borderRadius: 12,
-  },
-  difficultyText: {
-    fontSize: 11,
-    color: '#4A5568',
-    fontWeight: '600',
-  },
-  expandIcon: {
-    fontSize: 12,
-    color: '#A0AEC0',
-  },
-  qBody: {
-    padding: 14,
-    borderTopWidth: 1,
-    borderTopColor: '#EDF2F7',
-    backgroundColor: '#FAFBFC',
-  },
-  bodyLabel: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#718096',
-    marginTop: 12,
-    marginBottom: 4,
-  },
-  bodyText: {
-    fontSize: 14,
-    color: '#4A5568',
-    lineHeight: 20,
-  },
-  topicRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginVertical: 4,
-  },
-  topicBadge: {
-    backgroundColor: '#EBF8FF',
+    backgroundColor: Colors.background.secondary,
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
+    marginRight: Spacing.xs,
     borderWidth: 1,
-    borderColor: '#BEE3F8',
-    borderRadius: 4,
-    paddingVertical: 3,
-    paddingHorizontal: 8,
+    borderColor: Colors.border.subtle,
+  },
+  alignmentHeader: {
+    fontSize: Typography.fontSize.xs,
+    fontWeight: Typography.fontWeight.bold,
+    marginBottom: Spacing.xs,
+  },
+  alignmentItem: {
+    fontSize: Typography.fontSize.xs,
+    color: Colors.text.secondary,
+    marginVertical: 2,
+  },
+  coachCard: {
+    backgroundColor: Colors.background.secondary,
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.glass.border,
+    marginBottom: Spacing.lg,
+  },
+  coachHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.xs },
+  coachTitle: {
+    fontSize: Typography.fontSize.sm,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.brand.purpleLight,
+    marginLeft: 6,
+  },
+  coachText: { fontSize: Typography.fontSize.xs, color: Colors.text.secondary, lineHeight: 18 },
+  askCoachBtn: { marginTop: Spacing.sm },
+  askCoachBtnText: {
+    fontSize: Typography.fontSize.xs,
+    color: Colors.brand.purpleLight,
+    fontWeight: Typography.fontWeight.bold,
+  },
+  topicCategoryCard: {
+    backgroundColor: Colors.background.secondary,
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
+    marginBottom: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.border.subtle,
+  },
+  topicCatHeader: {
+    fontSize: Typography.fontSize.sm,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.primary,
+    marginBottom: Spacing.xs,
+  },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap' },
+  topicChip: {
+    backgroundColor: Colors.background.tertiary,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.full,
     marginRight: 6,
-    marginBottom: 6,
+    marginVertical: 3,
   },
-  topicText: {
-    fontSize: 11,
-    color: '#2B6CB0',
-    fontWeight: '500',
-  },
-  emptyCard: {
-    backgroundColor: '#FFF',
-    borderRadius: 8,
-    padding: 24,
+  topicChipText: { fontSize: 11, color: Colors.text.secondary },
+  taskCard: {
+    flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: Colors.background.secondary,
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
+    marginBottom: Spacing.xs,
+    borderWidth: 1,
+    borderColor: Colors.border.subtle,
   },
-  emptyText: {
-    fontSize: 13,
-    color: '#A0AEC0',
-    fontStyle: 'italic',
+  taskTitle: {
+    fontSize: Typography.fontSize.sm,
+    color: Colors.text.primary,
+    fontWeight: Typography.fontWeight.semibold,
+  },
+  taskMeta: { fontSize: 10, color: Colors.text.muted, marginTop: 2 },
+  primaryBtn: {
+    flexDirection: 'row',
+    backgroundColor: Colors.brand.purple,
+    borderRadius: BorderRadius.full,
+    paddingVertical: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: Spacing.md,
+    marginBottom: Spacing.xl,
+  },
+  primaryBtnText: {
+    color: Colors.white,
+    fontWeight: Typography.fontWeight.bold,
+    fontSize: Typography.fontSize.base,
   },
 });

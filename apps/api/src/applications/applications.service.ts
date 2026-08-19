@@ -506,6 +506,47 @@ export class ApplicationsService {
         },
       });
 
+      if (dto.status === ApplicationStatus.INTERVIEW) {
+        const existingPlan = await tx.preparationPlan.findUnique({
+          where: { userId_jobId: { userId, jobId: application.jobId } },
+        });
+
+        if (!existingPlan) {
+          await tx.preparationPlan.create({
+            data: {
+              userId,
+              jobId: application.jobId,
+              applicationId: id,
+              planSummary: `Interview preparation plan for ${application.jobTitleSnapshot || 'Role'} at ${application.companyNameSnapshot || 'Company'}`,
+              tasks: {
+                create: [
+                  {
+                    title: 'Technical core concepts review',
+                    category: 'TECHNICAL',
+                    priority: 'HIGH',
+                  },
+                  {
+                    title: 'Practice STAR behavioral stories',
+                    category: 'BEHAVIORAL',
+                    priority: 'HIGH',
+                  },
+                  {
+                    title: 'Company background & product research',
+                    category: 'COMPANY',
+                    priority: 'MEDIUM',
+                  },
+                  {
+                    title: 'Complete 1 full adaptive mock interview',
+                    category: 'TECHNICAL',
+                    priority: 'CRITICAL',
+                  },
+                ],
+              },
+            },
+          });
+        }
+      }
+
       return updated;
     });
   }

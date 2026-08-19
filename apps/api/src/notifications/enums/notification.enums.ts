@@ -53,6 +53,8 @@ export enum NotificationType {
   WEEKLY_DIGEST = 'WEEKLY_DIGEST',
   SYSTEM = 'SYSTEM',
   TEST = 'TEST',
+  INTERVIEW_APPROACHING = 'INTERVIEW_APPROACHING',
+  MOCK_INTERVIEW_COMPLETED = 'MOCK_INTERVIEW_COMPLETED',
 }
 
 /** Decision engine outcome — what to do with a recommendation */

@@ -1098,6 +1098,7 @@ model Application {
   resumeVersion ResumeVersion?        @relation(fields: [resumeVersionId], references: [id], onDelete: SetNull)
   events        ApplicationEvent[]
   documents     ApplicationDocument[]
+  mockInterviews MockInterview[]
 
   @@unique([userId, jobId])
   @@index([userId])
@@ -1203,40 +1204,134 @@ enum InterviewStatus {
   ABANDONED
 }
 
-model MockInterview {
-  id        String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId    String          @db.Uuid
-  jobId     String?         @db.Uuid
-  status    InterviewStatus @default(IN_PROGRESS)
-  score     Int?
-  feedback  String?         @db.Text
-  createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
+enum InterviewType {
+  HR
+  BEHAVIORAL
+  TECHNICAL
+  CODING
+  SYSTEM_DESIGN
+  CASE_STUDY
+  MANAGERIAL
+  RESUME_BASED
+  MIXED
+}
 
-  user      User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  job       JobPosting?             @relation(fields: [jobId], references: [id], onDelete: SetNull)
-  questions MockInterviewQuestion[]
+enum InterviewMode {
+  QUICK_PRACTICE
+  TECHNICAL_MOCK
+  BEHAVIORAL_MOCK
+  ROLE_SPECIFIC
+  FULL_MOCK
+  WEAK_SKILL
+}
+
+enum QuestionCategory {
+  TECHNICAL
+  BEHAVIORAL
+  SITUATIONAL
+  RESUME
+  PROJECT
+  ROLE_SPECIFIC
+  CODING
+  SYSTEM_DESIGN
+  CASE_STUDY
+}
+
+enum DifficultyLevel {
+  EASY
+  MEDIUM
+  HARD
+  ADAPTIVE
+}
+
+model MockInterview {
+  id                      String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId                  String          @db.Uuid
+  jobId                   String?         @db.Uuid
+  applicationId           String?         @db.Uuid
+  interviewType           InterviewType   @default(MIXED)
+  mode                    InterviewMode    @default(FULL_MOCK)
+  status                  InterviewStatus @default(IN_PROGRESS)
+  score                   Int?
+  interviewReadinessScore Float?
+  topics                  String[]        @default([])
+  weakAreas               String[]        @default([])
+  strongAreas             String[]        @default([])
+  feedback                String?         @db.Text
+  completedAt             DateTime?
+  createdAt               DateTime        @default(now())
+  updatedAt               DateTime        @updatedAt
+
+  user        User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job         JobPosting?             @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  application Application?            @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+  questions   MockInterviewQuestion[]
 
   @@index([userId])
   @@index([jobId])
+  @@index([applicationId])
   @@map("mock_interviews")
 }
 
 model MockInterviewQuestion {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  interviewId String   @db.Uuid
-  question    String   @db.Text
-  answer      String?  @db.Text
-  feedback    String?  @db.Text
-  score       Int?
-  orderIndex  Int
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  interviewId       String           @db.Uuid
+  question          String           @db.Text
+  answer            String?          @db.Text
+  feedback          String?          @db.Text
+  category          QuestionCategory @default(TECHNICAL)
+  difficulty        DifficultyLevel  @default(MEDIUM)
+  questionType      String?          @db.VarChar(100)
+  hintUsed          Boolean          @default(false)
+  hintsGiven        Int              @default(0)
+  starAnalysis      Json?
+  technicalAnalysis Json?
+  modelAnswer       String?          @db.Text
+  topicsCovered     String[]         @default([])
+  score             Int?
+  overallScore      Float?
+  clarityScore      Float?
+  structureScore    Float?
+  depthScore        Float?
+  orderIndex        Int
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
 
   interview MockInterview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
 
   @@index([interviewId])
   @@map("mock_interview_questions")
+}
+
+model InterviewTopicPerformance {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String   @db.Uuid
+  jobId      String?  @db.Uuid
+  topic      String   @db.VarChar(100)
+  avgScore   Float    @default(0.0)
+  totalAsked Int      @default(0)
+  lastTested DateTime @default(now())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([userId, topic])
+  @@index([userId])
+  @@map("interview_topic_performances")
+}
+
+model InterviewSkillGap {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId         String   @db.Uuid
+  jobId          String?  @db.Uuid
+  skillName      String   @db.VarChar(100)
+  gapSeverity    String   @default("MEDIUM") @db.VarChar(50)
+  evidenceCount  Int      @default(1)
+  recommendation String?  @db.Text
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([userId])
+  @@map("interview_skill_gaps")
 }
 
 // =============================================================================

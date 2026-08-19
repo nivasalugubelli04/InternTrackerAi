@@ -8,6 +8,10 @@ import AuthNavigator from './AuthNavigator';
 import BottomTabNavigator from './BottomTabNavigator';
 import OnboardingNavigator from './OnboardingNavigator';
 import MockInterviewScreen from '../screens/ai/MockInterviewScreen';
+import InterviewDashboardScreen from '../screens/ai/InterviewDashboardScreen';
+import InterviewPrepScreen from '../screens/ai/InterviewPrepScreen';
+import InterviewReportScreen from '../screens/ai/InterviewReportScreen';
+import InterviewCoachScreen from '../screens/ai/InterviewCoachScreen';
 import ResumeBuilderScreen from '../screens/resume-builder/ResumeBuilderScreen';
 import { profileApi } from '../services/profile.service';
 
@@ -16,7 +20,11 @@ export type RootStackParamList = {
   Onboarding: undefined;
   App: undefined;
   Main: undefined;
-  MockInterview: undefined;
+  InterviewDashboard: undefined;
+  InterviewPrep: { jobId: string };
+  MockInterview: { jobId?: string; mode?: string };
+  InterviewReport: { sessionId: string };
+  InterviewCoach: { jobId?: string; jobTitle?: string };
   ResumeBuilder: undefined;
 };
 
@@ -31,7 +39,8 @@ export default function AppNavigator(): React.ReactElement {
     let mounted = true;
     if (isAuthenticated) {
       setCheckingProfile(true);
-      profileApi.get()
+      profileApi
+        .get()
         .then((profile) => {
           if (mounted) setOnboardingComplete(!!profile?.onboardingCompletedAt);
         })
@@ -44,7 +53,9 @@ export default function AppNavigator(): React.ReactElement {
     } else {
       if (mounted) setCheckingProfile(false);
     }
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [isAuthenticated]);
 
   if (isLoading || checkingProfile) {
@@ -64,14 +75,18 @@ export default function AppNavigator(): React.ReactElement {
       ) : (
         <>
           <Stack.Screen name="Main" component={BottomTabNavigator} />
-          
-          <Stack.Screen 
-            name="MockInterview" 
-            component={MockInterviewScreen} 
+
+          <Stack.Screen name="InterviewDashboard" component={InterviewDashboardScreen} />
+          <Stack.Screen name="InterviewPrep" component={InterviewPrepScreen} />
+          <Stack.Screen
+            name="MockInterview"
+            component={MockInterviewScreen}
             options={{ presentation: 'fullScreenModal' }}
           />
-          <Stack.Screen 
-            name="ResumeBuilder" 
+          <Stack.Screen name="InterviewReport" component={InterviewReportScreen} />
+          <Stack.Screen name="InterviewCoach" component={InterviewCoachScreen} />
+          <Stack.Screen
+            name="ResumeBuilder"
             component={ResumeBuilderScreen}
             options={{ presentation: 'fullScreenModal' }}
           />
