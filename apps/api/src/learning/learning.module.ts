@@ -5,19 +5,20 @@ import { AiModule } from '../ai/ai.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { LEARNING_QUEUE } from '../queues/queue.constants';
 
-// Services
 import { AdminLearningController } from './controllers/admin-learning.controller';
 import { LearningController } from './controllers/learning.controller';
 import { LearningProcessor } from './processors/learning.processor';
+import { AdaptiveRoadmapService } from './services/adaptive-roadmap.service';
+import { CareerReadinessService } from './services/career-readiness.service';
+import { DailyPlanService } from './services/daily-plan.service';
 import { LearningCoachService } from './services/learning-coach.service';
+import { LearningSyncService } from './services/learning-sync.service';
 import { PracticeService } from './services/practice.service';
 import { PrerequisiteService } from './services/prerequisite.service';
+import { ProjectRecommendationService } from './services/project-recommendation.service';
 import { RoadmapGenerationService } from './services/roadmap-generation.service';
+import { SkillGapEngineService } from './services/skill-gap-engine.service';
 import { SkillMasteryService } from './services/skill-mastery.service';
-
-// Controllers
-
-// Background Job Processors
 
 @Module({
   imports: [
@@ -34,6 +35,12 @@ import { SkillMasteryService } from './services/skill-mastery.service';
     PracticeService,
     SkillMasteryService,
     LearningCoachService,
+    SkillGapEngineService,
+    AdaptiveRoadmapService,
+    CareerReadinessService,
+    DailyPlanService,
+    ProjectRecommendationService,
+    LearningSyncService,
     LearningProcessor,
   ],
   exports: [
@@ -42,6 +49,12 @@ import { SkillMasteryService } from './services/skill-mastery.service';
     PracticeService,
     SkillMasteryService,
     LearningCoachService,
+    SkillGapEngineService,
+    AdaptiveRoadmapService,
+    CareerReadinessService,
+    DailyPlanService,
+    ProjectRecommendationService,
+    LearningSyncService,
   ],
 })
 export class LearningModule {}

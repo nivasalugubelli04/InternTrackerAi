@@ -6,8 +6,8 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   Request,
-  BadRequestException,
   NotFoundException,
   ForbiddenException,
 } from '@nestjs/common';
@@ -18,14 +18,18 @@ import {
   CreateLearningGoalDto,
   UpdateLearningGoalDto,
   SubmitPracticeAttemptDto,
-  AddSkillEvidenceDto,
 } from '../dto/learning.dto';
-import { LearningCoachService } from '../services/learning-coach.service';
+import { AdaptiveRoadmapService } from '../services/adaptive-roadmap.service';
+import { CareerReadinessService } from '../services/career-readiness.service';
+import { DailyPlanService } from '../services/daily-plan.service';
+import { CoachIntent, LearningCoachService } from '../services/learning-coach.service';
+import { LearningSyncService } from '../services/learning-sync.service';
 import { PracticeService } from '../services/practice.service';
+import { ProjectRecommendationService } from '../services/project-recommendation.service';
 import { RoadmapGenerationService } from '../services/roadmap-generation.service';
-import { SkillMasteryService } from '../services/skill-mastery.service';
+import { SkillGapEngineService } from '../services/skill-gap-engine.service';
 
-@ApiTags('Learning — Students')
+@ApiTags('Learning — Career Intelligence')
 @ApiBearerAuth()
 @Controller('api/v1/learning')
 export class LearningController {
@@ -33,8 +37,13 @@ export class LearningController {
     private readonly prisma: PrismaService,
     private readonly roadmapGen: RoadmapGenerationService,
     private readonly practice: PracticeService,
-    private readonly skillMastery: SkillMasteryService,
     private readonly coach: LearningCoachService,
+    private readonly skillGapEngine: SkillGapEngineService,
+    private readonly adaptiveRoadmap: AdaptiveRoadmapService,
+    private readonly readiness: CareerReadinessService,
+    private readonly dailyPlan: DailyPlanService,
+    private readonly projectRec: ProjectRecommendationService,
+    private readonly sync: LearningSyncService,
   ) {}
 
   private getUserId(req: any): string {
@@ -42,6 +51,86 @@ export class LearningController {
       throw new ForbiddenException('User authentication required.');
     }
     return req.user.id;
+  }
+
+  // ── PHASE 35: CAREER ROADMAP & READINESS ───────────────────────────────────
+
+  @Get('adaptive-roadmap')
+  @ApiOperation({ summary: 'Get active 7-phase adaptive career roadmap' })
+  async getAdaptiveRoadmap(@Request() req: any) {
+    const userId = this.getUserId(req);
+    return this.adaptiveRoadmap.getActiveRoadmap(userId);
+  }
+
+  @Post('adaptive-roadmap/generate')
+  @ApiOperation({ summary: 'Generate or adapt 7-phase career roadmap' })
+  async generateAdaptiveRoadmap(
+    @Request() req: any,
+    @Body('targetRole') targetRole?: string,
+    @Body('timelineDays') timelineDays?: number,
+    @Body('reason') reason?: string,
+  ) {
+    const userId = this.getUserId(req);
+    return this.adaptiveRoadmap.generateOrAdaptRoadmap(
+      userId,
+      targetRole,
+      timelineDays || 60,
+      reason,
+    );
+  }
+
+  @Get('readiness')
+  @ApiOperation({ summary: 'Get transparent multi-dimensional Career Readiness score' })
+  async getCareerReadiness(@Request() req: any) {
+    const userId = this.getUserId(req);
+    return this.readiness.computeReadiness(userId);
+  }
+
+  @Get('skill-gaps')
+  @ApiOperation({ summary: 'Get multi-signal skill gaps & high-impact skills' })
+  async getSkillGaps(@Request() req: any, @Query('targetRole') targetRole?: string) {
+    const userId = this.getUserId(req);
+    return this.skillGapEngine.analyzeSkillGap(userId, targetRole);
+  }
+
+  @Get('daily-plan')
+  @ApiOperation({ summary: 'Get today budgeted learning schedule' })
+  async getDailyPlan(@Request() req: any, @Query('minutes') minutes?: string) {
+    const userId = this.getUserId(req);
+    const parsedMinutes = minutes ? parseInt(minutes, 10) : undefined;
+    return this.dailyPlan.getDailyPlan(userId, parsedMinutes);
+  }
+
+  @Get('projects/recommended')
+  @ApiOperation({ summary: 'Get recommended portfolio projects' })
+  async getRecommendedProjects(@Request() req: any) {
+    const userId = this.getUserId(req);
+    return this.projectRec.getRecommendedProjects(userId);
+  }
+
+  @Post('projects/:id/complete')
+  @ApiOperation({ summary: 'Mark recommended project as completed and award skill evidence' })
+  async completeProject(
+    @Request() req: any,
+    @Param('id') id: string,
+    @Body('repoUrl') repoUrl?: string,
+  ) {
+    const userId = this.getUserId(req);
+    const res = await this.projectRec.completeProject(userId, id, repoUrl);
+    await this.sync.syncLearningProgress(userId);
+    return res;
+  }
+
+  @Post('ai/coach')
+  @ApiOperation({ summary: 'Query AI Learning Coach' })
+  async queryAiCoach(
+    @Request() req: any,
+    @Body('query') query: string,
+    @Body('intent') intent?: CoachIntent,
+    @Body('skillId') skillId?: string,
+  ) {
+    const userId = this.getUserId(req);
+    return this.coach.queryCoach(userId, query, intent || 'EXPLAIN', skillId);
   }
 
   // ── GOALS ──────────────────────────────────────────────────────────────────
@@ -139,67 +228,13 @@ export class LearningController {
     return this.roadmapGen.generateRoadmap(userId, goalId);
   }
 
-  @Get('roadmaps/:id')
-  @ApiOperation({ summary: 'Get roadmap details' })
-  async getRoadmap(@Request() req: any, @Param('id') id: string) {
-    const userId = this.getUserId(req);
-    const roadmap = await this.prisma.learningRoadmap.findUnique({ where: { id } });
-    if (!roadmap || roadmap.userId !== userId) throw new NotFoundException('Roadmap not found');
-    return roadmap;
-  }
-
-  @Post('roadmaps/:id/regenerate')
-  @ApiOperation({ summary: 'Regenerate current roadmap with updated goals/skills progress' })
-  async regenerateRoadmap(
-    @Request() req: any,
-    @Param('id') id: string,
-    @Body('reason') reason?: string,
-  ) {
-    const userId = this.getUserId(req);
-    const roadmap = await this.prisma.learningRoadmap.findUnique({ where: { id } });
-    if (!roadmap || roadmap.userId !== userId) throw new NotFoundException('Roadmap not found');
-    if (!roadmap.goalId) throw new BadRequestException('Roadmap has no bound goal');
-
-    return this.roadmapGen.generateRoadmap(userId, roadmap.goalId, reason);
-  }
-
-  // ── MODULES & ENROLLMENTS ────────────────────────────────────────────────────
+  // ── MODULES & PRACTICE ─────────────────────────────────────────────────────
 
   @Get('modules')
   @ApiOperation({ summary: 'Get modules catalogue' })
   async listModules() {
     return this.prisma.learningModule.findMany({
       where: { status: 'ACTIVE' },
-    });
-  }
-
-  @Get('modules/:id')
-  @ApiOperation({ summary: 'Get learning module details' })
-  async getModule(@Param('id') id: string) {
-    const m = await this.prisma.learningModule.findUnique({ where: { id } });
-    if (!m) throw new NotFoundException('Module not found');
-    return m;
-  }
-
-  @Post('modules/:id/start')
-  @ApiOperation({ summary: 'Enroll and start study on module' })
-  async startModule(@Request() req: any, @Param('id') id: string) {
-    const userId = this.getUserId(req);
-    const module = await this.prisma.learningModule.findUnique({ where: { id } });
-    if (!module) throw new NotFoundException('Module not found');
-
-    const existing = await this.prisma.learningEnrollment.findFirst({
-      where: { userId, moduleId: id },
-    });
-    if (existing) return existing;
-
-    return this.prisma.learningEnrollment.create({
-      data: {
-        userId,
-        moduleId: id,
-        status: 'IN_PROGRESS',
-        progress: 0.1,
-      },
     });
   }
 
@@ -213,10 +248,7 @@ export class LearningController {
     if (!enrollment)
       throw new NotFoundException('Enrollment record not found. Start module first.');
 
-    // Save skill evidence if this module is linked to a skill
-    const module = await this.prisma.learningModule.findUnique({
-      where: { id },
-    });
+    const module = await this.prisma.learningModule.findUnique({ where: { id } });
     if (module?.skillId) {
       await this.prisma.skillEvidence.create({
         data: {
@@ -228,6 +260,7 @@ export class LearningController {
           description: `Completed module study: "${module.title}"`,
         },
       });
+      await this.sync.syncLearningProgress(userId, module.skillId);
     }
 
     return this.prisma.learningEnrollment.update({
@@ -239,79 +272,6 @@ export class LearningController {
       },
     });
   }
-
-  // ── EVIDENCE & PROGRESS ──────────────────────────────────────────────────────
-
-  @Get('progress')
-  @ApiOperation({ summary: 'Get user overall roadmap and goal consistency progress' })
-  async getProgressOverview(@Request() req: any) {
-    const userId = this.getUserId(req);
-    const enrollments = await this.prisma.learningEnrollment.findMany({
-      where: { userId },
-      include: { module: true },
-    });
-
-    const goals = await this.prisma.learningGoal.findMany({
-      where: { userId },
-    });
-
-    return {
-      totalEnrolledModules: enrollments.length,
-      completedModules: enrollments.filter((e) => e.status === 'COMPLETED').length,
-      activeGoals: goals.filter((g) => g.status === 'ACTIVE').length,
-      completedGoals: goals.filter((g) => g.status === 'COMPLETED').length,
-    };
-  }
-
-  @Post('evidence')
-  @ApiOperation({ summary: 'Submit manual evidence or sync choice options' })
-  async addEvidence(@Request() req: any, @Body() dto: AddSkillEvidenceDto) {
-    const userId = this.getUserId(req);
-    return this.prisma.skillEvidence.create({
-      data: {
-        userId,
-        skillId: dto.skillId,
-        evidenceType: dto.evidenceType,
-        referenceId: dto.referenceId || null,
-        score: dto.score,
-        description: dto.description || null,
-      },
-    });
-  }
-
-  @Get('skills/:skillId/sync-check')
-  @ApiOperation({ summary: 'Get profile addition options (sync choice validation)' })
-  async syncCheck(@Request() req: any, @Param('skillId') skillId: string) {
-    const userId = this.getUserId(req);
-    return this.skillMastery.getProfileSyncOptions(userId, skillId);
-  }
-
-  @Post('skills/:skillId/sync')
-  @ApiOperation({ summary: 'Confirm choice to sync developed skill to public profile' })
-  async syncConfirm(
-    @Request() req: any,
-    @Param('skillId') skillId: string,
-    @Body('choice') choice: 'ADD' | 'KEEP_LEARNING' | 'REJECT',
-  ) {
-    const userId = this.getUserId(req);
-    return this.skillMastery.processProfileSync(userId, skillId, choice);
-  }
-
-  // ── COACH / AI ASSISTANT ─────────────────────────────────────────────────────
-
-  @Post('coach/explain')
-  @ApiOperation({ summary: 'AI Coach concept explanations' })
-  async explain(
-    @Request() req: any,
-    @Body('skillId') skillId: string,
-    @Body('concept') concept: string,
-  ) {
-    const userId = this.getUserId(req);
-    const explanation = await this.coach.explainConcept(userId, skillId, concept);
-    return { explanation };
-  }
-
-  // ── PRACTICE ─────────────────────────────────────────────────────────────────
 
   @Get('skills/:skillId/practice')
   @ApiOperation({ summary: 'Get adaptive practice activities' })
@@ -328,6 +288,11 @@ export class LearningController {
     @Body() dto: SubmitPracticeAttemptDto,
   ) {
     const userId = this.getUserId(req);
-    return this.practice.submitAttempt(userId, id, dto.answer, dto.timeSpentSeconds);
+    const result = await this.practice.submitAttempt(userId, id, dto.answer, dto.timeSpentSeconds);
+    const activity = await this.prisma.practiceActivity.findUnique({ where: { id } });
+    if (activity?.skillId) {
+      await this.sync.syncLearningProgress(userId, activity.skillId);
+    }
+    return result;
   }
 }

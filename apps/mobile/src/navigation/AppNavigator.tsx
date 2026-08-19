@@ -12,6 +12,8 @@ import InterviewDashboardScreen from '../screens/ai/InterviewDashboardScreen';
 import InterviewPrepScreen from '../screens/ai/InterviewPrepScreen';
 import InterviewReportScreen from '../screens/ai/InterviewReportScreen';
 import InterviewCoachScreen from '../screens/ai/InterviewCoachScreen';
+import LearningRoadmapScreen from '../screens/ai/LearningRoadmapScreen';
+import SkillGapScreen from '../screens/ai/SkillGapScreen';
 import ResumeBuilderScreen from '../screens/resume-builder/ResumeBuilderScreen';
 import { profileApi } from '../services/profile.service';
 
@@ -25,6 +27,8 @@ export type RootStackParamList = {
   MockInterview: { jobId?: string; mode?: string };
   InterviewReport: { sessionId: string };
   InterviewCoach: { jobId?: string; jobTitle?: string };
+  LearningRoadmap: undefined;
+  SkillGapScreen: undefined;
   ResumeBuilder: undefined;
 };
 
@@ -85,6 +89,8 @@ export default function AppNavigator(): React.ReactElement {
           />
           <Stack.Screen name="InterviewReport" component={InterviewReportScreen} />
           <Stack.Screen name="InterviewCoach" component={InterviewCoachScreen} />
+          <Stack.Screen name="LearningRoadmap" component={LearningRoadmapScreen} />
+          <Stack.Screen name="SkillGapScreen" component={SkillGapScreen} />
           <Stack.Screen
             name="ResumeBuilder"
             component={ResumeBuilderScreen}
@@ -99,8 +105,8 @@ export default function AppNavigator(): React.ReactElement {
 const styles = StyleSheet.create({
   loader: {
     flex: 1,
-    backgroundColor: Colors.background.primary,
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.background.primary,
   },
 });

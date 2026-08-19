@@ -1,148 +1,289 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
-  TextInput,
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  RefreshControl,
 } from 'react-native';
-import { aiService } from '../../services/ai.service';
+import {
+  LearningService,
+  AdaptiveRoadmapData,
+  CareerReadinessData,
+  DailyPlanData,
+} from '../../services/learning.service';
+import { Colors, Typography, Spacing, BorderRadius } from '../../theme';
 
-export default function LearningRoadmapScreen() {
-  const [targetRole, setTargetRole] = useState('');
-  const [targetCompany, setTargetCompany] = useState('');
-  const [roadmap, setRoadmap] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(false);
+export default function LearningRoadmapScreen({ navigation }: any) {
+  const [roadmap, setRoadmap] = useState<AdaptiveRoadmapData | null>(null);
+  const [readiness, setReadiness] = useState<CareerReadinessData | null>(null);
+  const [dailyPlan, setDailyPlan] = useState<DailyPlanData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [selectedTimeline, setSelectedTimeline] = useState<number>(60);
+  const [expandedPhase, setExpandedPhase] = useState<number>(1);
 
-  const handleGenerate = async () => {
-    if (!targetRole.trim()) {
-      Alert.alert('Error', 'Please enter a target role.');
-      return;
+  const loadData = async () => {
+    try {
+      const [rmData, crData, dpData] = await Promise.all([
+        LearningService.getAdaptiveRoadmap(),
+        LearningService.getCareerReadiness(),
+        LearningService.getDailyPlan(),
+      ]);
+      setRoadmap(rmData);
+      setReadiness(crData);
+      setDailyPlan(dpData);
+      setSelectedTimeline(rmData.timelineDays || 60);
+    } catch (err: any) {
+      Alert.alert('Error', err.response?.data?.message || 'Failed to load career roadmap.');
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
     }
+  };
 
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const handleTimelineChange = async (days: number) => {
+    setSelectedTimeline(days);
     setIsLoading(true);
     try {
-      const result = await aiService.generateRoadmap(targetRole, targetCompany);
-      setRoadmap(result);
+      const updated = await LearningService.generateAdaptiveRoadmap(
+        roadmap?.targetRole || 'Software Engineer',
+        days,
+        'User adjusted target prep timeline',
+      );
+      setRoadmap(updated);
     } catch (err: any) {
-      Alert.alert('Error', err.response?.data?.message || 'Roadmap generation failed.');
+      Alert.alert('Error', 'Failed to adapt roadmap timeline.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Personalized Learning Roadmap</Text>
-      <Text style={styles.subtitle}>
-        Generate a weekly structured timeline plan to build the skills required for your dream internship role.
-      </Text>
+  if (isLoading && !isRefreshing) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={Colors.brand.purple} />
+        <Text style={styles.loadingText}>Assembling AI Career Roadmap...</Text>
+      </View>
+    );
+  }
 
-      {/* Input section */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Roadmap Configuration</Text>
-        <TextInput
-          style={styles.input}
-          value={targetRole}
-          onChangeText={setTargetRole}
-          placeholder="Target Role (e.g. Frontend Engineer, Data Scientist)"
-          placeholderTextColor="#888"
+  return (
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      refreshControl={
+        <RefreshControl
+          refreshing={isRefreshing}
+          onRefresh={() => {
+            setIsRefreshing(true);
+            loadData();
+          }}
+          colors={[Colors.brand.purple]}
         />
-        <TextInput
-          style={styles.input}
-          value={targetCompany}
-          onChangeText={setTargetCompany}
-          placeholder="Target Company (optional, e.g. Google, Stripe)"
-          placeholderTextColor="#888"
-        />
-        <TouchableOpacity
-          onPress={handleGenerate}
-          style={[styles.button, isLoading && styles.buttonDisabled]}
-          disabled={isLoading}
-        >
-          {isLoading ? (
-            <ActivityIndicator color="#FFF" size="small" />
-          ) : (
-            <Text style={styles.buttonText}>Generate Roadmap</Text>
-          )}
-        </TouchableOpacity>
+      }
+    >
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.title}>AI Career Roadmap</Text>
+        <Text style={styles.subtitle}>
+          Adaptive 7-phase skill building plan targeting your dream internship role.
+        </Text>
       </View>
 
-      {roadmap && (
-        <View style={styles.resultsContainer}>
-          <Text style={styles.sectionTitle}>Your Customized Learning Plan</Text>
+      {/* Career Readiness Card */}
+      {readiness && (
+        <View style={styles.readinessCard}>
+          <View style={styles.readinessHeader}>
+            <View style={styles.scoreBadge}>
+              <Text style={styles.scoreValue}>{readiness.overallReadiness}%</Text>
+              <Text style={styles.scoreLabel}>Readiness</Text>
+            </View>
+            <View style={styles.readinessTitleBox}>
+              <Text style={styles.readinessRoleTitle}>{roadmap?.targetRole || 'Target Role'}</Text>
+              <Text style={styles.readinessNarrative}>{readiness.narrativeSummary}</Text>
+            </View>
+          </View>
 
-          {/* Overview */}
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Roadmap Goals</Text>
-            <View style={styles.detailsGrid}>
-              <View style={styles.gridItem}>
-                <Text style={styles.gridLabel}>Est. Total Weeks</Text>
-                <Text style={styles.gridValue}>{roadmap.estimatedWeeks || '12 weeks'}</Text>
+          {/* Breakdown Bars */}
+          <View style={styles.breakdownGrid}>
+            <View style={styles.breakdownItem}>
+              <Text style={styles.breakdownLabel}>Skill Coverage</Text>
+              <View style={styles.progressBarBg}>
+                <View style={[styles.progressBarFill, { width: `${readiness.skillReadiness}%` }]} />
               </View>
-              <View style={styles.gridItem}>
-                <Text style={styles.gridLabel}>Target Skillset</Text>
-                <Text style={styles.gridValue}>{roadmap.targetSkills?.join(', ') || 'N/A'}</Text>
+            </View>
+            <View style={styles.breakdownItem}>
+              <Text style={styles.breakdownLabel}>Interview Prep</Text>
+              <View style={styles.progressBarBg}>
+                <View
+                  style={[
+                    styles.progressBarFill,
+                    { width: `${readiness.interviewReadiness}%`, backgroundColor: '#34D399' },
+                  ]}
+                />
+              </View>
+            </View>
+            <View style={styles.breakdownItem}>
+              <Text style={styles.breakdownLabel}>Portfolio</Text>
+              <View style={styles.progressBarBg}>
+                <View
+                  style={[
+                    styles.progressBarFill,
+                    { width: `${readiness.portfolioReadiness}%`, backgroundColor: '#FBBF24' },
+                  ]}
+                />
               </View>
             </View>
           </View>
 
-          {/* Timeline Milestones */}
-          <Text style={styles.subHeader}>Weekly Milestones</Text>
-          {roadmap.milestones?.map((milestone: any, idx: number) => (
-            <View key={idx} style={styles.timelineRow}>
-              {/* Timeline Indicator Line */}
-              <View style={styles.timelineIndicator}>
-                <View style={styles.timelineDot} />
-                <View style={styles.timelineLine} />
-              </View>
-
-              {/* Milestone Details Card */}
-              <View style={[styles.card, styles.timelineCard]}>
-                <View style={styles.milestoneHeader}>
-                  <Text style={styles.milestoneWeek}>{milestone.weekRange || `Week ${idx + 1}`}</Text>
-                  <Text style={styles.milestoneTitle}>{milestone.title}</Text>
-                </View>
-                <Text style={styles.milestoneDesc}>{milestone.description}</Text>
-                
-                <Text style={styles.itemLabel}>Key Concepts to Master:</Text>
-                {milestone.topics?.map((topic: string, tIdx: number) => (
-                  <Text key={tIdx} style={styles.bulletItem}>• {topic}</Text>
-                ))}
-
-                {milestone.projects && milestone.projects.length > 0 && (
-                  <>
-                    <Text style={styles.itemLabel}>Recommended Practice Project:</Text>
-                    <Text style={styles.projectText}>{milestone.projects[0]}</Text>
-                  </>
-                )}
-              </View>
-            </View>
-          )) || <Text style={styles.emptyText}>No milestones returned.</Text>}
-
-          {/* General Resources & Certifications */}
-          {roadmap.recommendedResources && roadmap.recommendedResources.length > 0 && (
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>Curated Resources</Text>
-              {roadmap.recommendedResources.map((res: string, idx: number) => (
-                <Text key={idx} style={styles.bulletItem}>• {res}</Text>
-              ))}
-            </View>
-          )}
-
-          {roadmap.certifications && roadmap.certifications.length > 0 && (
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>Suggested Certifications</Text>
-              {roadmap.certifications.map((cert: string, idx: number) => (
-                <Text key={idx} style={styles.bulletItem}>• {cert}</Text>
-              ))}
-            </View>
-          )}
+          {/* Action to Skill Gap */}
+          <TouchableOpacity
+            style={styles.gapCTA}
+            onPress={() => navigation.navigate('SkillGapScreen')}
+          >
+            <Text style={styles.gapCTAText}>View Skill Gap Analysis →</Text>
+          </TouchableOpacity>
         </View>
       )}
+
+      {/* Daily Study Plan Widget */}
+      {dailyPlan && (
+        <View style={styles.dailyPlanCard}>
+          <View style={styles.dailyPlanHeader}>
+            <View>
+              <Text style={styles.dailyPlanBadge}>TODAY'S SCHEDULE</Text>
+              <Text style={styles.dailyPlanTitle}>{dailyPlan.dailyGoalTitle}</Text>
+            </View>
+            <Text style={styles.streakText}>🔥 {dailyPlan.streakDays}d streak</Text>
+          </View>
+
+          {dailyPlan.blocks.map((block, idx) => (
+            <View key={idx} style={styles.dailyBlockRow}>
+              <View
+                style={[
+                  styles.categoryPill,
+                  block.category === 'CONCEPT'
+                    ? styles.pillConcept
+                    : block.category === 'PRACTICE'
+                      ? styles.pillPractice
+                      : styles.pillProject,
+                ]}
+              >
+                <Text style={styles.categoryPillText}>{block.category}</Text>
+              </View>
+              <View style={styles.blockInfo}>
+                <Text style={styles.blockTitle}>{block.title}</Text>
+                <Text style={styles.blockAction}>{block.action}</Text>
+              </View>
+              <Text style={styles.blockDuration}>{block.durationMinutes}m</Text>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {/* Timeline Switcher Pills */}
+      <View style={styles.timelinePillContainer}>
+        <Text style={styles.timelinePillLabel}>Prep Horizon:</Text>
+        {[30, 60, 90, 180].map((days) => (
+          <TouchableOpacity
+            key={days}
+            style={[styles.timelinePill, selectedTimeline === days && styles.timelinePillActive]}
+            onPress={() => handleTimelineChange(days)}
+          >
+            <Text
+              style={[
+                styles.timelinePillText,
+                selectedTimeline === days && styles.timelinePillTextActive,
+              ]}
+            >
+              {days} Days
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* 7-Phase Vertical Timeline */}
+      <Text style={styles.sectionHeader}>7-Phase Roadmap</Text>
+      {roadmap?.phases.map((phase) => {
+        const isExpanded = expandedPhase === phase.phase;
+        const isCurrent = (roadmap.currentPhase || 1) === phase.phase;
+
+        return (
+          <View key={phase.phase} style={styles.phaseRow}>
+            <View style={styles.timelineColumn}>
+              <View
+                style={[
+                  styles.timelineDot,
+                  isCurrent && styles.timelineDotCurrent,
+                  phase.phase < (roadmap.currentPhase || 1) && styles.timelineDotCompleted,
+                ]}
+              />
+              <View style={styles.timelineLine} />
+            </View>
+
+            <TouchableOpacity
+              style={[styles.phaseCard, isCurrent && styles.phaseCardCurrent]}
+              onPress={() => setExpandedPhase(isExpanded ? 0 : phase.phase)}
+              activeOpacity={0.8}
+            >
+              <View style={styles.phaseHeaderRow}>
+                <View>
+                  <Text style={styles.phaseNumber}>PHASE {phase.phase}</Text>
+                  <Text style={styles.phaseTitle}>{phase.title}</Text>
+                </View>
+                <Text style={styles.phaseHours}>{phase.estimatedHours} hrs</Text>
+              </View>
+
+              {/* Skills Tags */}
+              <View style={styles.skillsTagRow}>
+                {phase.skillsCovered.map((s, sIdx) => (
+                  <View key={sIdx} style={styles.skillTag}>
+                    <Text style={styles.skillTagText}>{s}</Text>
+                  </View>
+                ))}
+              </View>
+
+              {/* Expanded Milestones */}
+              {isExpanded && (
+                <View style={styles.expandedContent}>
+                  {phase.milestones.map((ms, mIdx) => (
+                    <View key={mIdx} style={styles.milestoneItem}>
+                      <Text style={styles.milestoneTitle}>
+                        • {ms.title} ({ms.estimatedMinutes}m)
+                      </Text>
+                      <Text style={styles.milestoneDesc}>{ms.description}</Text>
+                      {ms.tasks.map((task, tIdx) => (
+                        <Text key={tIdx} style={styles.taskBullet}>
+                          - {task}
+                        </Text>
+                      ))}
+                    </View>
+                  ))}
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
+        );
+      })}
+
+      {/* AI Coach Quick CTA */}
+      <TouchableOpacity
+        style={styles.coachBanner}
+        onPress={() => navigation.navigate('InterviewCoachScreen')}
+      >
+        <Text style={styles.coachBannerTitle}>🤖 Ask AI Learning Coach</Text>
+        <Text style={styles.coachBannerSubtitle}>
+          Get instant concept explanations, code examples, hints, and practice questions.
+        </Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 }
@@ -150,166 +291,339 @@ export default function LearningRoadmapScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: Colors.background.primary,
   },
   content: {
-    padding: 16,
+    padding: Spacing.lg,
+    paddingBottom: Spacing.xl * 2,
   },
-  title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#1A202C',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#718096',
-    lineHeight: 20,
-    marginBottom: 20,
-  },
-  card: {
-    backgroundColor: '#FFF',
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  cardTitle: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    color: '#2D3748',
-    marginBottom: 12,
-  },
-  input: {
-    height: 48,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#FAFBFC',
-    paddingHorizontal: 16,
-    fontSize: 14,
-    color: '#1A202C',
-    marginBottom: 12,
-  },
-  button: {
-    height: 48,
-    borderRadius: 8,
-    backgroundColor: '#6200EE',
+  loadingContainer: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 8,
+    backgroundColor: Colors.background.primary,
   },
-  buttonDisabled: {
-    backgroundColor: '#A0AEC0',
+  loadingText: {
+    marginTop: Spacing.md,
+    fontSize: Typography.fontSize.base,
+    color: Colors.text.secondary,
   },
-  buttonText: {
-    color: '#FFF',
-    fontSize: 16,
-    fontWeight: '600',
+  header: {
+    marginBottom: Spacing.lg,
   },
-  resultsContainer: {
-    marginTop: 8,
+  title: {
+    fontSize: Typography.fontSize.xl,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.primary,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1A202C',
-    marginBottom: 12,
+  subtitle: {
+    fontSize: Typography.fontSize.sm,
+    color: Colors.text.secondary,
+    marginTop: Spacing.xs,
   },
-  detailsGrid: {
+  readinessCard: {
+    backgroundColor: Colors.background.secondary,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.lg,
+    marginBottom: Spacing.lg,
+    borderWidth: 1,
+    borderColor: Colors.border.subtle,
+  },
+  readinessHeader: {
     flexDirection: 'row',
+    alignItems: 'center',
   },
-  gridItem: {
+  scoreBadge: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: Colors.glass.surface,
+    borderColor: Colors.glass.border,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: Spacing.md,
+  },
+  scoreValue: {
+    fontSize: Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.brand.purpleLight,
+  },
+  scoreLabel: {
+    fontSize: 9,
+    color: Colors.text.secondary,
+  },
+  readinessTitleBox: {
     flex: 1,
   },
-  gridLabel: {
-    fontSize: 11,
-    color: '#A0AEC0',
-    textTransform: 'uppercase',
-    fontWeight: '600',
+  readinessRoleTitle: {
+    fontSize: Typography.fontSize.base,
+    color: Colors.text.primary,
+    fontWeight: Typography.fontWeight.bold,
   },
-  gridValue: {
-    fontSize: 13,
-    color: '#4A5568',
-    fontWeight: '500',
+  readinessNarrative: {
+    fontSize: Typography.fontSize.xs,
+    color: Colors.text.secondary,
     marginTop: 2,
   },
-  subHeader: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1A202C',
-    marginVertical: 12,
+  breakdownGrid: {
+    marginTop: Spacing.md,
+    gap: Spacing.xs,
   },
-  timelineRow: {
+  breakdownItem: {
+    marginBottom: Spacing.xs,
+  },
+  breakdownLabel: {
+    fontSize: Typography.fontSize.xs,
+    color: Colors.text.secondary,
+    marginBottom: 2,
+  },
+  progressBarBg: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.background.tertiary,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: Colors.brand.purple,
+    borderRadius: 3,
+  },
+  gapCTA: {
+    marginTop: Spacing.md,
+    alignSelf: 'flex-end',
+  },
+  gapCTAText: {
+    fontSize: Typography.fontSize.xs,
+    color: Colors.brand.purpleLight,
+    fontWeight: Typography.fontWeight.bold,
+  },
+  dailyPlanCard: {
+    backgroundColor: '#2A1F3D',
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.lg,
+    marginBottom: Spacing.lg,
+    borderWidth: 1,
+    borderColor: Colors.brand.purple,
+  },
+  dailyPlanHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: Spacing.md,
   },
-  timelineIndicator: {
+  dailyPlanBadge: {
+    fontSize: Typography.fontSize.xs,
+    color: Colors.brand.purpleLight,
+    fontWeight: Typography.fontWeight.extrabold,
+    letterSpacing: 0.5,
+  },
+  dailyPlanTitle: {
+    fontSize: Typography.fontSize.base,
+    color: Colors.text.primary,
+    fontWeight: Typography.fontWeight.bold,
+  },
+  streakText: {
+    fontSize: Typography.fontSize.xs,
+    color: '#F59E0B',
+    fontWeight: Typography.fontWeight.bold,
+  },
+  dailyBlockRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.background.tertiary,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+    marginBottom: Spacing.xs,
+  },
+  categoryPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 4,
+    marginRight: Spacing.sm,
+  },
+  pillConcept: { backgroundColor: '#312E81' },
+  pillPractice: { backgroundColor: '#064E3B' },
+  pillProject: { backgroundColor: '#78350F' },
+  categoryPillText: {
+    fontSize: 9,
+    fontWeight: Typography.fontWeight.extrabold,
+    color: Colors.text.primary,
+  },
+  blockInfo: {
+    flex: 1,
+  },
+  blockTitle: {
+    fontSize: Typography.fontSize.xs,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.primary,
+  },
+  blockAction: {
+    fontSize: 11,
+    color: Colors.text.secondary,
+  },
+  blockDuration: {
+    fontSize: Typography.fontSize.xs,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.brand.purpleLight,
+  },
+  timelinePillContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Spacing.lg,
+    gap: Spacing.xs,
+  },
+  timelinePillLabel: {
+    fontSize: Typography.fontSize.xs,
+    color: Colors.text.secondary,
+    fontWeight: Typography.fontWeight.semibold,
+    marginRight: Spacing.xs,
+  },
+  timelinePill: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 6,
+    borderRadius: BorderRadius.full,
+    backgroundColor: Colors.background.secondary,
+    borderWidth: 1,
+    borderColor: Colors.border.subtle,
+  },
+  timelinePillActive: {
+    backgroundColor: Colors.brand.purple,
+    borderColor: Colors.brand.purple,
+  },
+  timelinePillText: {
+    fontSize: Typography.fontSize.xs,
+    color: Colors.text.secondary,
+  },
+  timelinePillTextActive: {
+    color: '#FFFFFF',
+    fontWeight: Typography.fontWeight.bold,
+  },
+  sectionHeader: {
+    fontSize: Typography.fontSize.base,
+    color: Colors.text.primary,
+    fontWeight: Typography.fontWeight.bold,
+    marginBottom: Spacing.md,
+  },
+  phaseRow: {
+    flexDirection: 'row',
+    marginBottom: Spacing.md,
+  },
+  timelineColumn: {
     width: 24,
     alignItems: 'center',
+    marginRight: Spacing.sm,
   },
   timelineDot: {
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#6200EE',
-    marginTop: 20,
+    backgroundColor: Colors.border.subtle,
+    marginTop: 4,
+  },
+  timelineDotCurrent: {
+    backgroundColor: Colors.brand.purple,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+  },
+  timelineDotCompleted: {
+    backgroundColor: '#34D399',
   },
   timelineLine: {
-    flex: 1,
     width: 2,
-    backgroundColor: '#E2E8F0',
-  },
-  timelineCard: {
     flex: 1,
-    marginLeft: 8,
+    backgroundColor: Colors.border.subtle,
+    marginTop: 4,
   },
-  milestoneHeader: {
-    marginBottom: 8,
+  phaseCard: {
+    flex: 1,
+    backgroundColor: Colors.background.secondary,
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.border.subtle,
   },
-  milestoneWeek: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#6200EE',
-    textTransform: 'uppercase',
+  phaseCardCurrent: {
+    borderColor: Colors.brand.purple,
+    borderWidth: 1.5,
+  },
+  phaseHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  phaseNumber: {
+    fontSize: 10,
+    color: Colors.brand.purpleLight,
+    fontWeight: Typography.fontWeight.extrabold,
+  },
+  phaseTitle: {
+    fontSize: Typography.fontSize.base,
+    color: Colors.text.primary,
+    fontWeight: Typography.fontWeight.bold,
+  },
+  phaseHours: {
+    fontSize: Typography.fontSize.xs,
+    color: Colors.text.secondary,
+    fontWeight: Typography.fontWeight.semibold,
+  },
+  skillsTagRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
+    marginTop: Spacing.xs,
+  },
+  skillTag: {
+    backgroundColor: Colors.background.tertiary,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  skillTagText: {
+    fontSize: 10,
+    color: Colors.text.secondary,
+  },
+  expandedContent: {
+    marginTop: Spacing.md,
+    paddingTop: Spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border.subtle,
+  },
+  milestoneItem: {
+    marginBottom: Spacing.sm,
   },
   milestoneTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#2D3748',
-    marginTop: 2,
+    fontSize: Typography.fontSize.xs,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.primary,
   },
   milestoneDesc: {
-    fontSize: 14,
-    color: '#4A5568',
-    lineHeight: 20,
-    marginBottom: 12,
+    fontSize: 11,
+    color: Colors.text.secondary,
+    marginTop: 2,
   },
-  itemLabel: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#718096',
-    marginTop: 8,
-    marginBottom: 4,
+  taskBullet: {
+    fontSize: 11,
+    color: Colors.text.secondary,
+    marginLeft: Spacing.sm,
   },
-  bulletItem: {
-    fontSize: 13,
-    color: '#4A5568',
-    lineHeight: 18,
-    marginVertical: 2,
+  coachBanner: {
+    backgroundColor: Colors.background.secondary,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.lg,
+    marginTop: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.brand.purple,
   },
-  projectText: {
-    fontSize: 13,
-    color: '#2D3748',
-    fontStyle: 'italic',
-    lineHeight: 18,
+  coachBannerTitle: {
+    fontSize: Typography.fontSize.base,
+    color: Colors.brand.purpleLight,
+    fontWeight: Typography.fontWeight.bold,
   },
-  emptyText: {
-    fontSize: 13,
-    color: '#A0AEC0',
-    fontStyle: 'italic',
+  coachBannerSubtitle: {
+    fontSize: Typography.fontSize.xs,
+    color: Colors.text.secondary,
+    marginTop: 2,
   },
 });

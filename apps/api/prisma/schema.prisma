@@ -159,6 +159,11 @@ model User {
   careerCenterPreference         CareerCenterPreference?
   careerActions                  CareerAction[]
 
+  // Phase 35
+  careerReadiness                CareerReadiness?
+  projectRecommendations         ProjectRecommendation[]
+  skillDecayNotices              SkillDecayNotice[]
+
   @@index([email])
   @@map("users")
 }
@@ -284,10 +289,14 @@ model Skill {
 }
 
 model UserSkill {
-  userId      String           @db.Uuid
-  skillId     String           @db.Uuid
-  proficiency ProficiencyLevel @default(BEGINNER)
-  addedAt     DateTime         @default(now())
+  userId          String           @db.Uuid
+  skillId         String           @db.Uuid
+  proficiency     ProficiencyLevel @default(BEGINNER)
+  confidenceScore Float            @default(0.5) // 0.0 to 1.0 confidence level
+  evidenceCount   Int              @default(0)
+  lastEvaluatedAt DateTime?
+  decayWarning    Boolean          @default(false)
+  addedAt         DateTime         @default(now())
 
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   skill Skill @relation(fields: [skillId], references: [id], onDelete: Cascade)
@@ -936,18 +945,21 @@ model GeneratedDocument {
 }
 
 model LearningRoadmap {
-  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId        String   @db.Uuid
-  goalId        String?  @db.Uuid
-  targetRole    String   @db.VarChar(255)
-  targetCompany String?  @db.VarChar(255)
-  roadmapJson   Json
-  version       Int      @default(1)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String   @db.Uuid
+  goalId          String?  @db.Uuid
+  targetRole      String   @db.VarChar(255)
+  targetCompany   String?  @db.VarChar(255)
+  timelineDays    Int      @default(60)
+  currentPhase    Int      @default(1)
+  overallProgress Float    @default(0.0)
+  version         Int      @default(1)
+  roadmapJson     Json
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  user     User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  goal     LearningGoal?           @relation(fields: [goalId], references: [id], onDelete: SetNull)
+  user     User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  goal     LearningGoal?            @relation(fields: [goalId], references: [id], onDelete: SetNull)
   versions LearningRoadmapVersion[]
 
   @@index([userId])
@@ -3337,6 +3349,68 @@ model LearningGoal {
   @@index([userId])
   @@index([targetSkillId])
   @@map("learning_goals")
+}
+
+
+
+model CareerReadiness {
+  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId               String   @unique @db.Uuid
+  overallReadiness     Float    @default(0.0)
+  skillReadiness       Float    @default(0.0)
+  portfolioReadiness   Float    @default(0.0)
+  resumeReadiness      Float    @default(0.0)
+  applicationReadiness Float    @default(0.0)
+  interviewReadiness   Float    @default(0.0)
+  goalAlignment        Float    @default(0.0)
+  breakdownJson        Json?
+  lastCalculatedAt     DateTime @default(now())
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("career_readinesses")
+}
+
+model ProjectRecommendation {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId           String    @db.Uuid
+  title            String    @db.VarChar(255)
+  description      String    @db.Text
+  targetRole       String    @db.VarChar(255)
+  difficulty       String    @default("INTERMEDIATE") @db.VarChar(50)
+  estimatedHours   Int       @default(10)
+  targetSkillIds   String[]
+  targetSkillNames String[]
+  repoTemplateUrl  String?   @db.VarChar(512)
+  status           String    @default("RECOMMENDED") @db.VarChar(30)
+  completedAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@map("project_recommendations")
+}
+
+model SkillDecayNotice {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId        String   @db.Uuid
+  skillId       String   @db.Uuid
+  lastPracticed DateTime
+  daysInactive  Int
+  message       String   @db.VarChar(255)
+  isDismissed   Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([skillId])
+  @@map("skill_decay_notices")
 }
 
 model LearningRoadmapVersion {

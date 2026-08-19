@@ -6,152 +6,156 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
+  TouchableOpacity,
 } from 'react-native';
-import { aiService } from '../../services/ai.service';
+import {
+  LearningService,
+  SkillGapData,
+  ProjectRecommendationData,
+} from '../../services/learning.service';
+import { Colors, Typography, Spacing, BorderRadius } from '../../theme';
 
 interface Props {
-  route?: any;
+  navigation?: any;
 }
 
-export default function SkillGapScreen({ route }: Props) {
-  const jobId = route?.params?.jobId;
-  const [gapAnalysis, setGapAnalysis] = useState<any>(null);
+export default function SkillGapScreen({ navigation }: Props) {
+  const [gapData, setGapData] = useState<SkillGapData | null>(null);
+  const [projects, setProjects] = useState<ProjectRecommendationData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchGapAnalysis = async () => {
+    const fetchData = async () => {
       try {
-        const result = await aiService.analyzeSkillGap(jobId);
-        setGapAnalysis(result);
+        const [gaps, projList] = await Promise.all([
+          LearningService.getSkillGaps(),
+          LearningService.getRecommendedProjects(),
+        ]);
+        setGapData(gaps);
+        setProjects(projList);
       } catch (err: any) {
-        Alert.alert('Error', 'Failed to retrieve skill gap analysis.');
+        Alert.alert('Error', 'Failed to retrieve multi-signal skill gap analysis.');
       } finally {
         setIsLoading(false);
       }
     };
-    if (jobId) fetchGapAnalysis();
-  }, [jobId]);
+    fetchData();
+  }, []);
 
   if (isLoading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#6200EE" />
-        <Text style={styles.loadingText}>Analyzing skill requirements...</Text>
+        <ActivityIndicator size="large" color={Colors.brand.purple} />
+        <Text style={styles.loadingText}>Analyzing multi-signal skill requirements...</Text>
       </View>
     );
   }
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority?.toUpperCase()) {
-      case 'HIGH':
-        return '#E53E3E';
-      case 'MEDIUM':
-        return '#DD6B20';
-      case 'LOW':
-        return '#3182CE';
-      default:
-        return '#718096';
-    }
-  };
-
-  const renderSkillChips = (title: string, skills: string[], type: 'match' | 'missingRequired' | 'missingPreferred' | 'recommend') => {
-    const chipBg =
-      type === 'match'
-        ? '#E6FFFA'
-        : type === 'missingRequired'
-        ? '#FFF5F5'
-        : type === 'missingPreferred'
-        ? '#FFFAF0'
-        : '#F7FAFC';
-
-    const chipBorder =
-      type === 'match'
-        ? '#B2F5EA'
-        : type === 'missingRequired'
-        ? '#FEB2B2'
-        : type === 'missingPreferred'
-        ? '#FEEBC8'
-        : '#E2E8F0';
-
-    const chipTextColor =
-      type === 'match'
-        ? '#008080'
-        : type === 'missingRequired'
-        ? '#C53030'
-        : type === 'missingPreferred'
-        ? '#C05621'
-        : '#4A5568';
-
-    return (
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>{title}</Text>
-        {skills && skills.length > 0 ? (
-          <View style={styles.chipRow}>
-            {skills.map((skill, idx) => (
-              <View key={idx} style={[styles.chip, { backgroundColor: chipBg, borderColor: chipBorder }]}>
-                <Text style={[styles.chipText, { color: chipTextColor }]}>{skill}</Text>
-              </View>
-            ))}
-          </View>
-        ) : (
-          <Text style={styles.emptyText}>No skills identified</Text>
-        )}
-      </View>
-    );
-  };
-
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Skill Gap Analysis</Text>
+      <Text style={styles.title}>Multi-Signal Skill Gap Analysis</Text>
       <Text style={styles.subtitle}>
-        Identify technical and soft skills required for the internship that are not found on your profile.
+        Connected analysis comparing target role requirements against opportunity signals, mock
+        interviews, and tracked applications.
       </Text>
 
-      {gapAnalysis && (
-        <View>
-          {/* Gap Level Priority */}
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Gap Severity Level</Text>
-            <View style={styles.priorityRow}>
-              <View
-                style={[
-                  styles.priorityIndicator,
-                  { backgroundColor: getPriorityColor(gapAnalysis.priority) },
-                ]}
-              />
-              <Text
-                style={[
-                  styles.priorityValue,
-                  { color: getPriorityColor(gapAnalysis.priority) },
-                ]}
-              >
-                {gapAnalysis.priority} Priority
+      {/* Coverage Banner */}
+      {gapData && (
+        <View style={styles.bannerCard}>
+          <View style={styles.bannerHeader}>
+            <View>
+              <Text style={styles.bannerRole}>{gapData.targetRole}</Text>
+              <Text style={styles.bannerSubtitle}>
+                {gapData.overallCoveragePercentage}% Role Coverage
               </Text>
             </View>
-            <Text style={styles.priorityDesc}>
-              {gapAnalysis.priority === 'HIGH'
-                ? 'This role requires core technical skills that are missing in your profile. Prioritize learning these first.'
-                : gapAnalysis.priority === 'MEDIUM'
-                ? 'You match several required skills, but missing preferred competencies may affect your ranking.'
-                : 'Excellent alignment. You match almost all requirements for this role.'}
-            </Text>
+            <View style={styles.coverageBadge}>
+              <Text style={styles.coverageBadgeText}>
+                {gapData.strongSkills.length}/{gapData.totalRequiredSkills} Skills
+              </Text>
+            </View>
           </View>
 
-          {renderSkillChips('Matched Skills (On Your Profile)', gapAnalysis.matchedSkills, 'match')}
-          {renderSkillChips('Missing Required Skills', gapAnalysis.missingRequiredSkills, 'missingRequired')}
-          {renderSkillChips('Missing Preferred Skills', gapAnalysis.missingPreferredSkills, 'missingPreferred')}
-          {renderSkillChips('Recommended Gained Skills', gapAnalysis.recommendedSkills, 'recommend')}
+          <View style={styles.progressBarBg}>
+            <View
+              style={[styles.progressBarFill, { width: `${gapData.overallCoveragePercentage}%` }]}
+            />
+          </View>
+        </View>
+      )}
 
-          {/* Learning Suggestions */}
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Gap Mitigation Steps</Text>
-            {gapAnalysis.learningSuggestions?.map((item: string, idx: number) => (
-              <View key={idx} style={styles.bulletRow}>
-                <Text style={styles.bulletPoint}>•</Text>
-                <Text style={styles.bulletText}>{item}</Text>
+      {/* High-Impact Skills Highlight */}
+      {gapData && gapData.highImpactSkills.length > 0 && (
+        <View style={styles.highImpactSection}>
+          <Text style={styles.sectionHeader}>⚡ High-Impact Opportunities</Text>
+          <Text style={styles.sectionSub}>
+            Skills that will unlock the most target internship matches when mastered.
+          </Text>
+
+          {gapData.highImpactSkills.map((sk) => (
+            <View key={sk.id} style={styles.highImpactCard}>
+              <View style={styles.highImpactHeader}>
+                <Text style={styles.highImpactTitle}>{sk.name}</Text>
+                <View style={styles.unlockBadge}>
+                  <Text style={styles.unlockText}>+{sk.opportunitiesUnlockedCount} Matches</Text>
+                </View>
               </View>
-            )) || <Text style={styles.emptyText}>No suggestions available</Text>}
-          </View>
+              <Text style={styles.highImpactReason}>{sk.reason}</Text>
+
+              <TouchableOpacity
+                style={styles.practiceBtn}
+                onPress={() => navigation.navigate('InterviewCoachScreen')}
+              >
+                <Text style={styles.practiceBtnText}>Practice {sk.name} →</Text>
+              </TouchableOpacity>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {/* Missing Skills List */}
+      {gapData && gapData.missingSkills.length > 0 && (
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Priority Skill Gaps ({gapData.missingSkills.length})</Text>
+          {gapData.missingSkills.map((sk) => (
+            <View key={sk.id} style={styles.gapRow}>
+              <View style={styles.gapHeader}>
+                <Text style={styles.gapName}>{sk.name}</Text>
+                <View style={styles.impactBadge}>
+                  <Text style={styles.impactBadgeText}>Impact: {sk.impactScore}</Text>
+                </View>
+              </View>
+              <Text style={styles.gapReason}>{sk.reason}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {/* Recommended Portfolio Projects */}
+      {projects.length > 0 && (
+        <View style={styles.projectsSection}>
+          <Text style={styles.sectionHeader}>🛠️ Recommended Portfolio Projects</Text>
+          <Text style={styles.sectionSub}>
+            Demonstrate missing skills with end-to-end projects for your profile.
+          </Text>
+
+          {projects.map((p) => (
+            <View key={p.id} style={styles.projectCard}>
+              <View style={styles.projectHeader}>
+                <Text style={styles.projectTitle}>{p.title}</Text>
+                <Text style={styles.difficultyBadge}>{p.difficulty}</Text>
+              </View>
+              <Text style={styles.projectDesc}>{p.description}</Text>
+
+              <View style={styles.projectSkillTags}>
+                {p.targetSkillNames.map((s, idx) => (
+                  <View key={idx} style={styles.pSkillTag}>
+                    <Text style={styles.pSkillTagText}>{s}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          ))}
         </View>
       )}
     </ScrollView>
@@ -161,108 +165,232 @@ export default function SkillGapScreen({ route }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: Colors.background.primary,
   },
   content: {
-    padding: 16,
+    padding: Spacing.lg,
+    paddingBottom: Spacing.xl * 2,
   },
   center: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F8F9FA',
-    padding: 24,
+    backgroundColor: Colors.background.primary,
+    padding: Spacing.xl,
   },
   loadingText: {
-    marginTop: 12,
-    fontSize: 14,
-    color: '#718096',
+    marginTop: Spacing.md,
+    fontSize: Typography.fontSize.base,
+    color: Colors.text.secondary,
   },
   title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#1A202C',
-    marginBottom: 8,
+    fontSize: Typography.fontSize.xl,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.primary,
   },
   subtitle: {
-    fontSize: 14,
-    color: '#718096',
-    lineHeight: 20,
-    marginBottom: 20,
+    fontSize: Typography.fontSize.sm,
+    color: Colors.text.secondary,
+    marginTop: Spacing.xs,
+    marginBottom: Spacing.lg,
   },
-  card: {
-    backgroundColor: '#FFF',
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+  bannerCard: {
+    backgroundColor: Colors.background.secondary,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.lg,
+    marginBottom: Spacing.lg,
+    borderWidth: 1,
+    borderColor: Colors.border.subtle,
   },
-  cardTitle: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    color: '#2D3748',
-    marginBottom: 12,
-  },
-  priorityRow: {
+  bannerHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: Spacing.md,
   },
-  priorityIndicator: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginRight: 8,
+  bannerRole: {
+    fontSize: Typography.fontSize.base,
+    color: Colors.text.primary,
+    fontWeight: Typography.fontWeight.bold,
   },
-  priorityValue: {
-    fontSize: 16,
-    fontWeight: 'bold',
+  bannerSubtitle: {
+    fontSize: Typography.fontSize.xs,
+    color: Colors.text.secondary,
   },
-  priorityDesc: {
-    fontSize: 13,
-    color: '#718096',
-    lineHeight: 18,
+  coverageBadge: {
+    backgroundColor: Colors.glass.surface,
+    borderColor: Colors.glass.border,
+    borderWidth: 1,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.full,
+  },
+  coverageBadgeText: {
+    fontSize: Typography.fontSize.xs,
+    color: Colors.brand.purpleLight,
+    fontWeight: Typography.fontWeight.bold,
+  },
+  progressBarBg: {
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.background.tertiary,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: Colors.brand.purple,
+    borderRadius: 4,
+  },
+  highImpactSection: {
+    marginBottom: Spacing.lg,
+  },
+  sectionHeader: {
+    fontSize: Typography.fontSize.base,
+    color: Colors.text.primary,
+    fontWeight: Typography.fontWeight.bold,
+  },
+  sectionSub: {
+    fontSize: Typography.fontSize.xs,
+    color: Colors.text.secondary,
+    marginBottom: Spacing.md,
+  },
+  highImpactCard: {
+    backgroundColor: '#2A1F3D',
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
+    marginBottom: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.brand.purple,
+  },
+  highImpactHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  highImpactTitle: {
+    fontSize: Typography.fontSize.base,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.primary,
+  },
+  unlockBadge: {
+    backgroundColor: Colors.brand.purple,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  unlockText: {
+    fontSize: 10,
+    fontWeight: Typography.fontWeight.extrabold,
+    color: Colors.text.primary,
+  },
+  highImpactReason: {
+    fontSize: Typography.fontSize.xs,
+    color: Colors.text.secondary,
     marginTop: 4,
   },
-  chipRow: {
+  practiceBtn: {
+    marginTop: Spacing.sm,
+    alignSelf: 'flex-end',
+  },
+  practiceBtnText: {
+    fontSize: Typography.fontSize.xs,
+    color: Colors.brand.purpleLight,
+    fontWeight: Typography.fontWeight.extrabold,
+  },
+  card: {
+    backgroundColor: Colors.background.secondary,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.lg,
+    marginBottom: Spacing.lg,
+    borderWidth: 1,
+    borderColor: Colors.border.subtle,
+  },
+  cardTitle: {
+    fontSize: Typography.fontSize.base,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.primary,
+    marginBottom: Spacing.md,
+  },
+  gapRow: {
+    paddingVertical: Spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border.subtle,
+  },
+  gapHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  gapName: {
+    fontSize: Typography.fontSize.base,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.primary,
+  },
+  impactBadge: {
+    backgroundColor: Colors.background.tertiary,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  impactBadgeText: {
+    fontSize: 10,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.secondary,
+  },
+  gapReason: {
+    fontSize: Typography.fontSize.xs,
+    color: Colors.text.secondary,
+    marginTop: 2,
+  },
+  projectsSection: {
+    marginBottom: Spacing.lg,
+  },
+  projectCard: {
+    backgroundColor: Colors.background.secondary,
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
+    marginBottom: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.border.subtle,
+  },
+  projectHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  projectTitle: {
+    fontSize: Typography.fontSize.base,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.primary,
+  },
+  difficultyBadge: {
+    fontSize: 9,
+    fontWeight: Typography.fontWeight.extrabold,
+    color: Colors.brand.purpleLight,
+    backgroundColor: Colors.glass.surface,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  projectDesc: {
+    fontSize: Typography.fontSize.xs,
+    color: Colors.text.secondary,
+    marginTop: 4,
+  },
+  projectSkillTags: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    gap: 4,
+    marginTop: Spacing.xs,
   },
-  chip: {
-    borderWidth: 1,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 16,
-    marginRight: 8,
-    marginBottom: 8,
+  pSkillTag: {
+    backgroundColor: Colors.background.tertiary,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
   },
-  chipText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  bulletRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginVertical: 4,
-  },
-  bulletPoint: {
-    fontSize: 14,
-    color: '#718096',
-    marginRight: 8,
-  },
-  bulletText: {
-    flex: 1,
-    fontSize: 14,
-    color: '#4A5568',
-    lineHeight: 20,
-  },
-  emptyText: {
-    fontSize: 13,
-    color: '#A0AEC0',
-    fontStyle: 'italic',
+  pSkillTagText: {
+    fontSize: 9,
+    color: Colors.text.secondary,
   },
 });
