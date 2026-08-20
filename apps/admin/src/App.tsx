@@ -24,6 +24,9 @@ import LearningOverview from './pages/LearningOverview';
 
 import Opportunities from './pages/Opportunities';
 import Applications from './pages/Applications';
+import CareerStrategyCenter from './pages/CareerStrategyCenter';
+import MarketAnalytics from './pages/MarketAnalytics';
+import CareerCommandCenter from './pages/CareerCommandCenter';
 
 // UI components
 import { Card } from './components/ui/Card';
@@ -114,6 +117,9 @@ export default function App() {
             <Route path="skills/market-demand" element={<SkillsMarketDemand />} />
             {/* Phase 26 — Personalized Learning & Roadmaps */}
             <Route path="learning" element={<LearningOverview />} />
+            <Route path="career-strategy" element={<CareerStrategyCenter />} />
+            <Route path="market-trends" element={<MarketAnalytics />} />
+            <Route path="career-command-center" element={<CareerCommandCenter />} />
             {/* Other routes can be stubbed out similarly */}
             <Route path="*" element={<div style={{ color: 'var(--text-muted)' }}>Under Construction</div>} />
           </Route>

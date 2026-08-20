@@ -14,6 +14,8 @@ import InterviewReportScreen from '../screens/ai/InterviewReportScreen';
 import InterviewCoachScreen from '../screens/ai/InterviewCoachScreen';
 import LearningRoadmapScreen from '../screens/ai/LearningRoadmapScreen';
 import SkillGapScreen from '../screens/ai/SkillGapScreen';
+import CareerStrategyScreen from '../screens/ai/CareerStrategyScreen';
+import CareerCommandCenterScreen from '../screens/ai/CareerCommandCenterScreen';
 import ResumeBuilderScreen from '../screens/resume-builder/ResumeBuilderScreen';
 import { profileApi } from '../services/profile.service';
 
@@ -29,6 +31,8 @@ export type RootStackParamList = {
   InterviewCoach: { jobId?: string; jobTitle?: string };
   LearningRoadmap: undefined;
   SkillGapScreen: undefined;
+  CareerStrategy: undefined;
+  CareerCommandCenter: undefined;
   ResumeBuilder: undefined;
 };
 
@@ -91,6 +95,8 @@ export default function AppNavigator(): React.ReactElement {
           <Stack.Screen name="InterviewCoach" component={InterviewCoachScreen} />
           <Stack.Screen name="LearningRoadmap" component={LearningRoadmapScreen} />
           <Stack.Screen name="SkillGapScreen" component={SkillGapScreen} />
+          <Stack.Screen name="CareerStrategy" component={CareerStrategyScreen} />
+          <Stack.Screen name="CareerCommandCenter" component={CareerCommandCenterScreen} />
           <Stack.Screen
             name="ResumeBuilder"
             component={ResumeBuilderScreen}

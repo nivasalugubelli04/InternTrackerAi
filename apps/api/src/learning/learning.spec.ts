@@ -28,6 +28,7 @@ describe('Phase 26 — Personalized Learning & Adaptive Roadmaps unit tests', ()
     },
     learningGoal: {
       findUnique: jest.fn(),
+      findFirst: jest.fn(),
       create: jest.fn(),
     },
     learningRoadmap: {

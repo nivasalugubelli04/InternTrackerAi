@@ -8,6 +8,21 @@
   --bg-card: rgba(18, 24, 40, 0.45);
   --bg-input: rgba(10, 14, 23, 0.85);
 
+  /* Phase 30 Premium UI/UX Design System 2.0 Tokens */
+  --p30-primary: #246BFE;
+  --p30-deep: #1456D9;
+  --p30-sky: #EAF3FF;
+  --p30-soft: #F3F7FF;
+  --p30-green: #79F28A;
+  --p30-soft-green: #E9FBEA;
+  --p30-ai-cream: #FFF4D8;
+  --p30-white: #FFFFFF;
+  --p30-text: #111111;
+  --p30-secondary: #6B7280;
+  --p30-border: #E7EAF0;
+  --p30-error: #EF4444;
+  --p30-warning: #F59E0B;
+
   --text-primary: #F3F4F6;
   --text-secondary: #9CA3AF;
   --text-muted: #6B7280;

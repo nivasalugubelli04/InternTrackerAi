@@ -37,6 +37,7 @@ export default function AdminLayout() {
       title: 'Core Operations',
       items: [
         { to: '/', icon: <LayoutDashboard size={18} />, label: 'Dashboard' },
+        { to: '/career-command-center', icon: <Target size={18} />, label: 'Career Command Center' },
         { to: '/opportunities', icon: <Compass size={18} />, label: 'Opportunity Discovery' },
         { to: '/applications', icon: <Briefcase size={18} />, label: 'Applications Tracker' },
         { to: '/users', icon: <Users size={18} />, label: 'Users' },
@@ -51,6 +52,8 @@ export default function AdminLayout() {
         { to: '/outcomes/roles', icon: <Briefcase size={18} />, label: 'Role Analytics' },
         { to: '/outcomes/skills', icon: <Award size={18} />, label: 'Skill Match Gaps' },
         { to: '/outcomes/data-quality', icon: <Database size={18} />, label: 'Data Quality' },
+        { to: '/career-strategy', icon: <Compass size={18} />, label: 'Career Strategy' },
+        { to: '/market-trends', icon: <TrendingUp size={18} />, label: 'Market Trends' },
       ]
     },
     {

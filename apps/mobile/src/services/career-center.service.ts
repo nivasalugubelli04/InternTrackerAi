@@ -121,4 +121,47 @@ export const careerCenterService = {
     });
     return response.data;
   },
+
+  async getCareerStrategy(): Promise<any> {
+    const response = await apiClient.get('/career/strategy');
+    return response.data;
+  },
+
+  async getHiringForecast(): Promise<any> {
+    const response = await apiClient.get('/career/forecast');
+    return response.data;
+  },
+
+  async chatAdvisor(message: string, conversationId?: string): Promise<any> {
+    const response = await apiClient.post('/ai/career/advisor', {
+      message,
+      conversationId,
+    });
+    return response.data;
+  },
+
+  async getCommandCenter(): Promise<any> {
+    const response = await apiClient.get('/career/command-center');
+    return response.data;
+  },
+
+  async getGoals(): Promise<any> {
+    const response = await apiClient.get('/career/goals');
+    return response.data;
+  },
+
+  async createGoal(goal: any): Promise<any> {
+    const response = await apiClient.post('/career/goals', goal);
+    return response.data;
+  },
+
+  async adjustGoal(id: string, currentValue: number): Promise<any> {
+    const response = await apiClient.patch(`/career/goals/${id}`, { currentValue });
+    return response.data;
+  },
+
+  async chatCommandCenter(message: string): Promise<any> {
+    const response = await apiClient.post('/ai/career/command', { message });
+    return response.data;
+  },
 };

@@ -164,6 +164,9 @@ model User {
   projectRecommendations         ProjectRecommendation[]
   skillDecayNotices              SkillDecayNotice[]
 
+  // Phase 37
+  userGoals                      UserGoal[]
+
   @@index([email])
   @@map("users")
 }
@@ -3741,5 +3744,23 @@ model SystemThreshold {
   updatedAt   DateTime @updatedAt
 
   @@map("system_thresholds")
+}
+
+model UserGoal {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId       String    @db.Uuid
+  type         String    @db.VarChar(50) // CAREER | LEARNING | APPLICATION | INTERVIEW | PROJECT
+  title        String    @db.VarChar(255)
+  targetValue  Int
+  currentValue Int       @default(0)
+  deadline     DateTime?
+  status       String    @default("ACTIVE") @db.VarChar(20) // ACTIVE | COMPLETED | ADJUSTED
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("user_goals")
 }
 
