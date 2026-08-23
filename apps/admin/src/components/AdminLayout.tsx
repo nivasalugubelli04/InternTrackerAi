@@ -52,6 +52,7 @@ export default function AdminLayout() {
         { to: '/outcomes', icon: <TrendingUp size={18} />, label: 'Outcomes Overview' },
         { to: '/analytics', icon: <TrendingUp size={18} />, label: 'Career Analytics' },
         { to: '/career-intelligence', icon: <Compass size={18} />, label: 'Career Intelligence' },
+        { to: '/integrations', icon: <Database size={18} />, label: 'External Integrations' },
         { to: '/networking', icon: <Compass size={18} />, label: 'Networking & Referrals' },
         { to: '/outcomes/roles', icon: <Briefcase size={18} />, label: 'Role Analytics' },
         { to: '/outcomes/skills', icon: <Award size={18} />, label: 'Skill Match Gaps' },

@@ -190,6 +190,12 @@ model User {
   careerScenarios            CareerScenario[]
   careerInsights             CareerInsight[]
 
+  // Phase 44 — External Integrations & Career Data Ecosystem
+  userIntegrations           UserIntegration[]
+  externalDataRecords        ExternalDataRecord[]
+  externalDataReviews        ExternalDataReview[]
+  integrationEvents          IntegrationEventLog[]
+
   @@index([email])
   @@map("users")
 }
@@ -4499,6 +4505,176 @@ model CareerInsight {
   @@index([userId, createdAt])
   @@map("career_insights")
 }
+
+// =============================================================================
+// Phase 44 — External Integrations & Unified Career Data Ecosystem
+// =============================================================================
+
+enum IntegrationProviderType {
+  GITHUB
+  GOOGLE_CALENDAR
+  PORTFOLIO_LINK
+  DOCUMENT_IMPORT
+  EMAIL_FEED
+}
+
+enum IntegrationStatus {
+  AVAILABLE
+  CONNECTED
+  SYNCING
+  SYNC_FAILED
+  DISCONNECTED
+  REAUTH_REQUIRED
+  PAUSED
+}
+
+enum ExternalRecordType {
+  REPOSITORY
+  CALENDAR_EVENT
+  DOCUMENT_SUMMARY
+  PORTFOLIO_LINK
+  EMAIL_SIGNAL
+}
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  MERGED
+  IGNORED
+}
+
+enum ReviewMatchConfidence {
+  EXACT_MATCH
+  HIGH_SIMILARITY
+  LOW_SIMILARITY
+  NEW_RECORD
+}
+
+/// Active external integration connected by user.
+model UserIntegration {
+  id              String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String                  @db.Uuid
+  provider        IntegrationProviderType
+  status          IntegrationStatus       @default(CONNECTED)
+  scopes          String[]                @default([])
+  lastSyncedAt    DateTime?
+  errorMessage    String?                 @db.Text
+  settingsJson    Json?
+
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+
+  user            User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  credential      IntegrationCredential?
+  syncs           IntegrationSync[]
+  records         ExternalDataRecord[]
+
+  @@unique([userId, provider])
+  @@index([userId])
+  @@index([provider])
+  @@map("user_integrations")
+}
+
+/// Secure AES-256 encrypted credentials for an integration.
+/// Access & refresh tokens are NEVER returned to the frontend.
+model IntegrationCredential {
+  id                    String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  integrationId         String          @unique @db.Uuid
+  accessTokenEncrypted  String          @db.Text
+  refreshTokenEncrypted String?         @db.Text
+  tokenType             String?         @db.VarChar(50)
+  expiresAt             DateTime?
+
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+
+  integration           UserIntegration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+
+  @@map("integration_credentials")
+}
+
+/// Synchronization job audit log.
+model IntegrationSync {
+  id                 String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  integrationId      String          @db.Uuid
+  syncType           String          @db.VarChar(50) // "INITIAL", "MANUAL", "SCHEDULED", "INCREMENTAL"
+  status             String          @db.VarChar(50) // "SUCCESS", "FAILED", "PARTIAL"
+  itemsScanned       Int             @default(0)
+  itemsImported      Int             @default(0)
+  itemsPendingReview Int             @default(0)
+  errorMessage       String?         @db.Text
+  startedAt          DateTime        @default(now())
+  completedAt        DateTime?
+
+  integration        UserIntegration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+
+  @@index([integrationId])
+  @@map("integration_syncs")
+}
+
+/// Raw & normalized external record fetched from an integration.
+model ExternalDataRecord {
+  id             String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId         String             @db.Uuid
+  integrationId  String             @db.Uuid
+  recordType     ExternalRecordType
+  externalId     String             @db.VarChar(255)
+  sourceUrl      String?            @db.VarChar(500)
+  rawJson        Json
+  normalizedJson Json
+  fetchedAt      DateTime           @default(now())
+
+  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  integration    UserIntegration    @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  review         ExternalDataReview?
+
+  @@index([userId])
+  @@index([integrationId])
+  @@index([userId, recordType])
+  @@map("external_data_records")
+}
+
+/// Staging queue item in the External Data Review Center.
+/// Requires explicit user action ([Accept], [Edit], [Merge], [Ignore]) before modifying career data.
+model ExternalDataReview {
+  id               String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId           String                @db.Uuid
+  recordId         String                @unique @db.Uuid
+  status           ReviewStatus          @default(PENDING)
+  matchConfidence  ReviewMatchConfidence @default(NEW_RECORD)
+  suggestedAction  String                @db.VarChar(255) // e.g. "CREATE_PROJECT", "LINK_EXISTING_PROJECT", "ADD_SKILL_EVIDENCE"
+  targetEntityType String?               @db.VarChar(100) // e.g. "PortfolioProject", "UserSkill", "Application"
+  targetEntityId   String?               @db.Uuid
+  reviewNotes      String?               @db.Text
+
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+
+  user             User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  record           ExternalDataRecord    @relation(fields: [recordId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, status])
+  @@map("external_data_reviews")
+}
+
+/// Integration activity & security audit event log.
+model IntegrationEventLog {
+  id         String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String                  @db.Uuid
+  provider   IntegrationProviderType
+  eventType  String                  @db.VarChar(100) // e.g. "CONNECTED", "DISCONNECTED", "SYNC_COMPLETED", "CREDENTIAL_REFRESHED"
+  details    Json?
+  createdAt  DateTime                @default(now())
+
+  user       User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, provider])
+  @@map("integration_event_logs")
+}
+
 
 
 

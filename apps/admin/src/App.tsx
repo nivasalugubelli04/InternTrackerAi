@@ -35,6 +35,9 @@ import CareerIntelligence from './pages/CareerIntelligence';
 import CareerScenarioPlanner from './pages/CareerScenarioPlanner';
 import CareerPathDetail from './pages/CareerPathDetail';
 import CareerPathComparison from './pages/CareerPathComparison';
+import IntegrationSettings from './pages/IntegrationSettings';
+import ExternalDataReviewCenter from './pages/ExternalDataReviewCenter';
+import IntegrationSyncHistory from './pages/IntegrationSyncHistory';
 
 // UI components
 import { Card } from './components/ui/Card';
@@ -119,6 +122,10 @@ export default function App() {
             <Route path="career-intelligence/scenarios" element={<CareerScenarioPlanner />} />
             <Route path="career-intelligence/paths/:title" element={<CareerPathDetail />} />
             <Route path="career-intelligence/compare" element={<CareerPathComparison />} />
+            {/* Phase 44 — External Integrations & Career Data Ecosystem */}
+            <Route path="integrations" element={<IntegrationSettings />} />
+            <Route path="integrations/review" element={<ExternalDataReviewCenter />} />
+            <Route path="integrations/history" element={<IntegrationSyncHistory />} />
             <Route path="users" element={<Users />} />
             <Route path="companies" element={<Companies />} />
             <Route path="flags" element={<FeatureFlags />} />

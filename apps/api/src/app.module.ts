@@ -38,6 +38,7 @@ import { OpportunitiesModule } from './opportunities/opportunities.module';
 import { OrganizationsModule } from './organizations/organizations.module';
 import { OutcomesModule } from './outcomes/outcomes.module';
 import { PortfolioModule } from './portfolio/portfolio.module';
+import { IntegrationsModule } from './integrations/integrations.module';
 import { PreferencesModule } from './preferences/preferences.module';
 import { PreparationModule } from './preparation/preparation.module';
 import { PrismaModule } from './prisma/prisma.module';
@@ -202,6 +203,8 @@ import { SystemModule } from './system/system.module';
     NetworkingModule,
     // Phase 43 — Advanced Career Intelligence
     CareerIntelligenceModule,
+    // Phase 44 — External Integrations & Data Ecosystem
+    IntegrationsModule,
     // Phase 26 — Adaptive Learning & Roadmaps
     LearningModule,
     // Phase 28 — Career Command Center
