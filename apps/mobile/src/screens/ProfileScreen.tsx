@@ -216,6 +216,19 @@ export default function ProfileScreen({ navigation }: Props): React.ReactElement
           <Text style={styles.emptyText}>Create and tailor ATS-friendly resumes</Text>
         </View>
 
+        {/* AI Portfolio Intelligence */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>AI Portfolio Intelligence</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('PortfolioIntelligence' as never)}>
+              <Text style={styles.manageLink}>View →</Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.emptyText}>
+            Verify target-role alignment and brand consistency health
+          </Text>
+        </View>
+
         {/* Preferences */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>

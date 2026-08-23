@@ -16,6 +16,10 @@ export interface CareerActionItem {
   reason: string;
   estimatedTime: string;
   source: string;
+  explanation?: string | null;
+  draft?: any;
+  safetyClass?: string | null;
+  isApproved?: boolean | null;
 }
 
 export interface ActionCandidate {
@@ -29,6 +33,9 @@ export interface ActionCandidate {
   reason: string;
   estimatedTime: string;
   source: string;
+  explanation?: string;
+  draft?: any;
+  safetyClass?: string;
 }
 
 @Injectable()
@@ -90,6 +97,10 @@ export class ActionOrchestrationService {
         reason: details.reason,
         estimatedTime: details.estimatedTime,
         source: details.source,
+        explanation: action.explanation || details.reason,
+        draft: action.draft,
+        safetyClass: action.safetyClass,
+        isApproved: action.isApproved,
       };
     });
 
@@ -174,6 +185,23 @@ export class ActionOrchestrationService {
     return this.prisma.careerAction.update({
       where: { id: actionId },
       data: { status: 'SNOOZED', snoozedUntil },
+    });
+  }
+
+  async approveAction(actionId: string, userId: string): Promise<any> {
+    const action = await this.prisma.careerAction.findFirst({
+      where: { id: actionId, userId },
+    });
+    if (!action) throw new NotFoundException('Action not found');
+
+    this.logger.log(`User approved proactive action ${actionId} of type ${action.actionType}`);
+
+    return this.prisma.careerAction.update({
+      where: { id: actionId },
+      data: {
+        isApproved: true,
+        status: action.safetyClass === 'TYPE_B' ? 'COMPLETED' : 'PENDING',
+      },
     });
   }
 
@@ -468,6 +496,11 @@ export class ActionOrchestrationService {
         },
       });
 
+      const safetyClass =
+        c.safetyClass ||
+        (c.actionType === 'FOLLOW_UP' || c.actionType === 'GOAL_CHECK' ? 'TYPE_B' : 'TYPE_A');
+      const isApproved = safetyClass === 'TYPE_A' ? true : null;
+
       if (existing) {
         if (existing.status === 'PENDING') {
           await this.prisma.careerAction.update({
@@ -475,6 +508,9 @@ export class ActionOrchestrationService {
             data: {
               priority: c.priority,
               expiresAt: c.expiresAt,
+              explanation: c.explanation || existing.explanation,
+              draft: c.draft || existing.draft,
+              safetyClass,
             },
           });
         }
@@ -488,6 +524,10 @@ export class ActionOrchestrationService {
             priority: c.priority,
             expiresAt: c.expiresAt,
             status: 'PENDING',
+            explanation: c.explanation || c.reason,
+            draft: c.draft || {},
+            safetyClass,
+            isApproved,
           },
         });
       }

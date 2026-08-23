@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 
 import { AiModule } from '../ai/ai.module';
+import { CareerCenterModule } from '../career-center/career-center.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { PrismaModule } from '../prisma/prisma.module';
 
@@ -13,7 +14,7 @@ import { InterviewSyncService } from './services/interview-sync.service';
 import { InterviewWorkspaceService } from './services/interview-workspace.service';
 
 @Module({
-  imports: [PrismaModule, AiModule, NotificationsModule],
+  imports: [PrismaModule, AiModule, NotificationsModule, CareerCenterModule],
   providers: [
     InterviewsService,
     InterviewWorkspaceService,

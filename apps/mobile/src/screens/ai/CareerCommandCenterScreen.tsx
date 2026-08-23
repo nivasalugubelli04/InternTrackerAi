@@ -18,7 +18,7 @@ interface Props {
   navigation?: any;
 }
 
-export default function CareerCommandCenterScreen({ navigation }: Props) {
+export default function CareerCommandCenterScreen({ navigation: _navigation }: Props) {
   const [state, setState] = useState<any>(null);
   const [goals, setGoals] = useState<any[]>([]);
   const [chatMessage, setChatMessage] = useState('');
@@ -61,6 +61,26 @@ export default function CareerCommandCenterScreen({ navigation }: Props) {
       fetchDashboard();
     } catch (err) {
       Alert.alert('Error', 'Failed to skip action.');
+    }
+  };
+
+  const handleApproveAction = async (id: string) => {
+    try {
+      await careerCenterService.approveAction(id);
+      Alert.alert('Approved', 'Action approved and executed.');
+      fetchDashboard();
+    } catch (err) {
+      Alert.alert('Error', 'Failed to approve action.');
+    }
+  };
+
+  const handleSnoozeAction = async (id: string) => {
+    try {
+      await careerCenterService.snoozeAction(id, 24);
+      Alert.alert('Snoozed', 'Action snoozed for 24 hours.');
+      fetchDashboard();
+    } catch (err) {
+      Alert.alert('Error', 'Failed to snooze action.');
     }
   };
 
@@ -155,14 +175,38 @@ export default function CareerCommandCenterScreen({ navigation }: Props) {
                 </View>
                 <Text style={styles.actionTitle}>{act.title}</Text>
                 <Text style={styles.actionDesc}>{act.description}</Text>
-                <Text style={styles.actionReason}>Why: {act.reason}</Text>
+                <Text style={styles.actionReason}>Why: {act.explanation || act.reason}</Text>
+
+                {act.draft && (act.draft.subject || act.draft.body) && (
+                  <View style={styles.draftCard}>
+                    <Text style={styles.draftLabel}>📧 Pre-drafted Outreach:</Text>
+                    <Text style={styles.draftSubject}>Subject: {act.draft.subject}</Text>
+                    <Text style={styles.draftBody}>{act.draft.body}</Text>
+                  </View>
+                )}
 
                 <View style={styles.actionBtns}>
+                  {!act.isApproved &&
+                  (act.safetyClass === 'TYPE_B' || act.safetyClass === 'TYPE_C') ? (
+                    <TouchableOpacity
+                      style={styles.approveBtn}
+                      onPress={() => handleApproveAction(act.id)}
+                    >
+                      <Text style={styles.approveBtnText}>Approve & Execute</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity
+                      style={styles.completeBtn}
+                      onPress={() => handleCompleteAction(act.id)}
+                    >
+                      <Text style={styles.completeBtnText}>Complete</Text>
+                    </TouchableOpacity>
+                  )}
                   <TouchableOpacity
-                    style={styles.completeBtn}
-                    onPress={() => handleCompleteAction(act.id)}
+                    style={styles.snoozeBtn}
+                    onPress={() => handleSnoozeAction(act.id)}
                   >
-                    <Text style={styles.completeBtnText}>Complete</Text>
+                    <Text style={styles.snoozeBtnText}>Snooze</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.skipBtn}
@@ -423,6 +467,54 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#EF4444',
   },
+  approveBtn: {
+    backgroundColor: '#8B5CF6',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 4,
+  },
+  approveBtnText: {
+    fontSize: 10,
+    color: 'white',
+    fontWeight: Typography.fontWeight.bold,
+  },
+  snoozeBtn: {
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.3)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 4,
+  },
+  snoozeBtnText: {
+    fontSize: 10,
+    color: '#F59E0B',
+  },
+  draftCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 6,
+    padding: Spacing.sm,
+    marginTop: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.border.subtle,
+  },
+  draftLabel: {
+    fontSize: 10,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.brand.purpleLight,
+    marginBottom: 4,
+  },
+  draftSubject: {
+    fontSize: Typography.fontSize.xs,
+    fontWeight: Typography.fontWeight.semibold,
+    color: Colors.text.primary,
+    marginBottom: 2,
+  },
+  draftBody: {
+    fontSize: 10,
+    color: Colors.text.secondary,
+    fontStyle: 'italic',
+  },
   goalRow: {
     marginBottom: Spacing.md,
   },
@@ -493,7 +585,7 @@ const styles = StyleSheet.create({
   chatBox: {
     minHeight: 180,
     maxHeight: 300,
-    background: 'rgba(0,0,0,0.1)',
+    backgroundColor: 'rgba(0,0,0,0.1)',
     borderRadius: BorderRadius.md,
     padding: Spacing.md,
     marginBottom: Spacing.md,

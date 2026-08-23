@@ -1,10 +1,11 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, Inject, forwardRef } from '@nestjs/common';
 import type {
   RecommendationPriority,
   RecommendationType,
   RecommendationFeedbackType,
 } from '@prisma/client';
 
+import { CareerEventsService } from '../../career-center/services/career-events.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RedisService } from '../../redis/redis.service';
 import type { MatchReasonData } from '../providers/matching-provider.interface';
@@ -35,6 +36,8 @@ export class RecommendationService {
     private readonly jobAnalyzer: JobAnalyzerService,
     private readonly scoringEngine: ScoringEngineService,
     private readonly semanticMatching: SemanticMatchingService,
+    @Inject(forwardRef(() => CareerEventsService))
+    private readonly eventsService: CareerEventsService,
   ) {}
 
   /**
@@ -234,6 +237,18 @@ export class RecommendationService {
             description: r.description,
             weight: r.weight,
           })),
+        });
+      }
+
+      // Publish proactive event if match quality is high
+      if (evalResult.overallScore >= 80) {
+        await this.eventsService.publish({
+          userId,
+          eventType: 'NEW_OPPORTUNITY',
+          source: 'Matching System',
+          entityType: 'JobPosting',
+          entityId: jobId,
+          importance: 'MEDIUM',
         });
       }
 

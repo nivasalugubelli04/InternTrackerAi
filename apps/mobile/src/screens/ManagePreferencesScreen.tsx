@@ -17,6 +17,7 @@ import { SelectChip } from '../components/common/SelectChip';
 import { FormInput } from '../components/auth/FormInput';
 import { Colors, Spacing, Typography, BorderRadius } from '../theme';
 import { preferencesApi } from '../services/profile.service';
+import { careerCenterService } from '../services/career-center.service';
 
 const ROLES = [
   'Software Engineer',
@@ -79,6 +80,16 @@ export default function ManagePreferencesScreen(): React.ReactElement {
   const [quietStart, setQuietStart] = useState('22:00');
   const [quietEnd, setQuietEnd] = useState('08:00');
 
+  // Proactive Agent
+  const [proactiveEnabled, setProactiveEnabled] = useState(true);
+  const [intensity, setIntensity] = useState('BALANCED');
+  const [opportunityAlerts, setOpportunityAlerts] = useState(true);
+  const [interviewReminders, setInterviewReminders] = useState(true);
+  const [followUpReminders, setFollowUpReminders] = useState(true);
+  const [learningReminders, setLearningReminders] = useState(true);
+  const [careerInsights, setCareerInsights] = useState(true);
+  const [companyAlerts, setCompanyAlerts] = useState(true);
+
   useEffect(() => {
     const fetchPrefs = async () => {
       try {
@@ -98,6 +109,18 @@ export default function ManagePreferencesScreen(): React.ReactElement {
           setWeeklyDigest(notifications.weeklyDigest);
           setQuietStart(notifications.quietHoursStart ?? '22:00');
           setQuietEnd(notifications.quietHoursEnd ?? '08:00');
+        }
+
+        const agentPrefs = await careerCenterService.getAutomationPreferences();
+        if (agentPrefs) {
+          setProactiveEnabled(agentPrefs.proactiveAssistanceEnabled);
+          setIntensity(agentPrefs.automationIntensity);
+          setOpportunityAlerts(agentPrefs.opportunityAlerts);
+          setInterviewReminders(agentPrefs.interviewReminders);
+          setFollowUpReminders(agentPrefs.followUpReminders);
+          setLearningReminders(agentPrefs.learningReminders);
+          setCareerInsights(agentPrefs.careerInsights);
+          setCompanyAlerts(agentPrefs.companyAlerts);
         }
       } catch (err) {
         Alert.alert('Error', 'Could not load preferences');
@@ -134,6 +157,19 @@ export default function ManagePreferencesScreen(): React.ReactElement {
           weeklyDigest,
           quietHoursStart: quietStart,
           quietHoursEnd: quietEnd,
+        }),
+        careerCenterService.updateAutomationPreferences({
+          proactiveAssistanceEnabled: proactiveEnabled,
+          automationIntensity: intensity,
+          opportunityAlerts,
+          interviewReminders,
+          followUpReminders,
+          learningReminders,
+          careerInsights,
+          companyAlerts,
+          watchedRoles: selectedRoles,
+          watchedLocations: selectedLocations,
+          watchedCompanies: selectedIndustries,
         }),
       ]);
       queryClient.invalidateQueries({ queryKey: ['career-center'] });
@@ -307,6 +343,98 @@ export default function ManagePreferencesScreen(): React.ReactElement {
           </View>
         </View>
 
+        {/* Proactive Career Agent */}
+        <Text style={styles.header}>AI Proactive Agent</Text>
+
+        <View style={styles.section}>
+          <View style={styles.card}>
+            <ToggleRow
+              emoji="🤖"
+              title="Proactive Assistance"
+              subtitle="Agent monitors career milestones"
+              value={proactiveEnabled}
+              onChange={setProactiveEnabled}
+            />
+            {proactiveEnabled && (
+              <>
+                <View style={styles.divider} />
+                <View style={styles.intensityRow}>
+                  <Text style={styles.intensityLabel}>Agent Intensity Mode</Text>
+                  <View style={styles.intensityBtns}>
+                    {['MINIMAL', 'BALANCED', 'PROACTIVE'].map((mode) => (
+                      <TouchableOpacity
+                        key={mode}
+                        style={[
+                          styles.intensityBtn,
+                          intensity === mode && styles.intensityBtnSelected,
+                        ]}
+                        onPress={() => setIntensity(mode)}
+                      >
+                        <Text
+                          style={[
+                            styles.intensityBtnText,
+                            intensity === mode && styles.intensityBtnTextSelected,
+                          ]}
+                        >
+                          {mode}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+                <View style={styles.divider} />
+                <ToggleRow
+                  emoji="💼"
+                  title="Opportunities Alerts"
+                  subtitle="Notify on high matches"
+                  value={opportunityAlerts}
+                  onChange={setOpportunityAlerts}
+                />
+                <View style={styles.divider} />
+                <ToggleRow
+                  emoji="📅"
+                  title="Interview Reminders"
+                  subtitle="Mock & recruiter schedules"
+                  value={interviewReminders}
+                  onChange={setInterviewReminders}
+                />
+                <View style={styles.divider} />
+                <ToggleRow
+                  emoji="✉️"
+                  title="Follow-up Prompts"
+                  subtitle="Draft inquiries on delays"
+                  value={followUpReminders}
+                  onChange={setFollowUpReminders}
+                />
+                <View style={styles.divider} />
+                <ToggleRow
+                  emoji="📚"
+                  title="Learning Notifications"
+                  subtitle="Streaks & skill roadmaps"
+                  value={learningReminders}
+                  onChange={setLearningReminders}
+                />
+                <View style={styles.divider} />
+                <ToggleRow
+                  emoji="💡"
+                  title="Strategic Insights"
+                  subtitle="Career forecasts & trends"
+                  value={careerInsights}
+                  onChange={setCareerInsights}
+                />
+                <View style={styles.divider} />
+                <ToggleRow
+                  emoji="🏢"
+                  title="Company Alerts"
+                  subtitle="Hiring shifts in tracked tags"
+                  value={companyAlerts}
+                  onChange={setCompanyAlerts}
+                />
+              </>
+            )}
+          </View>
+        </View>
+
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>🌙 Quiet Hours</Text>
           <View style={styles.card}>
@@ -421,5 +549,39 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: Colors.border.subtle,
     backgroundColor: Colors.background.primary,
+  },
+  intensityRow: {
+    padding: Spacing.md,
+  },
+  intensityLabel: {
+    color: Colors.text.primary,
+    fontSize: Typography.fontSize.sm,
+    fontWeight: Typography.fontWeight.semibold,
+    marginBottom: Spacing.sm,
+  },
+  intensityBtns: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  intensityBtn: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: Colors.border.default,
+    borderRadius: BorderRadius.sm,
+    paddingVertical: Spacing.xs,
+    alignItems: 'center',
+    marginHorizontal: 4,
+  },
+  intensityBtnSelected: {
+    backgroundColor: 'rgba(124,58,237,0.15)',
+    borderColor: Colors.brand.purple,
+  },
+  intensityBtnText: {
+    color: Colors.text.secondary,
+    fontSize: Typography.fontSize.xs,
+  },
+  intensityBtnTextSelected: {
+    color: Colors.brand.purpleLight,
+    fontWeight: Typography.fontWeight.semibold,
   },
 });

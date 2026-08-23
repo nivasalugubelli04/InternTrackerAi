@@ -18,7 +18,7 @@ interface Props {
   navigation?: any;
 }
 
-export default function CareerStrategyScreen({ navigation }: Props) {
+export default function CareerStrategyScreen({ navigation: _navigation }: Props) {
   const [strategy, setStrategy] = useState<any>(null);
   const [chatMessage, setChatMessage] = useState('');
   const [chatHistory, setChatHistory] = useState<any[]>([]);
@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
   chatBox: {
     minHeight: 180,
     maxHeight: 300,
-    background: 'rgba(0,0,0,0.1)',
+    backgroundColor: 'rgba(0,0,0,0.1)',
     borderRadius: BorderRadius.md,
     padding: Spacing.md,
     marginBottom: Spacing.md,

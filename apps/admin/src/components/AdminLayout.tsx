@@ -37,7 +37,8 @@ export default function AdminLayout() {
       title: 'Core Operations',
       items: [
         { to: '/', icon: <LayoutDashboard size={18} />, label: 'Dashboard' },
-        { to: '/career-command-center', icon: <Target size={18} />, label: 'Career Command Center' },
+        { to: '/career-command-center', icon: <Compass size={18} />, label: 'Career Command Center' },
+        { to: '/portfolio-intelligence', icon: <Award size={18} />, label: 'Portfolio Intelligence' },
         { to: '/opportunities', icon: <Compass size={18} />, label: 'Opportunity Discovery' },
         { to: '/applications', icon: <Briefcase size={18} />, label: 'Applications Tracker' },
         { to: '/users', icon: <Users size={18} />, label: 'Users' },

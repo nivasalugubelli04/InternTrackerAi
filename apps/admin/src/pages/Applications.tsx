@@ -1,6 +1,7 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Briefcase, AlertCircle, CheckCircle, Clock, FileText, ChevronRight, Play, ExternalLink, Calendar, Mail, FileCheck, Star, RefreshCw } from 'lucide-react';
+import { Briefcase, AlertCircle, CheckCircle, Clock, FileText, ChevronRight, Play, ExternalLink, Calendar, Mail, FileCheck, Star, RefreshCw, Sparkles } from 'lucide-react';
 import { adminClient } from '../api/admin-client';
 import { Button } from '../components/ui/Button';
 
@@ -248,7 +249,13 @@ export default function Applications() {
               <h3 style={{ color: 'white', fontWeight: 800, fontSize: '18px', margin: '4px 0' }}>{selectedApp.jobTitleSnapshot}</h3>
               <p style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>{selectedApp.companyNameSnapshot}</p>
             </div>
-            <button
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+              <Link to={`/applications/${selectedApp.id}/prepare`}>
+                <Button size="sm" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Sparkles size={14} /> Prepare Workspace
+                </Button>
+              </Link>
+              <button
               onClick={() => setSelectedId(null)}
               style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '20px' }}
             >

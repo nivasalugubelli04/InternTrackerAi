@@ -27,6 +27,8 @@ import Applications from './pages/Applications';
 import CareerStrategyCenter from './pages/CareerStrategyCenter';
 import MarketAnalytics from './pages/MarketAnalytics';
 import CareerCommandCenter from './pages/CareerCommandCenter';
+import PortfolioIntelligence from './pages/PortfolioIntelligence';
+import ApplicationPreparation from './pages/ApplicationPreparation';
 
 // UI components
 import { Card } from './components/ui/Card';
@@ -103,6 +105,7 @@ export default function App() {
             <Route index element={<Dashboard />} />
             <Route path="opportunities" element={<Opportunities />} />
             <Route path="applications" element={<Applications />} />
+            <Route path="applications/:id/prepare" element={<ApplicationPreparation />} />
             <Route path="users" element={<Users />} />
             <Route path="companies" element={<Companies />} />
             <Route path="flags" element={<FeatureFlags />} />
@@ -120,6 +123,7 @@ export default function App() {
             <Route path="career-strategy" element={<CareerStrategyCenter />} />
             <Route path="market-trends" element={<MarketAnalytics />} />
             <Route path="career-command-center" element={<CareerCommandCenter />} />
+            <Route path="portfolio-intelligence" element={<PortfolioIntelligence />} />
             {/* Other routes can be stubbed out similarly */}
             <Route path="*" element={<div style={{ color: 'var(--text-muted)' }}>Under Construction</div>} />
           </Route>

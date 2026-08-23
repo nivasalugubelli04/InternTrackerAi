@@ -7,6 +7,7 @@ import {
 import { ApplicationStatus, Prisma } from '@prisma/client';
 
 import { AiService } from '../ai/services/ai.service';
+import { CareerEventsService } from '../career-center/services/career-events.service';
 import { EngagementTrackerService } from '../engagement/services/engagement-tracker.service';
 import { NotificationsService } from '../notifications/services/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -78,6 +79,7 @@ export class ApplicationsService {
     private readonly notificationsService: NotificationsService,
     private readonly engagementTracker: EngagementTrackerService,
     private readonly aiService: AiService,
+    private readonly eventsService: CareerEventsService,
   ) {}
 
   async calculatePriority(
@@ -250,6 +252,26 @@ export class ApplicationsService {
         },
       },
     });
+
+    await this.eventsService.publish({
+      userId,
+      eventType: 'APPLICATION_CREATED',
+      source: 'Applications System',
+      entityType: 'Application',
+      entityId: application.id,
+      importance: 'LOW',
+    });
+
+    if (targetStatus === ApplicationStatus.APPLIED) {
+      await this.eventsService.publish({
+        userId,
+        eventType: 'APPLICATION_RESPONSE',
+        source: 'Applications System',
+        entityType: 'Application',
+        entityId: application.id,
+        importance: 'MEDIUM',
+      });
+    }
 
     if (application.nextActionDate) {
       await this.scheduleReminder(
@@ -441,6 +463,15 @@ export class ApplicationsService {
       );
     }
 
+    await this.eventsService.publish({
+      userId,
+      eventType: 'APPLICATION_UPDATED',
+      source: 'Applications System',
+      entityType: 'Application',
+      entityId: updated.id,
+      importance: 'LOW',
+    });
+
     return updated;
   }
 
@@ -546,6 +577,19 @@ export class ApplicationsService {
           });
         }
       }
+
+      await this.eventsService.publish({
+        userId,
+        eventType: 'APPLICATION_RESPONSE',
+        source: 'Applications System',
+        entityType: 'Application',
+        entityId: id,
+        importance:
+          dto.status === ApplicationStatus.INTERVIEW || dto.status === ApplicationStatus.OFFER
+            ? 'HIGH'
+            : 'MEDIUM',
+        metadata: { fromStatus: application.status, toStatus: dto.status },
+      });
 
       return updated;
     });

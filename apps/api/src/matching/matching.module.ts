@@ -1,7 +1,8 @@
 import { BullModule } from '@nestjs/bullmq';
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
+import { CareerCenterModule } from '../career-center/career-center.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { MatchingProcessor } from '../queues/processors/matching.processor';
 import { MATCHING_QUEUE } from '../queues/queue.constants';
@@ -25,6 +26,7 @@ import { SemanticMatchingService } from './services/semantic-matching.service';
     PrismaModule,
     RedisModule,
     ConfigModule,
+    forwardRef(() => CareerCenterModule),
     BullModule.registerQueue({
       name: MATCHING_QUEUE,
     }),

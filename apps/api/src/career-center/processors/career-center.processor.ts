@@ -5,10 +5,12 @@ import type { Job } from 'bullmq';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CAREER_CENTER_QUEUE } from '../../queues/queue.constants';
 import { ActionOrchestrationService } from '../services/action-orchestration.service';
+import { EventProcessingService } from '../services/event-processing.service';
 
 export interface CareerCenterJobPayload {
   userId?: string;
-  jobType: 'DAILY_PLAN' | 'CLEANUP_ACTIONS';
+  jobType: 'DAILY_PLAN' | 'CLEANUP_ACTIONS' | 'PROCESS_EVENT';
+  eventData?: any;
 }
 
 @Processor(CAREER_CENTER_QUEUE)
@@ -18,6 +20,7 @@ export class CareerCenterProcessor extends WorkerHost {
   constructor(
     private readonly prisma: PrismaService,
     private readonly actionOrchestrator: ActionOrchestrationService,
+    private readonly eventProcessing: EventProcessingService,
   ) {
     super();
   }
@@ -25,6 +28,13 @@ export class CareerCenterProcessor extends WorkerHost {
   async process(job: Job<CareerCenterJobPayload>): Promise<any> {
     const { userId, jobType } = job.data;
     this.logger.log(`Processing BullMQ Career Center job ${job.id} of type ${jobType}`);
+
+    if (jobType === 'PROCESS_EVENT') {
+      if (job.data.eventData) {
+        return this.eventProcessing.processEvent(job.data.eventData);
+      }
+      return { success: false, reason: 'Missing eventData payload' };
+    }
 
     if (jobType === 'CLEANUP_ACTIONS') {
       const activeUsers = await this.prisma.user.findMany({

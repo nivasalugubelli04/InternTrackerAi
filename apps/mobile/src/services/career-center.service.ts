@@ -164,4 +164,24 @@ export const careerCenterService = {
     const response = await apiClient.post('/ai/career/command', { message });
     return response.data;
   },
+
+  async approveAction(id: string): Promise<any> {
+    const response = await apiClient.post(`/automation/actions/${id}/approve`);
+    return response.data;
+  },
+
+  async getAutomationPreferences(): Promise<any> {
+    const response = await apiClient.get('/automation/preferences');
+    return response.data;
+  },
+
+  async updateAutomationPreferences(dto: any): Promise<any> {
+    const response = await apiClient.patch('/automation/preferences', dto);
+    return response.data;
+  },
+
+  async getAgentActivity(): Promise<any> {
+    const response = await apiClient.get('/automation/activity');
+    return response.data;
+  },
 };
