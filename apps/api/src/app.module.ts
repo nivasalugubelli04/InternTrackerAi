@@ -13,6 +13,7 @@ import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { BillingModule } from './billing/billing.module';
 import { CareerCenterModule } from './career-center/career-center.module';
+import { CareerIntelligenceModule } from './career-intelligence/career-intelligence.module';
 import { RateLimitGuard } from './common/guards/rate-limit.guard';
 import { CompaniesModule } from './companies/companies.module';
 import { CompanyTrackModule } from './company-track/company-track.module';
@@ -30,6 +31,7 @@ import { MarketModule } from './market/market.module';
 import { MatchingModule } from './matching/matching.module';
 import { ApiMetricsInterceptor } from './metrics/interceptors/api-metrics.interceptor';
 import { MetricsModule } from './metrics/metrics.module';
+import { NetworkingModule } from './networking/networking.module';
 import { NlpModule } from './nlp/nlp.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { OpportunitiesModule } from './opportunities/opportunities.module';
@@ -196,6 +198,10 @@ import { SystemModule } from './system/system.module';
     PrivacyModule,
     // Phase 24 — Career Outcomes, Placement Intelligence & Workforce Analytics
     OutcomesModule,
+    // Phase 42 — Networking & Referrals
+    NetworkingModule,
+    // Phase 43 — Advanced Career Intelligence
+    CareerIntelligenceModule,
     // Phase 26 — Adaptive Learning & Roadmaps
     LearningModule,
     // Phase 28 — Career Command Center

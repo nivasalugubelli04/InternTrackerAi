@@ -50,6 +50,9 @@ export default function AdminLayout() {
       title: 'Placement Intelligence',
       items: [
         { to: '/outcomes', icon: <TrendingUp size={18} />, label: 'Outcomes Overview' },
+        { to: '/analytics', icon: <TrendingUp size={18} />, label: 'Career Analytics' },
+        { to: '/career-intelligence', icon: <Compass size={18} />, label: 'Career Intelligence' },
+        { to: '/networking', icon: <Compass size={18} />, label: 'Networking & Referrals' },
         { to: '/outcomes/roles', icon: <Briefcase size={18} />, label: 'Role Analytics' },
         { to: '/outcomes/skills', icon: <Award size={18} />, label: 'Skill Match Gaps' },
         { to: '/outcomes/data-quality', icon: <Database size={18} />, label: 'Data Quality' },

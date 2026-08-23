@@ -29,6 +29,12 @@ import MarketAnalytics from './pages/MarketAnalytics';
 import CareerCommandCenter from './pages/CareerCommandCenter';
 import PortfolioIntelligence from './pages/PortfolioIntelligence';
 import ApplicationPreparation from './pages/ApplicationPreparation';
+import CareerAnalytics from './pages/CareerAnalytics';
+import CareerNetworking from './pages/CareerNetworking';
+import CareerIntelligence from './pages/CareerIntelligence';
+import CareerScenarioPlanner from './pages/CareerScenarioPlanner';
+import CareerPathDetail from './pages/CareerPathDetail';
+import CareerPathComparison from './pages/CareerPathComparison';
 
 // UI components
 import { Card } from './components/ui/Card';
@@ -106,6 +112,13 @@ export default function App() {
             <Route path="opportunities" element={<Opportunities />} />
             <Route path="applications" element={<Applications />} />
             <Route path="applications/:id/prepare" element={<ApplicationPreparation />} />
+            <Route path="analytics" element={<CareerAnalytics />} />
+            <Route path="networking" element={<CareerNetworking />} />
+            {/* Phase 43 — Career Intelligence */}
+            <Route path="career-intelligence" element={<CareerIntelligence />} />
+            <Route path="career-intelligence/scenarios" element={<CareerScenarioPlanner />} />
+            <Route path="career-intelligence/paths/:title" element={<CareerPathDetail />} />
+            <Route path="career-intelligence/compare" element={<CareerPathComparison />} />
             <Route path="users" element={<Users />} />
             <Route path="companies" element={<Companies />} />
             <Route path="flags" element={<FeatureFlags />} />

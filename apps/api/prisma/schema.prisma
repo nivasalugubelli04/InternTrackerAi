@@ -179,6 +179,17 @@ model User {
   brandInsight               BrandInsight?
   portfolioRecommendations   PortfolioRecommendation[]
 
+  // Phase 42 — Networking
+  professionalContacts       ProfessionalContact[]
+  outreachDrafts             OutreachDraft[]
+
+  // Phase 43 — Advanced Career Intelligence
+  careerProfileSnapshots     CareerProfileSnapshot[]
+  careerTrajectories         CareerTrajectory[]
+  careerPathAnalyses         CareerPathAnalysis[]
+  careerScenarios            CareerScenario[]
+  careerInsights             CareerInsight[]
+
   @@index([email])
   @@map("users")
 }
@@ -4104,5 +4115,390 @@ model ApplicationPreparationPlan {
 
   @@map("application_preparation_plans")
 }
+
+// ── PHASE 42 — NETWORKING & REFERRALS ───────────────────────────────────────
+
+enum ContactPipelineState {
+  DISCOVERED
+  TO_CONTACT
+  CONTACTED
+  CONVERSATION_ACTIVE
+  FOLLOW_UP
+  RELATIONSHIP_MAINTAINED
+  REFERRAL_DISCUSSED
+  ARCHIVED
+}
+
+enum RelationshipInteractionType {
+  CONTACT_ADDED
+  OUTREACH_DRAFTED
+  OUTREACH_SENT
+  CONVERSATION_NOTE
+  FOLLOW_UP_SCHEDULED
+  ADVICE_RECEIVED
+  REFERRAL_DISCUSSED
+  OUTCOME_RECORDED
+}
+
+enum NetworkingGoalType {
+  LEARN_ROLE
+  UNDERSTAND_COMPANY
+  GET_ADVICE
+  DISCUSS_SKILLS
+  EXPLORE_INTERNSHIP
+  BUILD_RELATIONSHIP
+  PREPARE_APPLICATION
+  REQUEST_REFERRAL
+}
+
+enum NetworkingGoalStatus {
+  PENDING
+  COMPLETED
+  ABANDONED
+}
+
+enum FollowUpStatus {
+  PENDING
+  COMPLETED
+  SNOOZED
+  CANCELLED
+}
+
+model ProfessionalContact {
+  id               String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId           String               @db.Uuid
+  name             String               @db.VarChar(255)
+  role             String               @db.VarChar(255)
+  company          String?              @db.VarChar(255)
+  industry         String?              @db.VarChar(255)
+  skills           String[]             @default([])
+  education        String?              @db.VarChar(255)
+  connectionSource String?              @db.VarChar(255)
+  publicProfileUrl String?              @db.VarChar(500)
+  privateNotes     String?              @db.Text
+  pipelineState    ContactPipelineState @default(DISCOVERED)
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  user             User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  interactions     RelationshipInteraction[]
+  networkingGoals  NetworkingGoal[]
+  outreachDrafts   OutreachDraft[]
+  followUps        FollowUpMetadata[]
+
+  @@index([userId])
+  @@index([pipelineState])
+  @@map("professional_contacts")
+}
+
+model RelationshipInteraction {
+  id          String                      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  contactId   String                      @db.Uuid
+  type        RelationshipInteractionType @default(CONVERSATION_NOTE)
+  description String                      @db.Text
+  occurredAt  DateTime                    @default(now())
+
+  contact     ProfessionalContact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@index([contactId])
+  @@map("relationship_interactions")
+}
+
+model NetworkingGoal {
+  id         String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  contactId  String               @db.Uuid
+  type       NetworkingGoalType   @default(BUILD_RELATIONSHIP)
+  status     NetworkingGoalStatus @default(PENDING)
+  targetDate DateTime?
+  createdAt  DateTime             @default(now())
+  updatedAt  DateTime             @updatedAt
+
+  contact    ProfessionalContact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@index([contactId])
+  @@map("networking_goals")
+}
+
+model OutreachDraft {
+  id              String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  contactId       String              @db.Uuid
+  userId          String              @db.Uuid
+  goal            String              @db.VarChar(255)
+  subject         String?             @db.VarChar(255)
+  body            String              @db.Text
+  personalization Json?
+  factsReferenced String[]            @default([])
+  qualityScore    Float?
+  feedback        String?             @db.Text
+  isApproved      Boolean             @default(false)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  contact         ProfessionalContact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([contactId])
+  @@index([userId])
+  @@map("outreach_drafts")
+}
+
+model FollowUpMetadata {
+  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  contactId     String         @db.Uuid
+  scheduledFor  DateTime
+  status        FollowUpStatus @default(PENDING)
+  reminderNotes String?        @db.Text
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  contact       ProfessionalContact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@index([contactId])
+  @@map("follow_up_metadata")
+}
+
+// =============================================================================
+// Phase 43 — Advanced AI Career Intelligence
+//             Career Trajectory Engine + Career Scenario Planning
+// =============================================================================
+
+enum TrajectoryPhase {
+  EXPLORING      // No clear pattern yet — user is discovering
+  BUILDING       // Actively growing skills/projects across paths
+  FOCUSING       // Pattern emerging toward a specific path
+  SPECIALIZING   // Deep investment in a chosen domain
+  TRANSITIONING  // Signals of domain pivot detected
+}
+
+enum CareerMomentumState {
+  ACCELERATING       // Activity and growth are increasing
+  STEADY             // Consistent activity and growth
+  SLOWING            // Reduced activity or stagnating growth
+  REFOCUSING         // Recent goal or strategy change detected
+  INSUFFICIENT_DATA  // Not enough signals to determine
+}
+
+enum PathAlignmentCategory {
+  STRONG_ALIGNMENT      // Dominant evidence matches the path
+  GOOD_ALIGNMENT        // Solid but partial match
+  EMERGING_ALIGNMENT    // Early signals, limited evidence
+  EXPLORATORY           // Few signals, speculative match
+  INSUFFICIENT_DATA     // Cannot assess due to lack of data
+}
+
+enum CareerInsightType {
+  TRAJECTORY_UPDATE     // Career direction changed
+  PATH_ALIGNMENT        // Path alignment signal
+  SKILL_EVOLUTION       // Skill level change
+  BOTTLENECK_DETECTED   // Potential future gap flagged
+  MILESTONE_REACHED     // Growth milestone achieved
+  STRATEGY_REVIEW       // Adaptive strategy change suggestion
+  GOAL_CONFLICT         // Goal overload or conflict detected
+  SCENARIO_RESULT       // Scenario analysis completed
+}
+
+/// Immutable point-in-time career state snapshot.
+/// Do NOT update — always insert new rows.
+model CareerProfileSnapshot {
+  id              String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String              @db.Uuid
+
+  /// Full serialized CareerState at snapshot time
+  snapshotJson    Json
+
+  /// Trajectory phase at this point in time
+  trajectoryPhase TrajectoryPhase     @default(EXPLORING)
+
+  /// Momentum state at this point in time
+  momentum        CareerMomentumState @default(INSUFFICIENT_DATA)
+
+  /// Human-readable summary of the snapshot
+  summary         String?             @db.Text
+
+  /// Key signals that drove this snapshot
+  keySignals      String[]            @default([])
+
+  createdAt       DateTime            @default(now())
+
+  user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, createdAt])
+  @@map("career_profile_snapshots")
+}
+
+/// Computed career trajectory for a user — updated on profile change events.
+model CareerTrajectory {
+  id                  String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId              String              @db.Uuid
+
+  /// Current trajectory phase
+  phase               TrajectoryPhase     @default(EXPLORING)
+
+  /// Career momentum assessment
+  momentum            CareerMomentumState @default(INSUFFICIENT_DATA)
+
+  /// Primary career path title (e.g. "AI Engineer")
+  primaryPathTitle    String?             @db.VarChar(255)
+
+  /// Alternative path titles
+  alternativePathTitles String[]          @default([])
+
+  /// Exploratory path titles
+  exploratoryPathTitles String[]          @default([])
+
+  /// Detected potential bottlenecks (labels only)
+  potentialBottlenecks String[]           @default([])
+
+  /// Contributing signals that shaped this trajectory
+  signals             String[]            @default([])
+
+  /// Free-text explanation of the trajectory
+  explanation         String?             @db.Text
+
+  /// Data limitations affecting confidence
+  dataLimitations     String[]            @default([])
+
+  computedAt          DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("career_trajectories")
+}
+
+/// Personalized career path alignment analysis for a user.
+model CareerPathAnalysis {
+  id                  String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId              String               @db.Uuid
+
+  /// Path label (e.g. "AI Engineer", "Data Engineer")
+  pathTitle           String               @db.VarChar(255)
+
+  /// Alignment category
+  alignmentCategory   PathAlignmentCategory @default(INSUFFICIENT_DATA)
+
+  /// Internal alignment score 0-100 (not shown directly to user)
+  alignmentScore      Float                @default(0)
+
+  /// Whether this is the primary recommended path
+  isPrimary           Boolean              @default(false)
+
+  /// Evidence-based reasons for alignment
+  alignmentReasons    String[]             @default([])
+
+  /// Current strengths supporting this path
+  strengths           String[]             @default([])
+
+  /// Current evidence gaps
+  gaps                String[]             @default([])
+
+  /// Trade-offs for choosing this path
+  tradeoffs           String[]             @default([])
+
+  /// Transferable skills
+  transferableSkills  String[]             @default([])
+
+  /// Recommended next actions for this path
+  recommendedActions  String[]             @default([])
+
+  /// Data limitations
+  dataLimitations     String[]             @default([])
+
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+
+  user                User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, isPrimary])
+  @@map("career_path_analyses")
+}
+
+/// What-if scenario created and explored by the user.
+/// Applying a scenario does NOT automatically modify the user profile.
+model CareerScenario {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId              String    @db.Uuid
+
+  /// User-facing title (e.g. "What if I deploy my AI project?")
+  title               String    @db.VarChar(500)
+
+  /// Description of the hypothetical action
+  actionDescription   String    @db.Text
+
+  /// Target career path being evaluated
+  targetPathTitle     String?   @db.VarChar(255)
+
+  /// Serialized scenario inputs
+  inputJson           Json
+
+  /// Serialized deterministic scenario result
+  resultJson          Json
+
+  /// AI narrative explanation of the scenario (optional)
+  aiNarrative         String?   @db.Text
+
+  /// True only if user explicitly chose to create a goal/action from it
+  isApplied           Boolean   @default(false)
+
+  /// Confidence label for the scenario result
+  confidence          String    @db.VarChar(100) @default("LOW — based on limited profile data")
+
+  /// Data limitations
+  dataLimitations     String[]  @default([])
+
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("career_scenarios")
+}
+
+/// AI-generated, evidence-grounded career insight.
+model CareerInsight {
+  id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String            @db.Uuid
+
+  /// Insight category
+  insightType     CareerInsightType @default(TRAJECTORY_UPDATE)
+
+  /// Short headline
+  title           String            @db.VarChar(500)
+
+  /// Full insight body (grounded, no fabricated claims)
+  body            String            @db.Text
+
+  /// Confidence label ("STRONG", "MODERATE", "EMERGING", "SPECULATIVE")
+  confidence      String            @db.VarChar(100)
+
+  /// Facts referenced from validated user data
+  factsReferenced String[]          @default([])
+
+  /// Data limitations acknowledged
+  dataLimitations String[]          @default([])
+
+  /// Whether the user has read this insight
+  isRead          Boolean           @default(false)
+
+  /// Related entity type (e.g. "CareerScenario", "CareerTrajectory")
+  entityType      String?           @db.VarChar(100)
+
+  /// Related entity ID
+  entityId        String?           @db.Uuid
+
+  createdAt       DateTime          @default(now())
+
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+  @@map("career_insights")
+}
+
 
 
