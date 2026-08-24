@@ -256,11 +256,12 @@ export default function Applications() {
                 </Button>
               </Link>
               <button
-              onClick={() => setSelectedId(null)}
-              style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '20px' }}
-            >
-              ✕
-            </button>
+                onClick={() => setSelectedId(null)}
+                style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '20px' }}
+              >
+                ✕
+              </button>
+            </div>
           </div>
 
           {/* Slider Tabs */}
@@ -293,7 +294,7 @@ export default function Applications() {
               <>
                 {/* Visual Status Progression */}
                 <div>
-                  <h4 style={{ color: 'white', fontSize: '12px', textTransform: 'uppercase', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '12px' }}>
+                  <h4 style={{ fontSize: '12px', textTransform: 'uppercase', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '12px' }}>
                     Visual Stage Tracker
                   </h4>
                   <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
@@ -345,7 +346,7 @@ export default function Applications() {
                 {/* Personal Notes */}
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                    <h4 style={{ color: 'white', fontSize: '12px', textTransform: 'uppercase', fontWeight: 800, color: 'var(--text-muted)' }}>
+                    <h4 style={{ fontSize: '12px', textTransform: 'uppercase', fontWeight: 800, color: 'var(--text-muted)' }}>
                       Personal Notes
                     </h4>
                     <button
@@ -365,7 +366,7 @@ export default function Applications() {
 
                 {/* Document attachments */}
                 <div>
-                  <h4 style={{ color: 'white', fontSize: '12px', textTransform: 'uppercase', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '8px' }}>
+                  <h4 style={{ fontSize: '12px', textTransform: 'uppercase', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '8px' }}>
                     Linked Application Documents
                   </h4>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -447,7 +448,7 @@ export default function Applications() {
                 {/* Cover letter draft */}
                 {coverLetterText && (
                   <div>
-                    <h4 style={{ color: 'white', fontSize: '12px', textTransform: 'uppercase', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '8px' }}>
+                    <h4 style={{ fontSize: '12px', textTransform: 'uppercase', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '8px' }}>
                       Tailored Cover Letter
                     </h4>
                     <textarea

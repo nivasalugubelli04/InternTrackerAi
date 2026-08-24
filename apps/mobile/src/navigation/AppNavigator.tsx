@@ -16,6 +16,9 @@ import LearningRoadmapScreen from '../screens/ai/LearningRoadmapScreen';
 import SkillGapScreen from '../screens/ai/SkillGapScreen';
 import CareerStrategyScreen from '../screens/ai/CareerStrategyScreen';
 import CareerCommandCenterScreen from '../screens/ai/CareerCommandCenterScreen';
+import { CareerExecutionDashboardScreen } from '../screens/ai/CareerExecutionDashboardScreen';
+import CareerLabScreen from '../screens/ai/CareerLabScreen';
+import { OpportunityResearchScreen } from '../screens/ai/OpportunityResearchScreen';
 import ResumeBuilderScreen from '../screens/resume-builder/ResumeBuilderScreen';
 import { profileApi } from '../services/profile.service';
 
@@ -33,6 +36,9 @@ export type RootStackParamList = {
   SkillGapScreen: undefined;
   CareerStrategy: undefined;
   CareerCommandCenter: undefined;
+  CareerExecutionDashboard: undefined;
+  CareerLab: undefined;
+  OpportunityResearch: undefined;
   ResumeBuilder: undefined;
 };
 
@@ -97,6 +103,12 @@ export default function AppNavigator(): React.ReactElement {
           <Stack.Screen name="SkillGapScreen" component={SkillGapScreen} />
           <Stack.Screen name="CareerStrategy" component={CareerStrategyScreen} />
           <Stack.Screen name="CareerCommandCenter" component={CareerCommandCenterScreen} />
+          <Stack.Screen
+            name="CareerExecutionDashboard"
+            component={CareerExecutionDashboardScreen}
+          />
+          <Stack.Screen name="CareerLab" component={CareerLabScreen} />
+          <Stack.Screen name="OpportunityResearch" component={OpportunityResearchScreen} />
           <Stack.Screen
             name="ResumeBuilder"
             component={ResumeBuilderScreen}

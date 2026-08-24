@@ -20,10 +20,12 @@ import { CompanyTrackModule } from './company-track/company-track.module';
 import configuration from './config/configuration';
 import type { AppConfig } from './config/configuration';
 import { EngagementModule } from './engagement/engagement.module';
+import { ExecutionModule } from './execution/execution.module';
 import { ExtensionModule } from './extension/extension.module';
 import { FeedbackModule } from './feedback/feedback.module';
 import { GrowthModule } from './growth/growth.module';
 import { HealthModule } from './health/health.module';
+import { IntegrationsModule } from './integrations/integrations.module';
 import { InterviewsModule } from './interviews/interviews.module';
 import { JobsModule } from './jobs/jobs.module';
 import { LearningModule } from './learning/learning.module';
@@ -38,7 +40,6 @@ import { OpportunitiesModule } from './opportunities/opportunities.module';
 import { OrganizationsModule } from './organizations/organizations.module';
 import { OutcomesModule } from './outcomes/outcomes.module';
 import { PortfolioModule } from './portfolio/portfolio.module';
-import { IntegrationsModule } from './integrations/integrations.module';
 import { PreferencesModule } from './preferences/preferences.module';
 import { PreparationModule } from './preparation/preparation.module';
 import { PrismaModule } from './prisma/prisma.module';
@@ -47,10 +48,12 @@ import { ProfileModule } from './profile/profile.module';
 import { QueuesModule } from './queues/queues.module';
 import { RecruiterModule } from './recruiter/recruiter.module';
 import { RedisModule } from './redis/redis.module';
+import { ResearchModule } from './research/research.module';
 import { ResumeModule } from './resume/resume.module';
 import { ResumeBuilderModule } from './resume-builder/resume-builder.module';
 import { ResumeStudioModule } from './resume-studio/resume-studio.module';
 import { ScrapersModule } from './scrapers/scrapers.module';
+import { SimulationModule } from './simulation/simulation.module';
 import { SkillsModule } from './skills/skills.module';
 // Phase 24 — Career Outcomes, Placement Intelligence & Workforce Analytics
 // Phase 26 — Personalized Learning & Roadmaps
@@ -205,6 +208,12 @@ import { SystemModule } from './system/system.module';
     CareerIntelligenceModule,
     // Phase 44 — External Integrations & Data Ecosystem
     IntegrationsModule,
+    // Phase 45 — AI Career Execution Engine
+    ExecutionModule,
+    // Phase 46 — Career Simulation & Opportunity Forecasting Engine
+    SimulationModule,
+    // Phase 47 — Autonomous Career Research & Opportunity Intelligence
+    ResearchModule,
     // Phase 26 — Adaptive Learning & Roadmaps
     LearningModule,
     // Phase 28 — Career Command Center

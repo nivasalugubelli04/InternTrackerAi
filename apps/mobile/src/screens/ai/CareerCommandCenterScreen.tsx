@@ -148,6 +148,68 @@ export default function CareerCommandCenterScreen({ navigation: _navigation }: P
           Your daily focus planner, priority checklist, and AI career companion.
         </Text>
 
+        {/* Phase 45 Execution Engine CTA Banner */}
+        <TouchableOpacity
+          style={styles.executionEngineBanner}
+          onPress={() => _navigation?.navigate('CareerExecutionDashboard')}
+        >
+          <View style={{ flex: 1 }}>
+            <Text style={styles.executionEngineTitle}>
+              ⚡ AI Career Execution Engine (Phase 45)
+            </Text>
+            <Text style={styles.executionEngineDesc}>
+              Daily & weekly action intelligence, Next Best Action, and sprint tracking.
+            </Text>
+          </View>
+          <View style={styles.executionEngineBtn}>
+            <Text style={styles.executionEngineBtnText}>Open Engine →</Text>
+          </View>
+        </TouchableOpacity>
+
+        {/* Phase 46 Career Lab Simulation CTA Banner */}
+        <TouchableOpacity
+          style={[
+            styles.executionEngineBanner,
+            { backgroundColor: '#1a1638', borderColor: '#a78bfa' },
+          ]}
+          onPress={() => _navigation?.navigate('CareerLab')}
+        >
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.executionEngineTitle, { color: '#a78bfa' }]}>
+              🧪 Career Lab & What-If Studio (Phase 46)
+            </Text>
+            <Text style={styles.executionEngineDesc}>
+              Simulate skill focus, strategy trade-offs, opportunity forecasting & what-if
+              scenarios.
+            </Text>
+          </View>
+          <View style={[styles.executionEngineBtn, { backgroundColor: '#7c3aed' }]}>
+            <Text style={styles.executionEngineBtnText}>Launch Lab →</Text>
+          </View>
+        </TouchableOpacity>
+
+        {/* Phase 47 Autonomous Opportunity Research CTA Banner */}
+        <TouchableOpacity
+          style={[
+            styles.executionEngineBanner,
+            { backgroundColor: '#0d233a', borderColor: '#38bdf8' },
+          ]}
+          onPress={() => _navigation?.navigate('OpportunityResearch')}
+        >
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.executionEngineTitle, { color: '#38bdf8' }]}>
+              📡 Autonomous Career Research (Phase 47)
+            </Text>
+            <Text style={styles.executionEngineDesc}>
+              Personalized feeds, grounded match explanations, watchlists & market signal
+              monitoring.
+            </Text>
+          </View>
+          <View style={[styles.executionEngineBtn, { backgroundColor: '#0284c7' }]}>
+            <Text style={styles.executionEngineBtnText}>Explore Feeds →</Text>
+          </View>
+        </TouchableOpacity>
+
         {/* Today Focus Banner */}
         <View style={styles.focusCard}>
           <Text style={styles.focusLabel}>TODAY'S PRIMARY FOCUS</Text>
@@ -645,5 +707,38 @@ const styles = StyleSheet.create({
     color: Colors.text.muted,
     textAlign: 'center',
     marginVertical: Spacing.md,
+  },
+  executionEngineBanner: {
+    backgroundColor: '#1E1E38',
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
+    marginBottom: Spacing.md,
+    borderWidth: 1.5,
+    borderColor: '#7c3aed',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  executionEngineTitle: {
+    fontSize: Typography.fontSize.sm,
+    fontWeight: Typography.fontWeight.bold,
+    color: '#ffffff',
+  },
+  executionEngineDesc: {
+    fontSize: Typography.fontSize.xs,
+    color: Colors.text.secondary,
+    marginTop: 2,
+  },
+  executionEngineBtn: {
+    backgroundColor: '#7c3aed',
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.sm,
+    marginLeft: Spacing.sm,
+  },
+  executionEngineBtnText: {
+    color: '#ffffff',
+    fontSize: Typography.fontSize.xs,
+    fontWeight: Typography.fontWeight.bold,
   },
 });

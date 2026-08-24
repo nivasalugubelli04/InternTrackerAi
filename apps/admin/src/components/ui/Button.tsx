@@ -2,16 +2,18 @@ import React from 'react';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   children: React.ReactNode;
-  variant?: 'primary' | 'secondary' | 'danger' | 'text';
+  variant?: 'primary' | 'secondary' | 'danger' | 'text' | 'outline';
+  size?: 'sm' | 'md' | 'lg' | string;
   icon?: React.ReactNode;
 }
 
-export function Button({ children, variant = 'primary', icon, className = '', style, ...props }: ButtonProps) {
+export function Button({ children, variant = 'primary', size, icon, className = '', style, ...props }: ButtonProps) {
   const getStyleClass = () => {
     switch (variant) {
       case 'primary':
         return 'btn-primary';
       case 'secondary':
+      case 'outline':
         return 'btn-secondary';
       case 'danger':
         return 'btn-danger';

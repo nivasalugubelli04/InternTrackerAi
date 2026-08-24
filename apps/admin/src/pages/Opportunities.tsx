@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Compass, Briefcase, MapPin, DollarSign, Calendar, AlertTriangle, CheckCircle, ArrowRight } from 'lucide-react';
+import { Compass, AlertTriangle, CheckCircle, ArrowRight } from 'lucide-react';
 import { adminClient } from '../api/admin-client';
-import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { FormControl } from '../components/ui/Form';
 
@@ -285,10 +284,10 @@ export default function Opportunities() {
 
               {/* Bottom Actions */}
               <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border-glass)', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                <Button variant="secondary" onClick={() => Linking.openURL(selectedOpp.applicationUrl)}>
+                <Button variant="secondary" onClick={() => window.open(selectedOpp.applicationUrl, '_blank')}>
                   View Posting
                 </Button>
-                <Button onClick={() => Linking.openURL(selectedOpp.applicationUrl)}>
+                <Button onClick={() => window.open(selectedOpp.applicationUrl, '_blank')}>
                   Apply Externally <ArrowRight size={16} style={{ marginLeft: '6px' }} />
                 </Button>
               </div>

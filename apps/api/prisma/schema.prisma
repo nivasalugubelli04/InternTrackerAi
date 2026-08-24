@@ -196,6 +196,21 @@ model User {
   externalDataReviews        ExternalDataReview[]
   integrationEvents          IntegrationEventLog[]
 
+  // Phase 45 — AI Career Execution Engine
+  executionPlans             ExecutionPlan[]
+  careerSprints              CareerSprint[]
+  planReviews                PlanReview[]
+  executionPreference        UserExecutionPreference?
+  executionInsights          ExecutionInsight[]
+
+  // Phase 46 — Career Simulation + Opportunity Forecasting Engine
+  careerSimulations          CareerSimulation[]
+
+  // Phase 47 — Autonomous Career Research & Opportunity Intelligence
+  researchWatchlists         ResearchWatchlist[]
+  companyFollows             CompanyFollow[]
+  researchPreference         ResearchPreference?
+
   @@index([email])
   @@map("users")
 }
@@ -4674,6 +4689,514 @@ model IntegrationEventLog {
   @@index([userId, provider])
   @@map("integration_event_logs")
 }
+
+// =============================================================================
+// Phase 45 — AI Career Execution Engine & Daily/Weekly Planning
+// =============================================================================
+
+enum PlanType {
+  DAILY
+  WEEKLY
+  SPRINT
+}
+
+enum PlanStatus {
+  ACTIVE
+  COMPLETED
+  SUPERSEDED
+  ADJUSTED
+}
+
+enum ExecutionItemStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  RESCHEDULED
+  BLOCKED
+  DEPRIORITIZED
+  ARCHIVED
+}
+
+enum ExecutionPriority {
+  CRITICAL
+  HIGH
+  IMPORTANT
+  WHEN_POSSIBLE
+  OPTIONAL
+}
+
+enum EffortCategory {
+  QUICK
+  SHORT
+  MEDIUM
+  DEEP_WORK
+}
+
+enum SprintType {
+  APPLICATION
+  PREPARATION
+  PROJECT
+  SKILL
+  PORTFOLIO
+  CUSTOM
+}
+
+enum SprintStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+  PAUSED
+}
+
+/// Execution Plan (Daily or Weekly) orchestrating prioritized career actions.
+model ExecutionPlan {
+  id                    String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId                String              @db.Uuid
+  planType              PlanType            @default(DAILY)
+  targetDate            DateTime?
+  weekStartDate         DateTime?
+  planObjective         String              @db.VarChar(500)
+  primaryFocus          String              @db.VarChar(255)
+  secondaryFocus        String?             @db.VarChar(255)
+  maintainFocus         String?             @db.VarChar(255)
+  workloadRisk          String              @default("BALANCED") @db.VarChar(50) // BALANCED, MODERATE, OVERLOADED
+  workloadReason        String?             @db.Text
+  reasoning             String?             @db.Text
+  status                PlanStatus          @default(ACTIVE)
+  totalEstimatedMinutes Int                 @default(0)
+  aiGenerated           Boolean             @default(false)
+  reviewTriggers        String[]            @default([])
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  user                  User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items                 ExecutionPlanItem[]
+
+  @@index([userId, planType])
+  @@index([userId, targetDate])
+  @@map("execution_plans")
+}
+
+/// Action item scheduled within an Execution Plan.
+model ExecutionPlanItem {
+  id                  String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  planId              String               @db.Uuid
+  actionId            String?              @db.Uuid // Linked CareerAction id if mapped
+  orderIndex          Int                  @default(0)
+  title               String               @db.VarChar(500)
+  description         String?              @db.Text
+  source              String               @db.VarChar(100) // APPLICATION, INTERVIEW, LEARNING, PROJECT, PORTFOLIO, NETWORKING, FOLLOW_UP, CAREER_STRATEGY, EXTERNAL_CALENDAR, USER_CREATED
+  sourceEntityType    String?              @db.VarChar(100)
+  sourceEntityId      String?              @db.Uuid
+  priority            ExecutionPriority    @default(IMPORTANT)
+  focusLevel          String               @default("MEDIUM") @db.VarChar(50) // HIGH, MEDIUM, LOW
+  estimatedEffort     EffortCategory       @default(SHORT)
+  estimatedMinutes    Int                  @default(30)
+  deadline            DateTime?
+  priorityExplanation String?              @db.Text
+  potentialImpact     String?              @db.Text
+  suggestedNextStep   String?              @db.Text
+  status              ExecutionItemStatus  @default(PENDING)
+  isBlocked           Boolean              @default(false)
+  blockerReason       String?              @db.Text
+  subSteps            Json?                // Decomposed action checklist steps
+  startedAt           DateTime?
+  completedAt         DateTime?
+  rescheduledTo       DateTime?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+
+  plan                ExecutionPlan        @relation(fields: [planId], references: [id], onDelete: Cascade)
+  dependencies        ActionDependency[]   @relation("DependentItem")
+  prerequisites       ActionDependency[]   @relation("PrerequisiteItem")
+
+  @@index([planId, orderIndex])
+  @@index([status])
+  @@map("execution_plan_items")
+}
+
+/// Explicit prerequisite dependency linking between actions.
+model ActionDependency {
+  id                 String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  dependentItemId    String            @db.Uuid
+  prerequisiteItemId String            @db.Uuid
+  dependencyType     String            @default("BLOCKS") @db.VarChar(50) // BLOCKS, RECOMMENDED_BEFORE
+  explanation        String?           @db.Text
+
+  dependentItem      ExecutionPlanItem @relation("DependentItem", fields: [dependentItemId], references: [id], onDelete: Cascade)
+  prerequisiteItem   ExecutionPlanItem @relation("PrerequisiteItem", fields: [prerequisiteItemId], references: [id], onDelete: Cascade)
+
+  @@unique([dependentItemId, prerequisiteItemId])
+  @@map("action_dependencies")
+}
+
+/// Career sprint for timeboxed execution focus (7-day, 14-day, custom).
+model CareerSprint {
+  id              String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String             @db.Uuid
+  title           String             @db.VarChar(255)
+  goal            String             @db.Text
+  sprintType      SprintType         @default(APPLICATION)
+  startDate       DateTime
+  endDate         DateTime
+  durationDays    Int                @default(7)
+  status          SprintStatus       @default(ACTIVE)
+  progressPercent Float              @default(0.0)
+  reflection      String?            @db.Text
+  keyMilestones   String[]           @default([])
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  user            User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items           CareerSprintItem[]
+
+  @@index([userId, status])
+  @@map("career_sprints")
+}
+
+/// Milestone / Action item inside a Career Sprint.
+model CareerSprintItem {
+  id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sprintId    String       @db.Uuid
+  planItemId  String?      @db.Uuid
+  title       String       @db.VarChar(500)
+  description String?      @db.Text
+  isMilestone Boolean      @default(false)
+  status      String       @default("PENDING") @db.VarChar(50) // PENDING, IN_PROGRESS, COMPLETED, SKIPPED
+  targetDay   Int          @default(1)
+  completedAt DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  sprint      CareerSprint @relation(fields: [sprintId], references: [id], onDelete: Cascade)
+
+  @@index([sprintId])
+  @@map("career_sprint_items")
+}
+
+/// AI-assisted constructive Weekly or Sprint Review.
+model PlanReview {
+  id                       String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId                   String    @db.Uuid
+  reviewPeriod             String    @default("WEEKLY") @db.VarChar(50) // WEEKLY, SPRINT, MONTHLY
+  periodStartDate          DateTime
+  periodEndDate            DateTime
+  whatWentWell             String[]  @default([])
+  progressMade             String[]  @default([])
+  actionsCarriedForward    String[]  @default([])
+  currentBottlenecks       String[]  @default([])
+  nextFocusRecommendations String[]  @default([])
+  completedActionsCount    Int       @default(0)
+  totalActionsCount        Int       @default(0)
+  userNotes                String?   @db.Text
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+
+  user                     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("plan_reviews")
+}
+
+/// User availability and planning capacity preferences.
+model UserExecutionPreference {
+  id                      String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId                  String    @unique @db.Uuid
+  dailyAvailableMinutes   Int       @default(60)
+  maxDailyActions         Int       @default(3)
+  preferredWorkingPeriods String[]  @default(["MORNING", "EVENING"])
+  preferredRestDays       String[]  @default(["SUNDAY"])
+  planningHorizonDays     Int       @default(7)
+  calendarSyncEnabled     Boolean   @default(true)
+  autoReplanOnTriggers    Boolean   @default(true)
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+
+  user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_execution_preferences")
+}
+
+/// Explainable Career Execution Insight & Recommendations.
+model ExecutionInsight {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId            String   @db.Uuid
+  type              String   @db.VarChar(100) // NEXT_BEST_ACTION, DEADLINE_RISK, WORKLOAD_OVERLOAD, BLOCKED_ACTION, DEPRIORITIZE_SUGGESTION, SPRINT_PROGRESS
+  title             String   @db.VarChar(500)
+  explanation       String   @db.Text
+  severity          String   @default("INFO") @db.VarChar(20) // INFO, WARNING, CRITICAL, SUCCESS
+  recommendedAction String?  @db.Text
+  actionData        Json?
+  isDismissed       Boolean  @default(false)
+  createdAt         DateTime @default(now())
+
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isDismissed])
+  @@map("execution_insights")
+}
+
+// =============================================================================
+// Phase 46 — Career Simulation + Opportunity Forecasting Engine
+// =============================================================================
+
+/// Root simulation session containing baseline snapshot and scenario branches.
+model CareerSimulation {
+  id               String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId           String               @db.Uuid
+  title            String               @db.VarChar(255)
+  description      String?              @db.Text
+  timeHorizon      String               @default("ONE_MONTH") @db.VarChar(50) // TWO_WEEKS, ONE_MONTH, THREE_MONTHS, CUSTOM
+  targetPathTitle  String?              @db.VarChar(255)
+  baselineSnapshot Json                 // Non-mutating capture of skills, projects, apps, interviews, capacity
+  status           String               @default("COMPLETED") @db.VarChar(50) // DRAFT, RUNNING, COMPLETED, ARCHIVED
+  confidenceLevel  String               @default("MEDIUM") @db.VarChar(20) // HIGH, MEDIUM, LIMITED
+  confidenceReason String?              @db.Text
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  user             User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scenarios        SimulationScenario[]
+  comparison       SimulationComparison?
+
+  @@index([userId, createdAt])
+  @@map("career_simulations")
+}
+
+/// An individual simulated what-if strategy branch (Scenario A, B, C, etc.)
+model SimulationScenario {
+  id                   String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  simulationId         String           @db.Uuid
+  scenarioKey          String           @db.VarChar(50) // BASELINE, SCENARIO_A, SCENARIO_B, SCENARIO_C, CUSTOM
+  title                String           @db.VarChar(255)
+  scenarioType         String           @default("CUSTOM") @db.VarChar(50) // SKILL_ACCELERATION, PROJECT_ACCELERATION, APPLICATION_SPRINT, INTERVIEW_PREP, PORTFOLIO_IMPROVEMENT, NETWORKING_PUSH, BALANCED_STRATEGY, FOCUS_STRATEGY, CAREER_PATH_COMPARISON, CUSTOM
+  variables            Json             // Specific modified variables (skill investment, extra apps, project focus, etc.)
+  timeAllocation       Json             // Percentage distribution across learning, projects, apps, interview, networking
+  isRealistic          Boolean          @default(true)
+  constraintViolations String[]         @default([])
+  impactScores         Json             // 9-dimension impact ratings & deltas
+  benefits             String[]         @default([])
+  tradeOffs            String[]         @default([])
+  risks                Json             // Identified risks with severities & mitigations
+  sensitivityFactors   Json             // Variable leverage rankings
+  assumptions          String[]         @default([])
+  confidenceLevel      String           @default("MEDIUM") @db.VarChar(20) // HIGH, MEDIUM, LIMITED
+  isRecommended        Boolean          @default(false)
+  aiNarrative          String?          @db.Text
+  proposedPlan         Json?            // Structured proposed plan diff for Phase 45 activation
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  simulation           CareerSimulation @relation(fields: [simulationId], references: [id], onDelete: Cascade)
+
+  @@index([simulationId, scenarioKey])
+  @@map("simulation_scenarios")
+}
+
+/// Multi-scenario side-by-side comparative analysis and recommendation.
+model SimulationComparison {
+  id                   String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  simulationId         String           @unique @db.Uuid
+  bestOptionKey        String?          @db.VarChar(50)
+  recommendationReason String?          @db.Text
+  comparisonMatrix     Json             // Matrix comparing Current vs A vs B vs C across all 9 dimensions
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  simulation           CareerSimulation @relation(fields: [simulationId], references: [id], onDelete: Cascade)
+
+  @@map("simulation_comparisons")
+}
+
+// =============================================================================
+// Phase 47 — Autonomous Career Research & Opportunity Intelligence
+// =============================================================================
+
+enum OpportunityCategory {
+  INTERNSHIP
+  ENTRY_LEVEL_JOB
+  GRADUATE_PROGRAM
+  APPRENTICESHIP
+  FELLOWSHIP
+  HACKATHON
+  OPEN_SOURCE
+  TECHNICAL_EVENT
+  CAREER_PROGRAM
+  OTHER
+}
+
+enum FreshnessStatus {
+  NEW
+  RECENT
+  ACTIVE
+  DEADLINE_SOON
+  POSSIBLY_EXPIRED
+  EXPIRED
+  ARCHIVED
+}
+
+enum SourceTrustLevel {
+  VERIFIED_OFFICIAL
+  PARTNER_PORTAL
+  COMMUNITY_FEED
+  UNVERIFIED
+}
+
+/// Official and verified career research data sources & feeds.
+model ResearchSource {
+  id                String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name              String              @unique @db.VarChar(255)
+  sourceType        String              @db.VarChar(100) // OFFICIAL_CAREER_PAGE, UNIVERSITY_PORTAL, GOVERNMENT_FEED, HACKATHON_PLATFORM, OPEN_SOURCE_FEED
+  category          OpportunityCategory @default(INTERNSHIP)
+  trustLevel        SourceTrustLevel    @default(VERIFIED_OFFICIAL)
+  baseUrl           String              @db.VarChar(1000)
+  supportedRegions  String[]            @default(["GLOBAL"])
+  rateLimitPerMin   Int                 @default(60)
+  isActive          Boolean             @default(true)
+  healthStatus      String              @default("HEALTHY") @db.VarChar(50) // HEALTHY, DEGRADED, FAILING
+  lastSyncAt        DateTime?
+  errorCount        Int                 @default(0)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  jobRuns           ResearchJobRun[]
+
+  @@map("research_sources")
+}
+
+/// Audit log for background research execution runs.
+model ResearchJobRun {
+  id                 String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sourceId           String?         @db.Uuid
+  runType            String          @default("SCHEDULED") @db.VarChar(50) // SCHEDULED, MANUAL, ON_DEMAND
+  itemsScanned       Int             @default(0)
+  itemsImported      Int             @default(0)
+  duplicatesFiltered Int             @default(0)
+  durationMs         Int             @default(0)
+  status             String          @default("COMPLETED") @db.VarChar(50) // COMPLETED, FAILED, PARTIAL
+  errorMessage       String?         @db.Text
+  createdAt          DateTime        @default(now())
+
+  source             ResearchSource? @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+
+  @@index([sourceId])
+  @@index([createdAt])
+  @@map("research_job_runs")
+}
+
+/// User-configured opportunity watchlists with saved criteria.
+model ResearchWatchlist {
+  id              String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String                  @db.Uuid
+  title           String                  @db.VarChar(255)
+  description     String?                 @db.Text
+  targetRoles     String[]                @default([])
+  categories      OpportunityCategory[]   @default([INTERNSHIP])
+  targetLocations String[]                @default([])
+  remoteOnly      Boolean                 @default(false)
+  minMatchScore   Int                     @default(70)
+  isAlertEnabled  Boolean                 @default(true)
+  isActive        Boolean                 @default(true)
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+
+  user            User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items           ResearchWatchlistItem[]
+
+  @@index([userId])
+  @@map("research_watchlists")
+}
+
+/// Pinned opportunity inside a user watchlist.
+model ResearchWatchlistItem {
+  id               String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  watchlistId      String            @db.Uuid
+  jobPostingId     String?           @db.Uuid
+  opportunityTitle String            @db.VarChar(500)
+  companyName      String            @db.VarChar(255)
+  matchScore       Int               @default(0)
+  notes            String?           @db.Text
+  createdAt        DateTime          @default(now())
+
+  watchlist        ResearchWatchlist @relation(fields: [watchlistId], references: [id], onDelete: Cascade)
+
+  @@index([watchlistId])
+  @@map("research_watchlist_items")
+}
+
+/// Real-time freshness and lifecycle verification for job postings.
+model OpportunityFreshness {
+  id                 String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  jobPostingId       String          @unique @db.Uuid
+  freshnessStatus    FreshnessStatus @default(ACTIVE)
+  lastVerifiedAt     DateTime        @default(now())
+  verificationSource String          @default("OFFICIAL_PAGE") @db.VarChar(100)
+  deadlineDaysLeft   Int?
+  isExpired          Boolean         @default(false)
+  expiredAt          DateTime?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  @@map("opportunity_freshness_logs")
+}
+
+/// Market & technology requirement signals aggregated across opportunities.
+model TechnologySignal {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  skillName      String   @unique @db.VarChar(100)
+  category       String   @default("ENGINEERING") @db.VarChar(100)
+  frequencyCount Int      @default(1)
+  demandTrend    String   @default("STABLE") @db.VarChar(50) // INCREASING, STABLE, EMERGING, DECLINING
+  sourceCount    Int      @default(1)
+  sampleJobTitles String[] @default([])
+  lastDetectedAt DateTime @default(now())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([demandTrend])
+  @@map("technology_signals")
+}
+
+/// User company tracking & following with custom alert thresholds.
+model CompanyFollow {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String   @db.Uuid
+  companyId       String   @db.Uuid
+  notifyOnNewJobs Boolean  @default(true)
+  minMatchAlert   Int      @default(75)
+  notes           String?  @db.Text
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, companyId])
+  @@index([userId])
+  @@index([companyId])
+  @@map("company_follows")
+}
+
+/// User-specific research and discovery preferences.
+model ResearchPreference {
+  id                  String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId              String                @unique @db.Uuid
+  preferredCategories OpportunityCategory[] @default([INTERNSHIP, ENTRY_LEVEL_JOB])
+  targetRoles         String[]              @default([])
+  targetLocations     String[]              @default([])
+  preferredWorkModes  String[]              @default(["REMOTE", "HYBRID", "ONSITE"])
+  researchFrequency   String                @default("DAILY") @db.VarChar(50) // REALTIME, DAILY, WEEKLY
+  autoMatchAlerts     Boolean               @default(true)
+  minAlertMatchScore  Int                   @default(80)
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+
+  user                User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("research_preferences")
+}
+
+
+
 
 
 

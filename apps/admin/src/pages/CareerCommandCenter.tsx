@@ -320,7 +320,7 @@ export default function CareerCommandCenter() {
         
         {/* Focus of the day */}
         <Card style={{ background: 'rgba(36, 107, 254, 0.08)', border: '1px solid rgba(36, 107, 254, 0.3)' }}>
-          <span style={{ fontSize: '11px', fontWeight: 700, color: colors.primary, textTransform: 'uppercase', tracking: '1px' }}>
+          <span style={{ fontSize: '11px', fontWeight: 700, color: colors.primary, textTransform: 'uppercase', letterSpacing: '1px' }}>
             Today's Primary Focus
           </span>
           <h2 style={{ fontSize: '24px', fontWeight: 800, color: 'white', margin: '4px 0 8px 0', fontFamily: 'var(--font-display)' }}>
@@ -354,7 +354,7 @@ export default function CareerCommandCenter() {
                 >
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <Badge variant={action.priority === 'CRITICAL' ? 'danger' : 'primary'}>
+                      <Badge variant={action.priority === 'CRITICAL' ? 'error' : 'primary'}>
                         {action.priority}
                       </Badge>
                       <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>

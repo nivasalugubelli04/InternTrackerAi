@@ -2,6 +2,7 @@ import type { TestingModule } from '@nestjs/testing';
 import { Test } from '@nestjs/testing';
 import { RecommendationPriority, RecommendationType } from '@prisma/client';
 
+import { CareerEventsService } from '../../career-center/services/career-events.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RedisService } from '../../redis/redis.service';
 
@@ -13,6 +14,12 @@ import { SemanticMatchingService } from './semantic-matching.service';
 
 describe('RecommendationService', () => {
   let service: RecommendationService;
+
+  const mockCareerEvents = {
+    publish: jest.fn().mockResolvedValue(undefined),
+    emitRecommendationGenerated: jest.fn(),
+    emitEvent: jest.fn(),
+  };
 
   const mockSemanticMatching = {
     computeHybridScore: jest.fn().mockReturnValue(75),
@@ -81,6 +88,7 @@ describe('RecommendationService', () => {
         { provide: JobAnalyzerService, useValue: mockJobAnalyzer },
         { provide: ScoringEngineService, useValue: mockScoringEngine },
         { provide: SemanticMatchingService, useValue: mockSemanticMatching },
+        { provide: CareerEventsService, useValue: mockCareerEvents },
       ],
     }).compile();
 

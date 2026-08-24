@@ -45,3 +45,10 @@ export function TableHeaderCell({ children, style, ...props }: React.ThHTMLAttri
     </th>
   );
 }
+
+export const Thead = TableHeader;
+export const Tbody = TableBody;
+export const Tr = TableRow;
+export const Td = TableCell;
+export const Th = TableHeaderCell;
+
