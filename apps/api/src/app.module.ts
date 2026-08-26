@@ -19,6 +19,7 @@ import { CompaniesModule } from './companies/companies.module';
 import { CompanyTrackModule } from './company-track/company-track.module';
 import configuration from './config/configuration';
 import type { AppConfig } from './config/configuration';
+import { CopilotModule } from './copilot/copilot.module';
 import { EngagementModule } from './engagement/engagement.module';
 import { ExecutionModule } from './execution/execution.module';
 import { ExtensionModule } from './extension/extension.module';
@@ -37,6 +38,7 @@ import { NetworkingModule } from './networking/networking.module';
 import { NlpModule } from './nlp/nlp.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { OpportunitiesModule } from './opportunities/opportunities.module';
+import { OptimizationModule } from './optimization/optimization.module';
 import { OrganizationsModule } from './organizations/organizations.module';
 import { OutcomesModule } from './outcomes/outcomes.module';
 import { PortfolioModule } from './portfolio/portfolio.module';
@@ -214,6 +216,10 @@ import { SystemModule } from './system/system.module';
     SimulationModule,
     // Phase 47 — Autonomous Career Research & Opportunity Intelligence
     ResearchModule,
+    // Phase 48 — Personal AI Career Copilot & Unified AI Orchestration
+    CopilotModule,
+    // Phase 49 — Autonomous Career Optimization & Continuous Learning
+    OptimizationModule,
     // Phase 26 — Adaptive Learning & Roadmaps
     LearningModule,
     // Phase 28 — Career Command Center

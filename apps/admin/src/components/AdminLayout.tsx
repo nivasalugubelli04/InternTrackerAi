@@ -13,7 +13,8 @@ import {
   BookOpen,
   Database,
   Briefcase,
-  Compass
+  Compass,
+  Bot,
 } from 'lucide-react';
 import { Button } from './ui/Button';
 
@@ -37,6 +38,8 @@ export default function AdminLayout() {
       title: 'Core Operations',
       items: [
         { to: '/', icon: <LayoutDashboard size={18} />, label: 'Dashboard' },
+        { to: '/copilot', icon: <Bot size={18} />, label: 'AI Career Copilot' },
+        { to: '/optimization', icon: <TrendingUp size={18} />, label: 'Career Optimization' },
         { to: '/career-command-center', icon: <Compass size={18} />, label: 'Career Command Center' },
         { to: '/portfolio-intelligence', icon: <Award size={18} />, label: 'Portfolio Intelligence' },
         { to: '/opportunities', icon: <Compass size={18} />, label: 'Opportunity Discovery' },

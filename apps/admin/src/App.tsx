@@ -38,6 +38,8 @@ import CareerPathComparison from './pages/CareerPathComparison';
 import IntegrationSettings from './pages/IntegrationSettings';
 import ExternalDataReviewCenter from './pages/ExternalDataReviewCenter';
 import IntegrationSyncHistory from './pages/IntegrationSyncHistory';
+import CareerCopilot from './pages/CareerCopilot';
+import CareerOptimization from './pages/CareerOptimization';
 
 // UI components
 import { Card } from './components/ui/Card';
@@ -144,6 +146,8 @@ export default function App() {
             <Route path="market-trends" element={<MarketAnalytics />} />
             <Route path="career-command-center" element={<CareerCommandCenter />} />
             <Route path="portfolio-intelligence" element={<PortfolioIntelligence />} />
+            <Route path="copilot" element={<CareerCopilot />} />
+            <Route path="optimization" element={<CareerOptimization />} />
             {/* Other routes can be stubbed out similarly */}
             <Route path="*" element={<div style={{ color: 'var(--text-muted)' }}>Under Construction</div>} />
           </Route>

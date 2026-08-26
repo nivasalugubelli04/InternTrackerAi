@@ -47,15 +47,20 @@ export class AiRateLimiterService {
 
     if (limit <= 0) return; // 0 or negative means unlimited
 
-    const client = this.redis.getClient();
-    const key = `ai:ratelimit:${type}:${userId}`;
-    const current = await client.get(key);
+    try {
+      const client = this.redis.getClient();
+      const key = `ai:ratelimit:${type}:${userId}`;
+      const current = await client.get(key);
 
-    if (current && parseInt(current, 10) >= limit) {
-      throw new HttpException(
-        `AI Rate Limit Exceeded for ${type}. Allowed: ${limit} per ${ttlSeconds === 3600 ? 'hour' : 'day'}.`,
-        HttpStatus.TOO_MANY_REQUESTS,
-      );
+      if (current && parseInt(current, 10) >= limit) {
+        throw new HttpException(
+          `AI Rate Limit Exceeded for ${type}. Allowed: ${limit} per ${ttlSeconds === 3600 ? 'hour' : 'day'}.`,
+          HttpStatus.TOO_MANY_REQUESTS,
+        );
+      }
+    } catch (err: any) {
+      if (err instanceof HttpException) throw err;
+      // If Redis has a transient network error, allow request through gracefully
     }
   }
 
@@ -88,12 +93,16 @@ export class AiRateLimiterService {
 
     if (limit <= 0) return;
 
-    const client = this.redis.getClient();
-    const key = `ai:ratelimit:${type}:${userId}`;
+    try {
+      const client = this.redis.getClient();
+      const key = `ai:ratelimit:${type}:${userId}`;
 
-    const pipeline = client.pipeline();
-    pipeline.incr(key);
-    pipeline.expire(key, ttlSeconds);
-    await pipeline.exec();
+      const pipeline = client.pipeline();
+      pipeline.incr(key);
+      pipeline.expire(key, ttlSeconds);
+      await pipeline.exec();
+    } catch {
+      // Degrade gracefully on redis error
+    }
   }
 }

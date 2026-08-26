@@ -211,6 +211,20 @@ model User {
   companyFollows             CompanyFollow[]
   researchPreference         ResearchPreference?
 
+  // Phase 48 — Personal AI Career Copilot & Unified Orchestration
+  copilotConversations       CopilotConversation[]
+  copilotMemories            CopilotMemory[]
+  copilotProposals           CopilotActionProposal[]
+
+  // Phase 49 — Autonomous Career Optimization & Continuous Learning
+  learningSignals            CareerLearningSignal[]
+  learningOutcomes           CareerLearningOutcome[]
+  optimizationFeedbacks      CareerOptimizationFeedback[]
+  optimizationInsights       OptimizationInsight[]
+  optimizationProposals      OptimizationProposal[]
+  strategyExperiments        StrategyExperiment[]
+  learnedPreferences         LearnedPreference[]
+
   @@index([email])
   @@map("users")
 }
@@ -5194,6 +5208,359 @@ model ResearchPreference {
 
   @@map("research_preferences")
 }
+
+// ============================================================
+// PHASE 48 — PERSONAL AI CAREER COPILOT & ORCHESTRATION
+// ============================================================
+
+enum CopilotMessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+  TOOL
+}
+
+enum CopilotAnswerType {
+  DIRECT_ANSWER
+  ANALYSIS
+  COMPARISON
+  RECOMMENDATION
+  ACTION_PLAN
+  SIMULATION_SUMMARY
+  OPPORTUNITY_SUMMARY
+  PROGRESS_SUMMARY
+}
+
+enum CopilotConfidenceLevel {
+  HIGH
+  MEDIUM
+  LIMITED
+}
+
+enum CopilotProposalStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  EXECUTED
+}
+
+/// A persistent conversation thread with the Unified AI Career Copilot.
+model CopilotConversation {
+  id          String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String           @db.Uuid
+  title       String           @default("Career Consultation") @db.VarChar(255)
+  isPinned    Boolean          @default(false)
+  metadata    Json?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages    CopilotMessage[]
+  proposals   CopilotActionProposal[]
+
+  @@index([userId])
+  @@map("copilot_conversations")
+}
+
+/// Individual message exchanged within a Copilot consultation.
+model CopilotMessage {
+  id                 String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  conversationId     String                  @db.Uuid
+  role               CopilotMessageRole      @default(USER)
+  content            String                  @db.Text
+  intent             String?                 @db.VarChar(100)
+  answerType         CopilotAnswerType?
+  confidence         CopilotConfidenceLevel? @default(HIGH)
+  groundingSources   Json?
+  evidenceSummary    String?                 @db.Text
+  suggestedFollowUps String[]                @default([])
+  structuredPayload  Json?
+  tokenUsage         Json?
+  createdAt          DateTime                @default(now())
+
+  conversation       CopilotConversation    @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@map("copilot_messages")
+}
+
+/// Explicit, user-visible long-term career preferences & memories.
+model CopilotMemory {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String   @db.Uuid
+  memoryType String   @default("CAREER_PREFERENCE") @db.VarChar(100)
+  key        String   @db.VarChar(150)
+  value      String   @db.Text
+  reason     String?  @db.Text
+  source     String   @default("USER_CONVERSATION") @db.VarChar(100)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, key])
+  @@index([userId])
+  @@map("copilot_memories")
+}
+
+/// Proposed actionable updates requiring explicit user review and confirmation.
+model CopilotActionProposal {
+  id             String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId         String                @db.Uuid
+  conversationId String?               @db.Uuid
+  proposalType   String                @db.VarChar(100) // ADD_DAILY_TASK, START_SPRINT, UPDATE_STRATEGY, SAVE_OPPORTUNITY
+  title          String                @db.VarChar(255)
+  description    String                @db.Text
+  targetEngine   String                @default("EXECUTION_ENGINE") @db.VarChar(100)
+  actionPayload  Json
+  status         CopilotProposalStatus @default(PENDING)
+  confirmedAt    DateTime?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  user           User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversation   CopilotConversation?  @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([status])
+  @@map("copilot_action_proposals")
+}
+
+// =============================================================================
+// Phase 49 — Autonomous Career Optimization + Continuous Learning Engine
+// =============================================================================
+
+enum LearningSignalType {
+  TASK_COMPLETED
+  TASK_SKIPPED
+  TASK_DELAYED
+  PLAN_ACCEPTED
+  PLAN_REJECTED
+  OPPORTUNITY_SAVED
+  OPPORTUNITY_IGNORED
+  OPPORTUNITY_APPLIED
+  APPLICATION_REJECTED
+  APPLICATION_ADVANCED
+  INTERVIEW_COMPLETED
+  INTERVIEW_ADVANCED
+  SKILL_IMPROVED
+  PROJECT_COMPLETED
+  PORTFOLIO_UPDATED
+  RECOMMENDATION_ACCEPTED
+  RECOMMENDATION_REJECTED
+  FEEDBACK_SUBMITTED
+}
+
+enum OutcomeCorrelationType {
+  OBSERVED_CORRELATION
+  LIKELY_CONTRIBUTOR
+  CONFIRMED_USER_FEEDBACK
+  INSUFFICIENT_DATA
+}
+
+enum InsightCategory {
+  EXECUTION_INSIGHT
+  SKILL_INSIGHT
+  APPLICATION_INSIGHT
+  PORTFOLIO_INSIGHT
+  OPPORTUNITY_INSIGHT
+  CAREER_STRATEGY_INSIGHT
+  TIME_ALLOCATION_INSIGHT
+  RECOMMENDATION_INSIGHT
+}
+
+enum OptimizationConfidence {
+  HIGH_CONFIDENCE
+  MEDIUM_CONFIDENCE
+  LIMITED_DATA
+}
+
+enum InsightFreshness {
+  FRESH
+  AGING
+  STALE
+  INSUFFICIENT_DATA
+}
+
+enum OptimizationProposalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  MODIFIED
+  APPLIED
+}
+
+enum StrategyExperimentStatus {
+  DRAFT
+  PENDING_APPROVAL
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum CareerOptimizationFeedbackResponse {
+  HELPFUL
+  NOT_HELPFUL
+  ALREADY_DOING_THIS
+  NOT_RELEVANT
+  TOO_DIFFICULT
+  NOT_ENOUGH_TIME
+  PREFER_ANOTHER_OPTION
+}
+
+/// Telemetry event signal capturing user actions, outcomes, and feedback.
+model CareerLearningSignal {
+  id            String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId        String             @db.Uuid
+  signalType    LearningSignalType
+  sourceEngine  String             @db.VarChar(100) // EXECUTION, APPLICATION, OPPORTUNITY, SKILL, PORTFOLIO, COPILOT
+  entityType    String?            @db.VarChar(100)
+  entityId      String?            @db.Uuid
+  payload       Json?
+  confidence    Float              @default(1.0)
+  qualityPassed Boolean            @default(true)
+  createdAt     DateTime           @default(now())
+
+  user          User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, signalType])
+  @@index([userId, createdAt])
+  @@map("career_learning_signals")
+}
+
+/// Tracked outcome model correlating user interventions with measurable career results.
+model CareerLearningOutcome {
+  id              String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String                 @db.Uuid
+  actionName      String                 @db.VarChar(255)
+  actionCategory  String                 @db.VarChar(100)
+  observedOutcome String                 @db.Text
+  correlationType OutcomeCorrelationType @default(OBSERVED_CORRELATION)
+  readinessImpact Float                  @default(0.0) // Relative +/- impact on readiness score
+  evidence        String[]               @default([])
+  metadata        Json?
+  createdAt       DateTime               @default(now())
+
+  user            User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("career_learning_outcomes")
+}
+
+/// Explicit user feedback regarding recommendation accuracy, feasibility, and usefulness.
+model CareerOptimizationFeedback {
+  id                 String                             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId             String                             @db.Uuid
+  recommendationId   String?                            @db.VarChar(255)
+  recommendationType String                             @db.VarChar(100)
+  response           CareerOptimizationFeedbackResponse
+  comment            String?                            @db.Text
+  createdAt          DateTime                           @default(now())
+
+  user               User                               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("career_optimization_feedbacks")
+}
+
+/// Synthesized evidence-based optimization insight derived from signal and pattern detection.
+model OptimizationInsight {
+  id              String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String                 @db.Uuid
+  category        InsightCategory
+  title           String                 @db.VarChar(255)
+  observation     String                 @db.Text
+  evidence        String[]               @default([])
+  confidence      OptimizationConfidence @default(HIGH_CONFIDENCE)
+  freshness       InsightFreshness       @default(FRESH)
+  limitations     String?                @db.Text
+  suggestedAction String                 @db.Text
+  isWorking       Boolean                @default(true) // true = "What is Working", false = "What Needs Adjustment"
+  observationDays Int                    @default(14)
+  sampleCount     Int                    @default(1)
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  user            User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  proposals       OptimizationProposal[]
+
+  @@index([userId, category])
+  @@index([userId, isWorking])
+  @@map("optimization_insights")
+}
+
+/// Actionable strategy change proposal requiring explicit user approval before applying.
+model OptimizationProposal {
+  id              String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String                     @db.Uuid
+  insightId       String?                    @db.Uuid
+  currentStrategy String                     @db.Text
+  observation     String                     @db.Text
+  proposedChange  String                     @db.Text
+  expectedBenefit String                     @db.Text
+  tradeOff        String                     @db.Text
+  confidence      OptimizationConfidence     @default(MEDIUM_CONFIDENCE)
+  status          OptimizationProposalStatus @default(PENDING)
+  targetEngine    String                     @default("EXECUTION_ENGINE") @db.VarChar(100)
+  actionPayload   Json
+  approvedAt      DateTime?
+  rejectedAt      DateTime?
+  rejectionReason String?                    @db.Text
+  modifiedPayload Json?
+  createdAt       DateTime                   @default(now())
+  updatedAt       DateTime                   @updatedAt
+
+  user            User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  insight         OptimizationInsight?       @relation(fields: [insightId], references: [id], onDelete: SetNull)
+
+  @@index([userId, status])
+  @@map("optimization_proposals")
+}
+
+/// Controlled timeboxed strategy experiment (e.g. Portfolio Focus vs Balanced Applications).
+model StrategyExperiment {
+  id              String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String                   @db.Uuid
+  title           String                   @db.VarChar(255)
+  hypothesis      String                   @db.Text
+  durationDays    Int                      @default(14)
+  strategyA       String                   @db.Text // Baseline / Control
+  strategyB       String                   @db.Text // Variant / Experiment
+  status          StrategyExperimentStatus @default(DRAFT)
+  metricsBaseline Json?
+  metricsCurrent  Json?
+  outcomeSummary  String?                  @db.Text
+  startDate       DateTime?
+  endDate         DateTime?
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+
+  user            User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@map("strategy_experiments")
+}
+
+/// Transparent, user-editable learned preferences (task duration, scheduling, etc.).
+model LearnedPreference {
+  id            String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId        String                 @db.Uuid
+  key           String                 @db.VarChar(100)
+  value         String                 @db.Text
+  confidence    OptimizationConfidence @default(HIGH_CONFIDENCE)
+  sourcePattern String                 @db.VarChar(255)
+  isEnabled     Boolean                @default(true)
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+
+  user          User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, key])
+  @@index([userId])
+  @@map("learned_preferences")
+}
+
+
 
 
 

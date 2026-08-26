@@ -6,6 +6,7 @@ import { RedisModule } from '../redis/redis.module';
 
 import { SystemAdminController } from './controllers/system-admin.controller';
 import { DeadLetterQueueService } from './services/dead-letter-queue.service';
+import { FeatureFlagService } from './services/feature-flag.service';
 import { HealthMonitorService } from './services/health-monitor.service';
 import { IncidentManagerService } from './services/incident-manager.service';
 import { QueueGuardService } from './services/queue-guard.service';
@@ -24,6 +25,7 @@ import { TelemetryService } from './services/telemetry.service';
     IncidentManagerService,
     SelfHealingService,
     DeadLetterQueueService,
+    FeatureFlagService,
   ],
   exports: [
     HealthMonitorService,
@@ -33,6 +35,7 @@ import { TelemetryService } from './services/telemetry.service';
     IncidentManagerService,
     SelfHealingService,
     DeadLetterQueueService,
+    FeatureFlagService,
   ],
 })
 export class SystemModule {}
