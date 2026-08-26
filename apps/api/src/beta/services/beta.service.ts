@@ -68,7 +68,7 @@ export class BetaService {
       funnels,
       retention,
       featureAdoption,
-      topFeedbackThemes: themes.map((t) => ({
+      topFeedbackThemes: themes.map((t: any) => ({
         id: t.id,
         title: t.title,
         category: t.category,
@@ -80,7 +80,7 @@ export class BetaService {
         aiSummary: t.aiSummary,
       })),
       frictionSignals,
-      productInsights: insights.map((i) => ({
+      productInsights: insights.map((i: any) => ({
         id: i.id,
         title: i.title,
         observation: i.observation,
