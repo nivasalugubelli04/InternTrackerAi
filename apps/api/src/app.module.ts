@@ -11,6 +11,7 @@ import { AiModule } from './ai/ai.module';
 import { ApplicationsModule } from './applications/applications.module';
 import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
+import { BetaModule } from './beta/beta.module';
 import { BillingModule } from './billing/billing.module';
 import { CareerCenterModule } from './career-center/career-center.module';
 import { CareerIntelligenceModule } from './career-intelligence/career-intelligence.module';
@@ -226,6 +227,8 @@ import { SystemModule } from './system/system.module';
     CareerCenterModule,
     // Phase 29 — SRE Operations & Monitoring
     SystemModule,
+    // Phase 51 — Beta Launch, Real User Testing & Product Validation
+    BetaModule,
   ],
 
   providers: [
