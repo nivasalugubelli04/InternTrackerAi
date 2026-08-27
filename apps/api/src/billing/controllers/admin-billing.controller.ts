@@ -1,58 +1,29 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
+import { CurrentUser } from '../../auth/decorators/current-user.decorator';
+import { Roles } from '../../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
-// RolesGuard and Roles decorator would typically be used here,
-// Assuming they exist or we just trust the admin guard logic for this phase.
+import { RolesGuard } from '../../auth/guards/roles.guard';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AdminGrantOverrideDto, CreatePromoCodeDto } from '../dto/billing.dto';
+import { MonetizationAnalyticsService } from '../services/monetization-analytics.service';
 
 @ApiTags('Admin Billing')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('ADMIN')
 @Controller('admin/billing')
 export class AdminBillingController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly analyticsService: MonetizationAnalyticsService,
+  ) {}
 
   @Get('dashboard')
-  @ApiOperation({ summary: 'Get revenue and subscription analytics' })
+  @ApiOperation({ summary: 'Get revenue, subscriber, and churn metrics' })
   async getDashboard() {
-    const totalUsers = await this.prisma.user.count();
-    const activeSubscriptions = await this.prisma.subscription.count({
-      where: { status: 'ACTIVE' },
-    });
-
-    const failedPayments = await this.prisma.payment.count({
-      where: { status: 'FAILED' },
-    });
-
-    const payments = await this.prisma.payment.findMany({
-      where: { status: 'COMPLETED' },
-    });
-
-    // Calculate MRR from active subscriptions (approximate for MVP)
-    const subscriptions = await this.prisma.subscription.findMany({
-      where: { status: 'ACTIVE' },
-      include: { plan: true },
-    });
-
-    let mrr = 0;
-    subscriptions.forEach((sub) => {
-      if (sub.plan.billingInterval === 'MONTHLY') mrr += Number(sub.plan.price);
-      if (sub.plan.billingInterval === 'YEARLY') mrr += Number(sub.plan.price) / 12;
-    });
-
-    const totalRevenue = payments.reduce((sum, p) => sum + Number(p.amount), 0);
-
-    return {
-      activePaidUsers: activeSubscriptions,
-      freeUsers: totalUsers - activeSubscriptions,
-      conversionRate:
-        totalUsers > 0 ? ((activeSubscriptions / totalUsers) * 100).toFixed(2) + '%' : '0%',
-      mrr: Math.round(mrr),
-      totalRevenue: Math.round(totalRevenue),
-      failedPayments,
-      churnRate: 'Needs implementation based on cancellations over time', // Requires more complex time-series queries
-    };
+    return this.analyticsService.getMonetizationMetrics();
   }
 
   @Get('subscriptions')
@@ -73,6 +44,55 @@ export class AdminBillingController {
       include: { user: { select: { email: true } } },
       orderBy: { createdAt: 'desc' },
       take: 50,
+    });
+  }
+
+  @Post('overrides')
+  @ApiOperation({ summary: 'Grant manual admin plan override' })
+  async grantOverride(@CurrentUser('id') adminId: string, @Body() dto: AdminGrantOverrideDto) {
+    const expiresAt = dto.durationDays
+      ? new Date(Date.now() + dto.durationDays * 24 * 60 * 60 * 1000)
+      : null;
+
+    return this.prisma.adminBillingOverride.create({
+      data: {
+        userId: dto.userId,
+        planId: dto.planId,
+        reason: dto.reason,
+        grantedByUserId: adminId,
+        expiresAt,
+        isActive: true,
+      },
+    });
+  }
+
+  @Post('promos')
+  @ApiOperation({ summary: 'Create new promotion / discount code' })
+  async createPromo(@Body() dto: CreatePromoCodeDto) {
+    const expiresAt = dto.validDays
+      ? new Date(Date.now() + dto.validDays * 24 * 60 * 60 * 1000)
+      : null;
+
+    return this.prisma.promotionCode.create({
+      data: {
+        code: dto.code.toUpperCase(),
+        description: dto.description,
+        discountPercent: dto.discountPercent || null,
+        discountAmount: dto.discountAmount || null,
+        currency: dto.currency || 'USD',
+        maxRedemptions: dto.maxRedemptions || null,
+        startsAt: new Date(),
+        expiresAt,
+        isActive: true,
+      },
+    });
+  }
+
+  @Get('promos')
+  @ApiOperation({ summary: 'List all active promotion codes' })
+  async getPromos() {
+    return this.prisma.promotionCode.findMany({
+      orderBy: { createdAt: 'desc' },
     });
   }
 }

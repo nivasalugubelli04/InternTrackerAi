@@ -3,11 +3,12 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import {
+  CreateCheckoutSessionDto,
+  CancelSubscriptionDto,
+  ApplyPromoCodeDto,
+} from '../dto/billing.dto';
 import { BillingService } from '../services/billing.service';
-
-class CheckoutDto {
-  planId!: string;
-}
 
 @ApiTags('Billing')
 @ApiBearerAuth()
@@ -23,26 +24,35 @@ export class BillingController {
   }
 
   @Get('subscription')
-  @ApiOperation({ summary: 'Get current user subscription status' })
+  @ApiOperation({ summary: 'Get current user subscription status and usage meters' })
   async getSubscription(@CurrentUser('id') userId: string) {
     return this.billingService.getSubscription(userId);
   }
 
   @Post('checkout')
   @ApiOperation({ summary: 'Create checkout session for a plan' })
-  async createCheckoutSession(@CurrentUser('id') userId: string, @Body() dto: CheckoutDto) {
-    return this.billingService.createCheckoutSession(userId, dto.planId);
+  async createCheckoutSession(
+    @CurrentUser('id') userId: string,
+    @Body() dto: CreateCheckoutSessionDto,
+  ) {
+    return this.billingService.createCheckoutSession(userId, dto);
   }
 
   @Post('cancel')
   @ApiOperation({ summary: 'Cancel active subscription' })
-  async cancelSubscription(@CurrentUser('id') userId: string) {
-    return this.billingService.cancelSubscription(userId);
+  async cancelSubscription(@CurrentUser('id') userId: string, @Body() dto: CancelSubscriptionDto) {
+    return this.billingService.cancelSubscription(userId, dto);
   }
 
-  @Get('payments')
-  @ApiOperation({ summary: 'Get payment history' })
-  async getPayments(@CurrentUser('id') userId: string) {
-    return this.billingService.getPayments(userId);
+  @Post('promo/validate')
+  @ApiOperation({ summary: 'Validate promotional coupon code' })
+  async validatePromoCode(@Body() dto: ApplyPromoCodeDto) {
+    return this.billingService.validatePromoCode(dto.code);
+  }
+
+  @Get('invoices')
+  @ApiOperation({ summary: 'Get billing invoices and receipts' })
+  async getInvoices(@CurrentUser('id') userId: string) {
+    return this.billingService.getInvoices(userId);
   }
 }

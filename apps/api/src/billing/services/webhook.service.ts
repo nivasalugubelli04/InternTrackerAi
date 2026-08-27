@@ -25,7 +25,10 @@ export class WebhookService {
   ) {}
 
   async processWebhook(input: RawWebhookInput) {
-    const hash = crypto.createHash('sha256').update(input.rawBody).digest('hex');
+    const hash = crypto
+      .createHash('sha256')
+      .update(input.rawBody || JSON.stringify(input.payload || {}))
+      .digest('hex');
 
     // 1. Idempotency Check
     const existing = await this.prisma.webhookEvent.findUnique({
@@ -33,7 +36,7 @@ export class WebhookService {
     });
 
     if (existing && existing.status === WebhookStatus.PROCESSED) {
-      this.logger.log(`Webhook ${input.eventId} already processed.`);
+      this.logger.log(`Webhook ${input.eventId} already processed. Skipping duplicate.`);
       return;
     }
 
@@ -41,7 +44,7 @@ export class WebhookService {
     if (!webhookEvent) {
       webhookEvent = await this.prisma.webhookEvent.create({
         data: {
-          provider: input.provider,
+          provider: input.provider || 'STRIPE',
           eventId: input.eventId,
           eventType: input.eventType || 'unknown',
           payloadHash: hash,
@@ -65,13 +68,13 @@ export class WebhookService {
         where: { id: webhookEvent.id },
         data: { status: WebhookStatus.FAILED },
       });
-      this.logger.error(`Webhook signature verification failed for ${input.eventId}`);
-      throw e; // Reraise so provider knows to retry or we return 400
+      this.logger.error(`Webhook signature verification failed for event ${input.eventId}`);
+      throw e;
     }
 
     // 3. Process Domain Logic Based on Event Type
     try {
-      await this.handleProviderEvent(input.eventType, parsedPayload);
+      await this.handleProviderEvent(input.eventType, parsedPayload || input.payload);
 
       await this.prisma.webhookEvent.update({
         where: { id: webhookEvent.id },
@@ -81,7 +84,7 @@ export class WebhookService {
         },
       });
     } catch (e) {
-      this.logger.error(`Error processing webhook domain logic for ${input.eventId}`, e);
+      this.logger.error(`Error processing webhook domain logic for event ${input.eventId}`, e);
       await this.prisma.webhookEvent.update({
         where: { id: webhookEvent.id },
         data: { status: WebhookStatus.FAILED },
@@ -91,17 +94,27 @@ export class WebhookService {
   }
 
   private async handleProviderEvent(eventType: string, payload: any) {
-    // Razorpay specific event mapping for this MVP
-    // Examples: 'subscription.charged', 'subscription.cancelled', 'subscription.halted'
+    this.logger.log(`Handling billing webhook event: ${eventType}`);
 
-    // Safety check - depending on provider format, extract the right entity
-    const entity = payload?.payload?.subscription?.entity || payload?.payload?.payment?.entity;
+    const subId =
+      payload?.data?.object?.subscription ||
+      payload?.data?.object?.id ||
+      payload?.payload?.subscription?.entity?.id;
 
-    if (eventType === 'subscription.charged') {
-      const subId = entity.id;
-      // We must find the corresponding local subscription
-      const subscription = await this.prisma.subscription.findUnique({
-        where: { providerSubscriptionId: subId },
+    // A. Successful Charge / Paid Invoice
+    if (
+      eventType === 'invoice.paid' ||
+      eventType === 'invoice.payment_succeeded' ||
+      eventType === 'subscription.charged'
+    ) {
+      const obj = payload?.data?.object || payload?.payload?.payment?.entity || {};
+      const amount = (obj.amount_paid || obj.amount || 0) / 100;
+      const currency = obj.currency?.toUpperCase() || 'USD';
+
+      const subscription = await this.prisma.subscription.findFirst({
+        where: {
+          OR: [{ providerSubscriptionId: subId }, { id: subId }],
+        },
       });
 
       if (subscription) {
@@ -110,52 +123,87 @@ export class WebhookService {
           data: {
             userId: subscription.userId,
             subscriptionId: subscription.id,
-            provider: 'RAZORPAY',
-            providerPaymentId: payload?.payload?.payment?.entity?.id || `pay_${Date.now()}`,
-            amount: (payload?.payload?.payment?.entity?.amount || 0) / 100, // convert paise to INR
+            provider: 'STRIPE',
+            providerPaymentId: obj.payment_intent || obj.id || `pay_${Date.now()}`,
+            amount,
+            currency,
             status: PaymentStatus.COMPLETED,
           },
         });
 
-        // Update Subscription limits/period
+        // Record Invoice
+        await this.prisma.invoice.create({
+          data: {
+            userId: subscription.userId,
+            subscriptionId: subscription.id,
+            providerInvoiceId: obj.id || `inv_${Date.now()}`,
+            amount,
+            currency,
+            status: 'PAID',
+            invoiceUrl: obj.hosted_invoice_url || null,
+          },
+        });
+
+        // Extend/activate subscription
+        const periodStart = obj.period_start ? new Date(obj.period_start * 1000) : new Date();
+        const periodEnd = obj.period_end
+          ? new Date(obj.period_end * 1000)
+          : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
         await this.prisma.subscription.update({
           where: { id: subscription.id },
           data: {
             status: SubscriptionStatus.ACTIVE,
-            currentPeriodStart: new Date(entity.current_start * 1000),
-            currentPeriodEnd: new Date(entity.current_end * 1000),
+            currentPeriodStart: periodStart,
+            currentPeriodEnd: periodEnd,
           },
         });
       }
-    } else if (eventType === 'subscription.halted' || eventType === 'subscription.pending') {
-      const subId = entity.id;
-      const subscription = await this.prisma.subscription.findUnique({
-        where: { providerSubscriptionId: subId },
+    }
+
+    // B. Failed Payment / Halted Subscription (Grace Period Trigger)
+    else if (
+      eventType === 'invoice.payment_failed' ||
+      eventType === 'subscription.halted' ||
+      eventType === 'subscription.pending'
+    ) {
+      const subscription = await this.prisma.subscription.findFirst({
+        where: {
+          OR: [{ providerSubscriptionId: subId }, { id: subId }],
+        },
       });
+
       if (subscription) {
         await this.prisma.subscription.update({
           where: { id: subscription.id },
           data: { status: SubscriptionStatus.PAST_DUE },
         });
 
-        // Record a failed payment to trigger the 7-day grace period logic in EntitlementService
         await this.prisma.payment.create({
           data: {
             userId: subscription.userId,
             subscriptionId: subscription.id,
-            provider: 'RAZORPAY',
+            provider: 'STRIPE',
             providerPaymentId: `fail_${Date.now()}`,
             amount: 0,
             status: PaymentStatus.FAILED,
-            failureReason: 'Subscription halted or pending',
+            failureReason: 'Payment method declined or invoice payment failed',
           },
         });
       }
-    } else if (eventType === 'subscription.cancelled') {
-      const subId = entity.id;
-      const subscription = await this.prisma.subscription.findUnique({
-        where: { providerSubscriptionId: subId },
+    }
+
+    // C. Subscription Cancelled / Deleted
+    else if (
+      eventType === 'customer.subscription.deleted' ||
+      eventType === 'subscription.cancelled'
+    ) {
+      const subscription = await this.prisma.subscription.findFirst({
+        where: {
+          OR: [{ providerSubscriptionId: subId }, { id: subId }],
+        },
       });
+
       if (subscription) {
         await this.prisma.subscription.update({
           where: { id: subscription.id },

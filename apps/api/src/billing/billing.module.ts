@@ -6,11 +6,13 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { AdminBillingController } from './controllers/admin-billing.controller';
 import { BillingController } from './controllers/billing.controller';
 import { WebhookController } from './controllers/webhook.controller';
+import { EntitlementGuard } from './guards/entitlement.guard';
 import { PAYMENT_PROVIDER_TOKEN } from './providers/payment-provider.interface';
-import { RazorpayAdapter } from './providers/razorpay.adapter';
+import { StripeAdapter } from './providers/stripe.adapter';
 import { BillingReconciliationService } from './services/billing-reconciliation.service';
 import { BillingService } from './services/billing.service';
 import { EntitlementService } from './services/entitlement.service';
+import { MonetizationAnalyticsService } from './services/monetization-analytics.service';
 import { UsageTrackerService } from './services/usage-tracker.service';
 import { WebhookService } from './services/webhook.service';
 
@@ -24,11 +26,19 @@ import { WebhookService } from './services/webhook.service';
     BillingService,
     WebhookService,
     BillingReconciliationService,
+    MonetizationAnalyticsService,
+    EntitlementGuard,
     {
       provide: PAYMENT_PROVIDER_TOKEN,
-      useClass: RazorpayAdapter,
+      useClass: StripeAdapter,
     },
   ],
-  exports: [UsageTrackerService, EntitlementService, BillingService],
+  exports: [
+    UsageTrackerService,
+    EntitlementService,
+    BillingService,
+    MonetizationAnalyticsService,
+    EntitlementGuard,
+  ],
 })
 export class BillingModule {}

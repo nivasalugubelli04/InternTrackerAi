@@ -15,6 +15,7 @@ import {
   Briefcase,
   Compass,
   Bot,
+  CreditCard,
 } from 'lucide-react';
 import { Button } from './ui/Button';
 
@@ -48,6 +49,7 @@ export default function AdminLayout() {
         { to: '/companies', icon: <Building2 size={18} />, label: 'Companies & Scrapers' },
         { to: '/beta-insights', icon: <TrendingUp size={18} />, label: 'Beta & Feedback Insights' },
         { to: '/growth-engagement', icon: <TrendingUp size={18} />, label: 'Growth & Engagement' },
+        { to: '/monetization-billing', icon: <CreditCard size={18} />, label: 'Monetization & Billing' },
         { to: '/flags', icon: <Flag size={18} />, label: 'Feature Flags' },
       ]
     },
