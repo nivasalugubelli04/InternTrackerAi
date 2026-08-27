@@ -52,6 +52,7 @@ export default function AdminLayout() {
         { to: '/growth-engagement', icon: <TrendingUp size={18} />, label: 'Growth & Engagement' },
         { to: '/monetization-billing', icon: <CreditCard size={18} />, label: 'Monetization & Billing' },
         { to: '/support-operations', icon: <Users size={18} />, label: 'Customer Support & Trust' },
+        { to: '/product-intelligence', icon: <TrendingUp size={18} />, label: 'Product Intelligence' },
         { to: '/flags', icon: <Flag size={18} />, label: 'Feature Flags' },
       ]
     },

@@ -45,6 +45,7 @@ import { GrowthEngagement } from './pages/GrowthEngagement';
 import { MonetizationBilling } from './pages/MonetizationBilling';
 import { AdminControlCenter } from './pages/AdminControlCenter';
 import { SupportOperations } from './pages/SupportOperations';
+import { ProductIntelligence } from './pages/ProductIntelligence';
 
 // UI components
 import { Card } from './components/ui/Card';
@@ -158,6 +159,7 @@ export default function App() {
             <Route path="monetization-billing" element={<MonetizationBilling />} />
             <Route path="control-center" element={<AdminControlCenter />} />
             <Route path="support-operations" element={<SupportOperations />} />
+            <Route path="product-intelligence" element={<ProductIntelligence />} />
             {/* Other routes can be stubbed out similarly */}
             <Route path="*" element={<div style={{ color: 'var(--text-muted)' }}>Under Construction</div>} />
           </Route>

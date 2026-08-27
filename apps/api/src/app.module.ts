@@ -47,6 +47,7 @@ import { PreferencesModule } from './preferences/preferences.module';
 import { PreparationModule } from './preparation/preparation.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { PrivacyModule } from './privacy/privacy.module';
+import { ProductIntelligenceModule } from './product-intelligence/product-intelligence.module';
 import { ProfileModule } from './profile/profile.module';
 import { QueuesModule } from './queues/queues.module';
 import { RecruiterModule } from './recruiter/recruiter.module';
@@ -61,7 +62,6 @@ import { SkillsModule } from './skills/skills.module';
 // Phase 24 — Career Outcomes, Placement Intelligence & Workforce Analytics
 // Phase 26 — Personalized Learning & Roadmaps
 // Phase 28 — Career Command Center
-// Phase 29 — SRE Operations & Monitoring
 import { SystemModule } from './system/system.module';
 /**
  * AppModule — root module of the InternTracker API.
@@ -229,6 +229,8 @@ import { SystemModule } from './system/system.module';
     SystemModule,
     // Phase 51 — Beta Launch, Real User Testing & Product Validation
     BetaModule,
+    // Phase 57 — Post-Launch Intelligence & Continuous Improvement
+    ProductIntelligenceModule,
   ],
 
   providers: [

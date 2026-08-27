@@ -250,6 +250,10 @@ model User {
   supportTickets             SupportTicket[]
   supportTicketMessages      SupportTicketMessage[]
 
+  // Phase 57 — Post-Launch Intelligence & Continuous Improvement
+  behaviorEvents             UserBehaviorEvent[]
+  assignedImprovements       ProductImprovementItem[] @relation("AssignedImprovements")
+
   @@index([email])
   @@map("users")
 }
@@ -6017,6 +6021,186 @@ model SupportTicketMessage {
   @@index([ticketId, createdAt])
   @@map("support_ticket_messages")
 }
+
+// =============================================================================
+// Phase 57 — Post-Launch Intelligence & Continuous Improvement
+// =============================================================================
+
+enum MetricCategory {
+  ACQUISITION
+  ACTIVATION
+  ENGAGEMENT
+  RETENTION
+  REVENUE
+  USER_SATISFACTION
+  SUPPORT
+  AI_QUALITY
+}
+
+enum FeatureHealthClassification {
+  HIGH_VALUE
+  GROWING
+  UNDERDISCOVERED
+  LOW_ADOPTION
+  HIGH_FRICTION
+  UNUSED
+}
+
+enum ImprovementPriority {
+  P0
+  P1
+  P2
+  P3
+}
+
+enum ImprovementStatus {
+  BACKLOG
+  TRIAGED
+  IN_DEVELOPMENT
+  IN_TESTING
+  DEPLOYED
+  VERIFIED
+  REJECTED
+}
+
+enum ExperimentStatus {
+  DRAFT
+  RUNNING
+  PAUSED
+  CONCLUDED
+}
+
+enum ExperimentDecision {
+  PENDING
+  KEEP
+  REVERT
+  ITERATE
+  INSUFFICIENT_DATA
+}
+
+/// Catalog of formal product success metric definitions.
+model ProductMetricDefinition {
+  id           String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  category     MetricCategory
+  name         String         @unique @db.VarChar(120)
+  code         String         @unique @db.VarChar(60)
+  description  String         @db.Text
+  formula      String         @db.Text
+  dataSource   String         @db.VarChar(150)
+  timeWindow   String         @db.VarChar(50) // "DAILY", "WEEKLY", "MONTHLY"
+  targetValue  Float?
+  warningThreshold Float?
+  criticalThreshold Float?
+  unit         String         @db.VarChar(30) // "PERCENTAGE", "COUNT", "RATIO", "MILLISECONDS", "CURRENCY"
+  isActive     Boolean        @default(true)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@index([category, isActive])
+  @@map("product_metric_definitions")
+}
+
+/// Canonical post-launch product event telemetry.
+model UserBehaviorEvent {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String?   @db.Uuid
+  sessionId   String?   @db.VarChar(100)
+  eventName   String    @db.VarChar(100)
+  featureName String    @db.VarChar(100) // "OPPORTUNITY_DISCOVERY", "COPILOT", "APPLICATIONS", etc.
+  journeyStage String?  @db.VarChar(100) // "ONBOARDING", "ACTIVATION", "SIMULATION", etc.
+  properties  Json?     @db.JsonB
+  isFriction  Boolean   @default(false)
+  durationMs  Int?
+  createdAt   DateTime  @default(now())
+
+  user        User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([eventName, createdAt])
+  @@index([featureName, createdAt])
+  @@index([userId, createdAt])
+  @@index([isFriction, createdAt])
+  @@map("user_behavior_events")
+}
+
+/// Evidence-based product improvement backlog queue.
+model ProductImprovementItem {
+  id                 String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title              String              @db.VarChar(200)
+  problemSummary     String              @db.Text
+  evidenceDetails    String              @db.Text
+  affectedFeature    String              @db.VarChar(100)
+  affectedUserCount  Int                 @default(0)
+  severity           String              @db.VarChar(30) // "LOW", "MEDIUM", "HIGH", "CRITICAL"
+  frequency          String              @db.VarChar(30) // "ISOLATED", "RECURRING", "SYSTEMIC"
+  userImpactScore    Float               @default(5.0) // 1 to 10
+  revenueImpactScore Float               @default(5.0) // 1 to 10
+  strategicValue     Float               @default(5.0) // 1 to 10
+  implementationEffort Float             @default(5.0) // 1 to 10 (1=trivial, 10=major rewrite)
+  confidenceScore    Float               @default(8.0) // 1 to 10
+  calculatedRiceScore Float              @default(50.0) // (Reach * Impact * Confidence) / Effort
+  priority           ImprovementPriority @default(P2)
+  status             ImprovementStatus   @default(BACKLOG)
+  assignedToUserId   String?             @db.Uuid
+  resolutionNotes    String?             @db.Text
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  resolvedAt         DateTime?
+
+  assignedToUser     User?               @relation("AssignedImprovements", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+
+  @@index([priority, status])
+  @@index([affectedFeature, status])
+  @@map("product_improvement_items")
+}
+
+/// Controlled A/B product experimentation system.
+model ProductExperiment {
+  id               String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  experimentKey    String             @unique @db.VarChar(80)
+  name             String             @db.VarChar(150)
+  hypothesis       String             @db.Text
+  targetMetric     String             @db.VarChar(80)
+  variants         Json               @db.JsonB // e.g. [{ key: "control", weight: 50 }, { key: "variant_a", weight: 50 }]
+  targetAudience   String             @default("ALL") @db.VarChar(100)
+  sampleSize       Int                @default(0)
+  status           ExperimentStatus   @default(DRAFT)
+  decision         ExperimentDecision @default(PENDING)
+  resultsSummary   String?            @db.Text
+  startDate        DateTime?
+  endDate          DateTime?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  @@index([status, decision])
+  @@map("product_experiments")
+}
+
+/// Weekly product intelligence executive review snapshots.
+model WeeklyProductReview {
+  id                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  weekStarting           DateTime  @db.Date
+  weekEnding             DateTime  @db.Date
+  totalActiveUsers       Int
+  newSignups             Int
+  activatedUsersCount    Int
+  activationRate         Float
+  d1RetentionRate        Float
+  d7RetentionRate        Float
+  d30RetentionRate       Float
+  topAdoptedFeatures     Json      @db.JsonB
+  underperformingFeatures Json     @db.JsonB
+  aiQualityMetrics       Json      @db.JsonB
+  measuredFacts          Json      @db.JsonB
+  inferencesAndHypotheses Json     @db.JsonB
+  recommendedPriorities  Json      @db.JsonB
+  publishedBy            String    @default("SYSTEM_INTELLIGENCE") @db.VarChar(100)
+  createdAt              DateTime  @default(now())
+
+  @@unique([weekStarting])
+  @@index([weekStarting, weekEnding])
+  @@map("weekly_product_reviews")
+}
+
 
 
 
