@@ -41,6 +41,7 @@ import IntegrationSyncHistory from './pages/IntegrationSyncHistory';
 import CareerCopilot from './pages/CareerCopilot';
 import CareerOptimization from './pages/CareerOptimization';
 import { BetaInsights } from './pages/BetaInsights';
+import { GrowthEngagement } from './pages/GrowthEngagement';
 
 // UI components
 import { Card } from './components/ui/Card';
@@ -150,6 +151,7 @@ export default function App() {
             <Route path="copilot" element={<CareerCopilot />} />
             <Route path="optimization" element={<CareerOptimization />} />
             <Route path="beta-insights" element={<BetaInsights />} />
+            <Route path="growth-engagement" element={<GrowthEngagement />} />
             {/* Other routes can be stubbed out similarly */}
             <Route path="*" element={<div style={{ color: 'var(--text-muted)' }}>Under Construction</div>} />
           </Route>

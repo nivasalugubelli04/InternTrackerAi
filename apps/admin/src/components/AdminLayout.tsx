@@ -47,6 +47,7 @@ export default function AdminLayout() {
         { to: '/users', icon: <Users size={18} />, label: 'Users' },
         { to: '/companies', icon: <Building2 size={18} />, label: 'Companies & Scrapers' },
         { to: '/beta-insights', icon: <TrendingUp size={18} />, label: 'Beta & Feedback Insights' },
+        { to: '/growth-engagement', icon: <TrendingUp size={18} />, label: 'Growth & Engagement' },
         { to: '/flags', icon: <Flag size={18} />, label: 'Feature Flags' },
       ]
     },
