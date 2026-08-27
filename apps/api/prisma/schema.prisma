@@ -243,6 +243,13 @@ model User {
   adminNotesAuthored         AdminNote[]            @relation("AdminNotesAuthored")
   adminNotesReceived         AdminNote[]            @relation("AdminNotesTargetUser")
 
+  // Phase 55 — Public Launch Readiness, Privacy, Trust & Support
+  consents                   UserConsent[]
+  dataExportRequests         DataExportRequest[]
+  accountDeletionRequests    AccountDeletionRequest[]
+  supportTickets             SupportTicket[]
+  supportTicketMessages      SupportTicketMessage[]
+
   @@index([email])
   @@map("users")
 }
@@ -5915,6 +5922,102 @@ model AdminNote {
   @@index([authorAdminId])
   @@map("admin_notes")
 }
+
+// =============================================================================
+// Phase 55 — Public Launch Readiness, Privacy, Trust, Support & Legal Foundation
+// =============================================================================
+
+/// Versioned user consent records.
+model UserConsent {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String    @db.Uuid
+  consentType String    @db.VarChar(50) // "TERMS", "PRIVACY_POLICY", "OPTIONAL_ANALYTICS", "PRODUCT_UPDATES", "AI_DATA_PROCESSING"
+  version     String    @db.VarChar(20) // e.g. "1.0.0", "2026-08"
+  isGranted   Boolean   @default(true)
+  ipAddress   String?   @db.VarChar(45)
+  userAgent   String?   @db.Text
+  grantedAt   DateTime  @default(now())
+  revokedAt   DateTime?
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, consentType])
+  @@map("user_consents")
+}
+
+/// User personal data archive export requests.
+model DataExportRequest {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String    @db.Uuid
+  status      String    @default("PENDING") @db.VarChar(30) // "PENDING", "PROCESSING", "COMPLETED", "FAILED", "EXPIRED"
+  downloadUrl String?   @db.Text
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@map("data_export_requests")
+}
+
+/// Staged user account deletion workflow.
+model AccountDeletionRequest {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId       String    @db.Uuid
+  reason       String?   @db.Text
+  status       String    @default("REQUESTED") @db.VarChar(30) // "REQUESTED", "CONFIRMED", "PROCESSING", "COMPLETED", "CANCELLED"
+  scheduledFor DateTime
+  confirmedAt  DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime  @default(now())
+
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@map("account_deletion_requests")
+}
+
+/// Customer support tickets.
+model SupportTicket {
+  id                String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId            String                 @db.Uuid
+  ticketNumber      String                 @unique @db.VarChar(30)
+  category          String                 @db.VarChar(50) // "ACCOUNT", "TECHNICAL", "BILLING", "SUBSCRIPTION", "AI_QUALITY", "PRIVACY_DATA", "SECURITY_REPORT", "OTHER"
+  priority          String                 @default("MEDIUM") @db.VarChar(20) // "LOW", "MEDIUM", "HIGH", "CRITICAL"
+  status            String                 @default("OPEN") @db.VarChar(30) // "OPEN", "IN_PROGRESS", "WAITING_USER", "RESOLVED", "CLOSED"
+  subject           String                 @db.VarChar(255)
+  description       String                 @db.Text
+  resolutionSummary String?                @db.Text
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  resolvedAt        DateTime?
+
+  user              User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages          SupportTicketMessage[]
+
+  @@index([userId, status])
+  @@index([status, priority])
+  @@map("support_tickets")
+}
+
+/// Messages and staff updates on support tickets.
+model SupportTicketMessage {
+  id             String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ticketId       String        @db.Uuid
+  senderUserId   String        @db.Uuid
+  senderType     String        @db.VarChar(30) // "USER", "SUPPORT_ADMIN", "SYSTEM"
+  message        String        @db.Text
+  isInternalNote Boolean       @default(false)
+  createdAt      DateTime      @default(now())
+
+  ticket         SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  senderUser     User          @relation(fields: [senderUserId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId, createdAt])
+  @@map("support_ticket_messages")
+}
+
 
 
 
