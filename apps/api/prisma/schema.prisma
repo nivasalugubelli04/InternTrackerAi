@@ -239,6 +239,10 @@ model User {
   // Phase 53 — Monetization, Subscriptions, Entitlements & Billing
   adminBillingOverrides      AdminBillingOverride[]
 
+  // Phase 54 — Admin Control Center, Platform Operations & Internal Intelligence
+  adminNotesAuthored         AdminNote[]            @relation("AdminNotesAuthored")
+  adminNotesReceived         AdminNote[]            @relation("AdminNotesTargetUser")
+
   @@index([email])
   @@map("users")
 }
@@ -5888,6 +5892,30 @@ model AdminBillingOverride {
   @@index([userId, isActive])
   @@map("admin_billing_overrides")
 }
+
+// =============================================================================
+// Phase 54 — Admin Control Center, Platform Operations & Internal Intelligence
+// =============================================================================
+
+/// Internal staff notes attached to user accounts, incidents, or platform entities.
+model AdminNote {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  targetType     String    @db.VarChar(50) // "USER", "INCIDENT", "SUBSCRIPTION", "SYSTEM"
+  targetId       String    @db.Uuid
+  authorAdminId  String    @db.Uuid
+  noteText       String    @db.Text
+  isPinned       Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  authorAdmin    User      @relation("AdminNotesAuthored", fields: [authorAdminId], references: [id], onDelete: Cascade)
+  targetUser     User?     @relation("AdminNotesTargetUser", fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@index([targetType, targetId])
+  @@index([authorAdminId])
+  @@map("admin_notes")
+}
+
 
 
 

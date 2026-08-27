@@ -43,6 +43,7 @@ import CareerOptimization from './pages/CareerOptimization';
 import { BetaInsights } from './pages/BetaInsights';
 import { GrowthEngagement } from './pages/GrowthEngagement';
 import { MonetizationBilling } from './pages/MonetizationBilling';
+import { AdminControlCenter } from './pages/AdminControlCenter';
 
 // UI components
 import { Card } from './components/ui/Card';
@@ -154,6 +155,7 @@ export default function App() {
             <Route path="beta-insights" element={<BetaInsights />} />
             <Route path="growth-engagement" element={<GrowthEngagement />} />
             <Route path="monetization-billing" element={<MonetizationBilling />} />
+            <Route path="control-center" element={<AdminControlCenter />} />
             {/* Other routes can be stubbed out similarly */}
             <Route path="*" element={<div style={{ color: 'var(--text-muted)' }}>Under Construction</div>} />
           </Route>

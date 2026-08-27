@@ -39,6 +39,7 @@ export default function AdminLayout() {
       title: 'Core Operations',
       items: [
         { to: '/', icon: <LayoutDashboard size={18} />, label: 'Dashboard' },
+        { to: '/control-center', icon: <LayoutDashboard size={18} />, label: 'Admin Control Center' },
         { to: '/copilot', icon: <Bot size={18} />, label: 'AI Career Copilot' },
         { to: '/optimization', icon: <TrendingUp size={18} />, label: 'Career Optimization' },
         { to: '/career-command-center', icon: <Compass size={18} />, label: 'Career Command Center' },
