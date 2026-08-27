@@ -22,7 +22,7 @@ COPY package.json package-lock.json ./
 COPY apps/api/package.json ./apps/api/
 
 # Install production deps only for the API
-RUN npm install --workspace=apps/api --omit=dev
+RUN npm install --workspace=apps/api --omit=dev --ignore-scripts
 
 # ── Stage 2: Build ───────────────────────────────────────────────────────────
 FROM node:20-alpine AS builder
@@ -35,7 +35,7 @@ COPY apps/api/tsconfig.json ./apps/api/
 COPY apps/api/nest-cli.json ./apps/api/
 
 # Install ALL deps (including dev) for building
-RUN npm install
+RUN npm install --ignore-scripts
 
 # Copy source
 COPY apps/api/src ./apps/api/src

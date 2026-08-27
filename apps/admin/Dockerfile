@@ -21,7 +21,7 @@ COPY package.json package-lock.json ./
 COPY apps/admin/package.json ./apps/admin/
 
 # Install dependencies (workspaces support)
-RUN npm install
+RUN npm install --ignore-scripts
 
 # Copy source files
 COPY apps/admin ./apps/admin
