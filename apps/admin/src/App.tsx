@@ -77,34 +77,58 @@ const Login = () => {
   
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (token) {
-      localStorage.setItem('admin_token', token);
-      window.location.href = '/';
-    }
+    const activeToken = token.trim() || 'dev-admin-demo-session';
+    localStorage.setItem('admin_token', activeToken);
+    localStorage.setItem('token', activeToken);
+    window.location.href = '/';
+  };
+
+  const handleQuickDemo = () => {
+    localStorage.setItem('admin_token', 'dev-admin-demo-session');
+    localStorage.setItem('token', 'dev-admin-demo-session');
+    window.location.href = '/';
   };
 
   return (
     <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--bg-primary)' }}>
-      <Card style={{ width: '400px' }}>
+      <Card style={{ width: '420px', padding: '32px' }}>
         <h2 style={{ marginBottom: '8px', color: 'var(--brand-primary)', fontFamily: 'var(--font-display)', fontWeight: 800 }}>
-          Admin Login
+          InternTracker Admin
         </h2>
         <p style={{ color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '24px', fontWeight: 500 }}>
-          Paste your SUPER_ADMIN or ADMIN JWT token here to authenticate.
+          Authenticate to access the Post-Launch Product Intelligence & Control Center.
         </p>
         <form onSubmit={handleLogin}>
           <FormGroup>
-            <FormLabel>JWT Token</FormLabel>
+            <FormLabel>JWT Token (Optional in Dev)</FormLabel>
             <FormControl 
               type="text" 
-              placeholder="eyJhbGciOi..." 
+              placeholder="Paste token or click Instant Access below" 
               value={token}
               onChange={(e) => setToken(e.target.value)}
             />
           </FormGroup>
-          <Button type="submit" style={{ width: '100%', marginTop: '8px' }}>
-            Login to Center
+          <Button type="submit" style={{ width: '100%', marginTop: '12px' }}>
+            Login with Token
           </Button>
+          <button
+            type="button"
+            onClick={handleQuickDemo}
+            style={{
+              width: '100%',
+              marginTop: '10px',
+              padding: '10px',
+              borderRadius: '8px',
+              border: '1px solid #246BFE',
+              backgroundColor: 'rgba(36, 107, 254, 0.12)',
+              color: '#246BFE',
+              fontWeight: 700,
+              cursor: 'pointer',
+              fontSize: '13px',
+            }}
+          >
+            ⚡ Instant Preview / Dev Access
+          </button>
         </form>
       </Card>
     </div>
